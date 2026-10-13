@@ -5,6 +5,14 @@ All notable changes to SynBio-LLVM will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Restored the BioScript compiler module (`parseCircuits` and `SEQUENCE_DB`) so headless unit tests and assembly/protocol tools can resolve circuits and registry parts.
+- Headless `npm test` / `test:ci` no longer loads the VS Code end-to-end suite. Run that suite with `npm run test:e2e` inside the client package.
+- Web demo static export typechecks on the TypeScript version pinned by the lockfile.
+- Client package license matches the repository AGPL-3.0 license.
+
 ## [0.2.0] - 2025-06-16
 
 ### 🚀 Vanguardia Release — Engineering Excellence

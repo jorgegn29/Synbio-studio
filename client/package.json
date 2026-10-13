@@ -4,7 +4,7 @@
   "description": "Compilador de circuitos genéticos para VS Code",
   "version": "0.2.0",
   "publisher": "synbio-llvm",
-  "license": "MIT",
+  "license": "AGPL-3.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -14,8 +14,9 @@
     "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
     "watch": "npm run build -- --watch",
     "lint": "eslint src --ext .ts",
-    "test": "mocha -r ts-node/register 'src/test/**/*.test.ts'",
-    "test:ci": "c8 --reporter=text --reporter=lcov mocha -r ts-node/register 'src/test/**/*.test.ts'"
+    "test": "mocha 'src/test/unit/**/*.test.ts' 'src/test/integration/**/*.test.ts' 'src/test/perf/**/*.test.ts' 'src/test/benchmarks/**/*.test.ts' 'src/test/smoke/**/*.test.ts'",
+    "test:ci": "c8 --reporter=text --reporter=lcov mocha 'src/test/unit/**/*.test.ts' 'src/test/integration/**/*.test.ts' 'src/test/perf/**/*.test.ts' 'src/test/benchmarks/**/*.test.ts' 'src/test/smoke/**/*.test.ts'",
+    "test:e2e": "tsx src/test/vscode-runner.ts"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
