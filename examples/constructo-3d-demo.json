@@ -1,0 +1,31 @@
+{
+  "id": "constructo-3d-demo",
+  "name": "Demo 3D - reporteros y aislamiento",
+  "status": "conceptual-not-experimentally-validated",
+  "parts": [
+    { "id": 1, "type": "promoter", "name": "Promotor demo", "x": 40, "y": 180, "properties": { "role": "regulacion conceptual" }, "trace": { "source": "constructo-3d-demo", "module": "reportero" } },
+    { "id": 2, "type": "operator", "name": "Operador demo", "x": 120, "y": 180, "properties": {} },
+    { "id": 3, "type": "rbs", "name": "RBS demo", "x": 200, "y": 180, "properties": {} },
+    { "id": 4, "type": "reporter", "name": "GFP", "x": 280, "y": 180, "properties": { "product": "reportero verde", "localization": "cytoplasm", "evidence": "conceptual" } },
+    { "id": 5, "type": "linker", "name": "Enlace demo", "x": 360, "y": 180, "properties": {} },
+    { "id": 6, "type": "reporter", "name": "mCherry", "x": 440, "y": 180, "properties": { "product": "reportero rojo", "evidence": "conceptual" } },
+    { "id": 7, "type": "degron", "name": "Etiqueta de recambio", "x": 520, "y": 180, "properties": {} },
+    { "id": 8, "type": "terminator", "name": "Terminador demo", "x": 600, "y": 180, "properties": {} },
+    { "id": 9, "type": "insulator", "name": "Aislante demo", "x": 680, "y": 180, "properties": {} },
+    { "id": 10, "type": "origin", "name": "Origen conceptual", "x": 760, "y": 180, "properties": { "copyNumber": "no determinado" } },
+    { "id": 11, "type": "selection_marker", "name": "Marcador conceptual", "x": 840, "y": 180, "properties": { "evidence": "sin secuencia especificada" } },
+    { "id": 12, "type": "spacer", "name": "Separador demo", "x": 920, "y": 180, "properties": {} }
+  ],
+  "connections": [
+    { "from": 1, "to": 2, "type": "activation" },
+    { "from": 2, "to": 3, "type": "activation" },
+    { "from": 3, "to": 4, "type": "activation" },
+    { "from": 4, "to": 5, "type": "activation" },
+    { "from": 5, "to": 6, "type": "activation" },
+    { "from": 6, "to": 7, "type": "activation" },
+    { "from": 7, "to": 8, "type": "activation" },
+    { "from": 8, "to": 9, "type": "activation" },
+    { "from": 10, "to": 11, "type": "activation" },
+    { "from": 11, "to": 12, "type": "activation" }
+  ]
+}

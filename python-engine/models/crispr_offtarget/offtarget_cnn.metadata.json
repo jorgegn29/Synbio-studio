@@ -1,0 +1,18 @@
+{
+  "model_version": "crispr-offtarget-cnn-v1",
+  "dataset_name": "Cas-OFFinder-style genome candidate pairs",
+  "training_reference": "Real RefSeq protospacers expanded into mismatch/PAM candidate pairs and calibrated with MIT/CFD cleavage priors",
+  "supported_organisms": {
+    "ecoli_mg1655": "E. coli K-12 MG1655",
+    "ecoli_bl21": "E. coli BL21(DE3)",
+    "bacillus_subtilis_168": "B. subtilis 168"
+  },
+  "train_metrics": {
+    "rmse": 0.3168,
+    "mae": 0.2189,
+    "pearson_r": 0.697,
+    "sample_count": 522
+  },
+  "guide_length": 20,
+  "max_pam_length": 6
+}

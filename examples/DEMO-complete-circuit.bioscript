@@ -1,0 +1,316 @@
+/// ═══════════════════════════════════════════════════════════════════
+/// SynBio-LLVM — DEMO COMPLETO: Smart Biosensor Circuit v2.0
+/// ═══════════════════════════════════════════════════════════════════
+///
+/// Circuito genético inteligente que detecta contaminantes ambientales
+/// (arsénico, mercurio) y activa una respuesta de biorremediación en
+/// tiempo real, con sistema de seguridad multicapa.
+///
+/// Este archivo de demostración activa TODAS las funcionalidades
+/// de SynBio-LLVM v0.7.0:
+///   🔬 Metabolic Digital Twin (análisis de carga en tiempo real)
+///   🧬 Circuit Failure Predictor (27 modos de fallo analizados)
+///   📊 Stochastic Simulation (Gillespie)
+///   🎨 SBOL Visual Renderer
+///   💊 Biosafety Classifier
+///   🔍 NCBI Integration
+///   🤖 OpenTrons Protocol Generation
+///   🧪 Primer Designer (Gibson Assembly)
+///   💻 LLM Biodesigner (Copilot)
+///
+/// Uso real: biosensores para agua potable, agua residual, suelos.
+/// Referencia: Merulla D et al. Environ Microbiol 2013 — arsenic biosensor
+///
+/// @author SynBio-LLVM Demo
+/// @version 2.0
+/// @host ecoli_k12_mg1655
+/// @biosafety_level BSL1
+/// @regulatory_framework NIH_Guidelines_2019, EU_Directive_2009_41_EC
+/// ═══════════════════════════════════════════════════════════════════
+
+// ── IMPORTACIONES ────────────────────────────────────────────────────
+import { pLac, pTet, pArs, pMer, pBAD } from "promoters";
+import { GFP, mCherry, BFP, mVenus } from "reporters";
+import { rbs_strong, rbs_medium, rbs_weak } from "rbs";
+import { LacI, TetR, ArsR, MerR, CcdB } from "regulatory_proteins";
+import { term_B0015, term_T1, term_rrnB } from "terminators";
+
+// ── ORGANISMO HUÉSPED ────────────────────────────────────────────────
+
+chassis EcoliK12: Host {
+    organism: "Escherichia coli",
+    strain:   "K-12 MG1655 (ATCC 700926)",
+    genotype: "F- lambda- ilvG- rfb-50 rph-1",
+    atp_capacity:    100 AU,
+    doubling_time:    20 min,
+    max_protein_load: 25 %,           // umbral de carga metabólica máxima
+    selection:        "Ampicillin 100 µg/mL",
+    growth_temp:      37 °C
+}
+
+// ── MÓDULO 1: BIOSENSOR DE ARSÉNICO ──────────────────────────────────
+// Ref: Rosen BP. Trends Microbiol 1999 — ArsR repressor arsenic sensor
+
+module ArsenicoSensor {
+    // ArsR es un represor metaloregulatorio nativo de E. coli
+    // que responde a arsénico III/V disociándose del operador arsO
+    let ars_promoter: Promoter         = pArs;      // BBa_K190015
+    let ars_repressor: Protein         = ArsR;      // BBa_K190010
+    let ars_reporter: Protein          = GFP;       // BBa_E0040
+    let ars_rbs: RBS                   = rbs_medium; // evitar sobreexpresión
+    let ars_terminator: Terminator     = term_B0015;
+
+    // Unidad transcripcional del sensor
+    ars_promoter -> ars_rbs -> ars_reporter -> ars_terminator
+
+    // Lógica de respuesta al arsénico
+    when ion("As3+") > 1 ppb OR ion("As5+") > 10 ppb {
+        // ArsR se disocia del operador → GFP se expresa
+        express(ars_reporter, level: medium);
+        activate(module: BiorremediacionArs);
+        log_event("ARSENICO_DETECTADO", timestamp: true);
+    }
+
+    when ion("As3+") > 50 ppb {
+        express(ars_reporter, level: high);
+        emit_alert("⚠️ ARSÉNICO CRÍTICO: >50 ppb — Umbral OMS excedido");
+    }
+
+    // Caracterización de la parte
+    characterization {
+        detection_range:   "0.1 – 500 ppb As(III)",
+        sensitivity:       "LOD = 0.1 ppb",
+        response_time:     "45-90 min",
+        reference:         "Merulla D et al. Environ Microbiol 2013;15:2093"
+    }
+}
+
+// ── MÓDULO 2: BIOSENSOR DE MERCURIO ──────────────────────────────────
+// Ref: Barkay T et al. FEMS Microbiol Rev 2003 — mercury response
+
+module MercurioSensor {
+    let mer_promoter: Promoter     = pMer;       // mercuric ion responsive
+    let mer_activator: Protein     = MerR;       // metal-responsive activator
+    let mer_reporter: Protein      = mCherry;    // BBa_J06504
+    let mer_rbs: RBS               = rbs_medium;
+    let mer_terminator: Terminator = term_T1;
+
+    // MerR funciona como activador (no represor) → se une a Hg²⁺ y activa pMer
+    when ion("Hg2+") > 0.1 ppb {
+        bind(MerR, metal: "Hg2+");
+        express(mer_reporter, level: medium);
+        activate(module: BiorremediacionMer);
+        log_event("MERCURIO_DETECTADO", timestamp: true);
+    }
+
+    characterization {
+        detection_range: "0.01 – 10 ppb Hg(II)",
+        response_time:   "30-60 min",
+        reference:       "Barkay T et al. FEMS Microbiol Rev 2003;27:355"
+    }
+}
+
+// ── MÓDULO 3: BIORREMEDIACIÓN ARSÉNICO ───────────────────────────────
+// Convierte As(III) → As(V) y bombea fuera de la célula
+
+module BiorremediacionArs {
+    // arsM: arsénico metiltransferasa (volatilización de arsina)
+    // arsB: bomba de eflujo de arsénico
+    sequence arsM: Gene {
+        ncbi_id:     "AAB87754.1",
+        organism:    "Rhodopseudomonas palustris",
+        function:    "Arsenite S-adenosylmethionine methyltransferase",
+        codon_table: "ecoli_k12"      // requiere optimización de codones
+    }
+
+    sequence arsB: Gene {
+        ncbi_id:     "P37459",
+        organism:    "Escherichia coli K-12",
+        function:    "Arsenical pump membrane protein",
+        codon_table: "ecoli_k12"
+    }
+
+    // Expresión coordinada bajo control de pArs
+    pArs -> rbs_weak -> arsM -> term_B0015
+    pArs -> rbs_weak -> arsB -> term_B0015
+
+    // Nota: rbs_weak critical — arsM y arsB son TÓXICOS en sobreexpresión
+    metabolic_note: "ArsM consume 2 SAM/arsénico. arsB usa ΔΨ"
+}
+
+// ── MÓDULO 4: BIORREMEDIACIÓN MERCURIO ───────────────────────────────
+// merA: reduce Hg(II) → Hg(0) (volatilización)
+
+module BiorremediacionMer {
+    sequence merA: Gene {
+        ncbi_id:     "AF053882.1",
+        organism:    "Serratia marcescens",
+        function:    "Mercuric reductase — reduces Hg(II) to Hg(0)",
+        codon_table: "ecoli_k12",
+        warning:     "Proteína grande (59kDa) — potencial toxicidad"
+    }
+
+    // MerA expresada solo cuando se detecta mercurio
+    pMer -> rbs_weak -> merA -> term_rrnB
+}
+
+// ── MÓDULO 5: TOGGLE SWITCH DE MEMORIA ───────────────────────────────
+// Bistable memory: recuerda si la contaminación fue detectada
+// Referencia: Gardner TS et al. Nature 2000;403:339
+
+module MemoriaContaminacion {
+    // Estado A (normal): LacI reprime pLac → mVenus OFF
+    // Estado B (alerta): TetR reprime pTet → LacI OFF → mVenus ON
+    
+    let lac_promoter: Promoter  = pLac;        // BBa_R0010
+    let tet_promoter: Promoter  = pTet;        // BBa_R0040
+    let lacI: Protein           = LacI;        // BBa_C0012
+    let tetR: Protein           = TetR;        // BBa_C0040
+    let memory_reporter: Protein = mVenus;     // estado actual
+
+    // Unidades transcripcionales del toggle
+    pLac -> rbs_medium -> TetR -> term_B0015   // Rama del toggle 1
+    pTet -> rbs_medium -> LacI -> term_B0015   // Rama del toggle 2
+    pLac -> rbs_weak   -> mVenus -> term_T1    // Reporter de estado
+
+    toggle_parameters {
+        cooperativity:   2.1,         // Hill coefficient (>2 necesario para bistabilidad)
+        promoter_ratio:  1.15,        // pLac : pTet = 1.15 (ligera asimetría)
+        bistable_range:  "[LacI]=0.5-5 µM; [TetR]=0.5-5 µM",
+        reference:       "Gardner TS et al. Nature 2000;403:339-342"
+    }
+
+    when detected(ArsenicoSensor) OR detected(MercurioSensor) {
+        flip_toggle(to_state: "ALERT");
+        // Estado persiste incluso después de retirar contaminante (memoria epigenética)
+    }
+}
+
+// ── MÓDULO 6: SISTEMA DE SEGURIDAD MULTICAPA ─────────────────────────
+// Regulación NIH, EU Directive 2009/41/EC
+
+safe module SistemaSeguridadMulticapa {
+    
+    // ── Kill Switch Primario: Toxin-Antitoxin CcdB/CcdA ──────────────
+    kill_switch CcdBA {
+        toxin:      CcdB,              // DNA gyrase inhibitor — letal para E. coli
+        antitoxin:  CcdA,              // degrades rapidly (t½ = 30 min)
+        control:    pBAD,              // arabinosa mantiene CcdA activa
+        mechanism:  "absence_triggers_death",
+        
+        // Si no hay arabinosa (contención rota) → CcdA se degrada → CcdB mata la célula
+        trigger:    absence_of("arabinose") FOR 2 hr,
+        delay:      30 min,
+        reliability: "99.7%"           // ref: Szafranski P et al. 1997
+    }
+
+    // ── Kill Switch Secundario: Auxotrophía sintética ─────────────────
+    kill_switch SyntheticAuxotrophy {
+        mechanism:  "synthetic_amino_acid_dependency",
+        // La cepa requiere fosfoserina artificial (pSer) — no existe en natualeza
+        dependency: "para-fluorophenylalanine incorporation",
+        description: "Células mueren sin pSer exógeno. Escape probability <10^-12",
+        reference:   "Mandell DJ et al. Nature 2015;518:55-60"
+    }
+
+    // ── Confinamiento de Transferencia Horizontal ─────────────────────
+    horizontal_gene_transfer_containment {
+        recA_deleted:    true,   // elimina recombinación (en cepa MG1655 ΔrecA)
+        restriction_mod: true,   // sistema R-M para degradar DNA exógeno
+        origin_of_repl:  "pSC101 (low copy, 5 copies/cell)" // minimiza transferencia
+    }
+
+    // ── Monitoreo Continuo ────────────────────────────────────────────
+    monitoring {
+        biosafety_level:    "BSL-1",
+        containment_class:  "Class 1 (EU Directive 2009/41/EC)",
+        escape_probability: "<10^-10 per cell per generation",
+        regulatory_approval: "NIH Guidelines Section III-E"
+    }
+}
+
+// ── MÓDULO 7: QUORUM SENSING (Coordinación Poblacional) ──────────────
+// Sincroniza respuesta en densidad crítica de células
+
+module QuorumSensing {
+    // LuxI/LuxR de Vibrio fischeri — sistema AI-1 (3OC6-HSL)
+    sequence luxI: Gene {
+        function:    "AHL synthase — produces 3OC6-HSL autoinducer",
+        expression:  "constitutive at low level"
+    }
+
+    sequence luxR: Gene {
+        function:    "AHL-responsive transcriptional activator"
+    }
+
+    when population_density > 10^7 cells/mL AND detected(ArsenicoSensor) {
+        // Toda la población responde coordinadamente
+        activate_all(module: BiorremediacionArs);
+        emit_signal("COLLECTIVE_RESPONSE_ACTIVATED");
+    }
+
+    note: "Sincronización de biorremediación hasta OD600=0.5 — máxima eficiencia"
+}
+
+// ── PARÁMETROS GLOBALES DEL CIRCUITO ────────────────────────────────
+
+simulation_parameters {
+    time_span:       "0 – 24 hr",
+    cell_volume:     "1 fL",
+    temperature:     37 °C,
+    pH:              7.4,
+    growth_medium:   "M9 minimal + 0.4% glucose",
+    
+    // Parámetros estocásticos para simulación Gillespie
+    stochastic: {
+        runs:          500,
+        noise_level:   "intrinsic + extrinsic",
+        cell_count:    100
+    }
+}
+
+// ── OBJETIVOS DE CARACTERIZACIÓN ────────────────────────────────────
+
+characterization_targets {
+    // Ejecutar con: Ctrl+Shift+P → SynBio: Generate Lab Protocol
+    assay_1: "Plate reader — fluorescencia GFP/mCherry/mVenus cada 10min, 24h",
+    assay_2: "Flow cytometry — distribución celular a t=2,4,8,12h",
+    assay_3: "qPCR — cuantificación arsM, arsB, merA expression",
+    assay_4: "ICP-MS — medición de arsénico/mercurio removido del medio",
+    
+    // Referencia de medición estándar iGEM
+    standard: "GFP measurements normalized to MEFL units (Beal J et al. ACS Synth Biol 2020)"
+}
+
+// ── NOTAS FINALES ────────────────────────────────────────────────────
+
+///
+/// COMANDOS DISPONIBLES PARA ESTE CIRCUITO:
+///
+/// Ctrl+Shift+P → "SynBio: Analizar Carga Metabólica"
+///   → Digital Twin predice impacto en crecimiento de E. coli
+///
+/// Ctrl+Shift+P → "SynBio: Failure Predictor Report"
+///   → Análisis de 27 modos de fallo con probabilidades
+///
+/// Ctrl+Shift+P → "SynBio: Simular Circuito"
+///   → Simulación estocástica Gillespie (500 runs)
+///
+/// Ctrl+Shift+P → "SynBio: Diseñar Primers"
+///   → Gibson Assembly primers para todos los módulos
+///
+/// Ctrl+Shift+P → "SynBio: Predecir Estructura Proteica"
+///   → ESMFold para ArsM, MerA, GFP, mCherry
+///
+/// Ctrl+Shift+P → "SynBio: Generar Protocolo de Laboratorio"
+///   → Protocolo completo + script OpenTrons OT-2
+///
+/// Ctrl+Shift+P → "SynBio: Buscar en NCBI"
+///   → Secuencias de arsM, arsB, merA desde GenBank
+///
+/// Ctrl+Shift+P → "SynBio: LLM Design Assistant"
+///   → Copilot analiza y optimiza este circuito
+///
+/// Ctrl+Shift+P → "SynBio: Publicar en Registry"
+///   → Exporta a SynBioHub / SBOL 3.0 / iGEM
+///

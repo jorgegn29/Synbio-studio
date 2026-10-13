@@ -1,0 +1,140 @@
+/* stylelint-disable at-rule-no-unknown */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Root Variables ──────────────────────────────────────── */
+:root {
+  --bio-primary: #10b981;
+  --bio-glow: #22c55e;
+  --surface-bg: #0a0e14;
+  --surface-card: #111827;
+}
+
+/* ─── Base Styles ─────────────────────────────────────────── */
+html {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-surface-950 text-surface-200 antialiased;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-surface-700/50;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-surface-600;
+}
+
+/* ─── Selection ───────────────────────────────────────────── */
+::selection {
+  @apply bg-bio-500/30 text-white;
+}
+
+/* ─── Code Font ───────────────────────────────────────────── */
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
+}
+
+/* ─── Glow Effects ────────────────────────────────────────── */
+.glow-bio {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15), 0 0 60px rgba(16, 185, 129, 0.05);
+}
+
+.glow-text {
+  text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+}
+
+/* ─── Panel Layout ────────────────────────────────────────── */
+.panel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0;
+  height: 100%;
+}
+
+@media (max-width: 1024px) {
+  .panel-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, 1fr);
+  }
+}
+
+/* ─── Tab Styles ──────────────────────────────────────────── */
+.tab-active {
+  @apply border-b-2 border-bio-500 text-bio-400 bg-surface-900/50;
+}
+
+.tab-inactive {
+  @apply border-b-2 border-transparent text-surface-500 hover:text-surface-300 hover:bg-surface-800/30;
+}
+
+/* ─── Pulse Ring Animation ────────────────────────────────── */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* ─── DNA Helix Background ────────────────────────────────── */
+.bg-dna-pattern {
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 50% 80%, rgba(168, 85, 247, 0.03) 0%, transparent 50%);
+}
+
+/* ─── Resize Handle ───────────────────────────────────────── */
+.resize-handle {
+  @apply cursor-col-resize select-none;
+  width: 4px;
+  background: linear-gradient(to bottom, transparent, theme('colors.surface.700'), transparent);
+}
+
+.resize-handle:hover {
+  background: linear-gradient(to bottom, transparent, theme('colors.bio.500'), transparent);
+}
+
+/* ─── Loading Skeleton ────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ─── Monaco Editor Overrides ─────────────────────────────── */
+.monaco-editor .margin {
+  background: #0d1117 !important;
+}
+
+.monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
+  border-radius: 4px;
+}

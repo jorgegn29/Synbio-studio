@@ -1,0 +1,49 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "watch",
+      "path": "client/",
+      "isBackground": true,
+      "problemMatcher": "$tsc-watch",
+      "label": "npm: watch",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "type": "npm",
+      "script": "build",
+      "path": "client/",
+      "problemMatcher": "$tsc",
+      "label": "npm: build client"
+    },
+    {
+      "type": "shell",
+      "command": "wscript",
+      "args": ["//nologo", "${workspaceFolder}/synbio-studio/scripts/launch-silent.vbs"],
+      "label": "Start SynBio Studio",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "echo": false,
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "close": true
+      }
+    },
+    {
+      "type": "shell",
+      "command": "cargo",
+      "args": ["build", "--release"],
+      "options": {
+        "cwd": "${workspaceFolder}/server"
+      },
+      "label": "cargo: build server",
+      "group": "build"
+    }
+  ]
+}

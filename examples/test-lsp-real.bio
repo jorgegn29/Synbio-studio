@@ -1,0 +1,111 @@
+// ============================================
+// Test LSP Real-Time: Repressilator Circuit
+// Este archivo prueba todas las funcionalidades LSP:
+// 1. Diagnósticos del parser (errores de sintaxis)
+// 2. Validación biológica (secuencias ADN, toxinas) 
+// 3. Autocompletado (partes, keywords, snippets)
+// 4. Hover (documentación de partes iGEM)
+// ============================================
+
+// Definición del circuito Repressilator (Elowitz & Leibler, 2000)
+circuit repressilator {
+    host: "ecoli_k12";
+
+    // TU1: LacI repressor
+    promoter pCI;
+    rbs: B0034;
+    gene lacI: Protein = LacI;
+    promoter: pCI;
+    terminator: B0015;
+
+    // TU2: TetR repressor
+    promoter pLac;
+    rbs: B0034;
+    gene tetR: Protein = TetR;
+    promoter: pLac;
+    terminator: B0015;
+
+    // TU3: CI repressor
+    promoter pTet;
+    rbs: B0034;
+    gene araC: Protein = AraC;
+    promoter: pTet;
+    terminator: B0015;
+
+    // TU4: GFP reporter
+    promoter pBAD;
+    rbs: B0034;
+    gene gfp: Protein = GFP;
+    promoter: pBAD;
+    rbs: B0034;
+    terminator: B0015;
+
+    // Conexiones de represión mutua (el repressilator)
+    pLac -> lacI;
+    LacI ~> pTet;    // LacI reprime pTet
+    
+    pTet -> tetR;
+    TetR ~> pBAD;    // TetR reprime pBAD
+    
+    pBAD -> araC;
+    AraC ~> pLac;    // AraC reprime pLac
+
+    // Reporter de salida
+    pLac -> gfp;
+
+    // Sistema de seguridad
+    kill_switch {
+        trigger: absence(IPTG),
+        toxin: CcdB,
+        antitoxin: CcdA,
+        delay: 2hr
+    }
+}
+
+// Toggle Switch separado para testing
+circuit toggle_switch {
+    host: "ecoli_k12";
+
+    // TU1: LacI
+    promoter pTet;
+    rbs: B0034;
+    gene lacI: Protein = LacI;
+    promoter: pTet;
+    terminator: B0015;
+
+    // TU2: TetR
+    promoter pLac;
+    rbs: B0034;
+    gene tetR: Protein = TetR;
+    promoter: pLac;
+    rbs: B0034;
+    terminator: B0015;
+
+    // Inhibición mutua
+    pLac -> lacI;
+    pTet -> tetR;
+    LacI ~> pTet;
+    TetR ~> pLac;
+}
+
+// Circuito CRISPR
+circuit crispr_editor {
+    host: "ecoli_k12";
+
+    // TU1: Cas9
+    promoter pT7;
+    rbs: B0034;
+    gene cas9: Protein = Cas9;
+    promoter: pT7;
+    terminator: B0015;
+
+    // TU2: dCas9
+    promoter pT7;
+    rbs: B0034;
+    gene dcas9: Protein = dCas9;
+    promoter: pT7;
+    rbs: B0034;
+    terminator: B0015;
+    
+    pT7 -> cas9;
+}

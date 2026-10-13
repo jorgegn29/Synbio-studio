@@ -1,0 +1,36 @@
+# SynBio-LLVM: Dependencias de Python para ML y Simulación
+# Activar con: .\.venv\Scripts\Activate.ps1
+
+# ===== ONNX Runtime (Inferencia de modelos de plegamiento) =====
+onnxruntime>=1.16.0
+onnx>=1.15.0
+
+# ===== Bioinformática =====
+biopython>=1.82           # Manipulación de secuencias
+numpy>=1.26.0             # Cálculos numéricos
+scipy>=1.11.0             # Algoritmos científicos
+
+# ===== Simulación Estocástica =====
+gillespy2>=1.8.0          # Algoritmo de Gillespie
+
+# ===== Termodinámica de ARN (opcional, requiere compilación) =====
+# ViennaRNA>=2.6.0        # Instalar manualmente si es necesario
+
+# ===== Servidor API =====
+fastapi>=0.104.0          # API REST para comunicación con VS Code
+uvicorn>=0.24.0           # Servidor ASGI
+pydantic>=2.5.0           # Validación de datos
+
+# ===== ML/Deep Learning (para predicción de plegamiento) =====
+torch>=2.1.0              # PyTorch (CPU por defecto)
+transformers>=4.35.0      # Modelos ESM para proteínas
+
+# ===== Utilidades =====
+python-dotenv>=1.0.0
+httpx>=0.25.0
+tqdm>=4.66.0
+
+# ===== Desarrollo =====
+pytest>=7.4.0
+black>=23.11.0
+mypy>=1.7.0

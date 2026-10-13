@@ -1,0 +1,155 @@
+{
+  "model_version": "codonbert-ecoli-v1",
+  "tag": "codonbert-ecoli-v1-pretrained",
+  "pretrained_on": "ecoli_mg1655",
+  "display_name": "E. coli K-12 MG1655",
+  "accession": "NC_000913.3",
+  "source": "NCBI RefSeq",
+  "max_len": 256,
+  "corpus_gene_count": 320,
+  "training": {
+    "epochs": 2,
+    "example_count": 761,
+    "epoch_losses": [
+      3.9915,
+      3.9589
+    ]
+  },
+  "codon_weights": {
+    "ATG": 1.0,
+    "TGG": 1.0,
+    "TAT": 1.0,
+    "TAC": 0.6857720836142953,
+    "TTA": 0.2843322818086225,
+    "TTG": 0.2858044164037855,
+    "CTT": 0.23512092534174553,
+    "CTC": 0.22754994742376447,
+    "CTA": 0.08811777076761304,
+    "CTG": 1.0,
+    "TTT": 1.0,
+    "TTC": 0.6945945945945946,
+    "GTT": 0.700041203131438,
+    "GTC": 0.5925010300782859,
+    "GTA": 0.41285537700865266,
+    "GTG": 1.0,
+    "GGT": 0.7989766081871345,
+    "GGC": 1.0,
+    "GGA": 0.2913011695906433,
+    "GGG": 0.3753654970760234,
+    "ATT": 1.0,
+    "ATC": 0.748128864301985,
+    "ATA": 0.14480963228115848,
+    "TGT": 0.809220985691574,
+    "TGC": 1.0,
+    "TCT": 0.5129124820659972,
+    "TCC": 0.5573888091822095,
+    "TCA": 0.4885222381635581,
+    "TCG": 0.6061692969870875,
+    "AGT": 0.573170731707317,
+    "AGC": 1.0,
+    "ACT": 0.3595714951094551,
+    "ACC": 1.0,
+    "ACA": 0.30274802049371213,
+    "ACG": 0.6059618071727992,
+    "GAT": 1.0,
+    "GAC": 0.5638538635628839,
+    "CCT": 0.319060773480663,
+    "CCC": 0.2421731123388582,
+    "CCA": 0.3720073664825046,
+    "CCG": 1.0,
+    "CGT": 0.9180642069956876,
+    "CGC": 1.0,
+    "CGA": 0.16435074269286057,
+    "CGG": 0.26114039290848107,
+    "AGA": 0.0924772400574988,
+    "AGG": 0.039770004791566844,
+    "AAA": 1.0,
+    "AAG": 0.298876404494382,
+    "AAT": 0.8529568460309004,
+    "AAC": 1.0,
+    "CAA": 0.5656297420333839,
+    "CAG": 1.0,
+    "CAT": 1.0,
+    "CAC": 0.6722750548646672,
+    "GCT": 0.44346116027531957,
+    "GCC": 0.7853162897410685,
+    "GCA": 0.618813503769256,
+    "GCG": 1.0,
+    "GAA": 1.0,
+    "GAG": 0.4549960866162275
+  },
+  "genes_preview": [
+    {
+      "gene": "appX",
+      "locus_tag": "b4592",
+      "product": "cytochrome bd-II accessory subunit AppX",
+      "length_aa": 30
+    },
+    {
+      "gene": "ylcH",
+      "locus_tag": "b4588",
+      "product": "uncharacterized protein YlcH",
+      "length_aa": 33
+    },
+    {
+      "gene": "yibY",
+      "locus_tag": "b4796",
+      "product": "protein YibY",
+      "length_aa": 36
+    },
+    {
+      "gene": "timP",
+      "locus_tag": "b4812",
+      "product": "putative toxic protein TimP",
+      "length_aa": 41
+    },
+    {
+      "gene": "yceO",
+      "locus_tag": "b1058",
+      "product": "DUF2770 domain-containing protein YceO",
+      "length_aa": 46
+    },
+    {
+      "gene": "ytiD",
+      "locus_tag": "b4721",
+      "product": "protein YtiD",
+      "length_aa": 47
+    },
+    {
+      "gene": "ydaF",
+      "locus_tag": "b4527",
+      "product": "DUF1391 domain-containing protein YdaF",
+      "length_aa": 51
+    },
+    {
+      "gene": "mokB",
+      "locus_tag": "b1420",
+      "product": "putative regulatory protein MokB",
+      "length_aa": 55
+    },
+    {
+      "gene": "ortT",
+      "locus_tag": "b1445",
+      "product": "orphan toxin OrtT",
+      "length_aa": 57
+    },
+    {
+      "gene": "yhdU",
+      "locus_tag": "b3263",
+      "product": "DUF2556 domain-containing protein YhdU",
+      "length_aa": 59
+    },
+    {
+      "gene": "ynbE",
+      "locus_tag": "b1382",
+      "product": "putative intermembrane phospholipid transport lipoprotein YnbE",
+      "length_aa": 61
+    },
+    {
+      "gene": "yebW",
+      "locus_tag": "b1837",
+      "product": "DUF1482 domain-containing protein YebW",
+      "length_aa": 63
+    }
+  ]
+}

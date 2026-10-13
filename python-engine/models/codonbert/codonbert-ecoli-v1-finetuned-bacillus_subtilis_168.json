@@ -1,0 +1,154 @@
+{
+  "model_version": "codonbert-ecoli-v1",
+  "tag": "codonbert-ecoli-v1-finetuned-bacillus_subtilis_168",
+  "pretrained_on": "ecoli_mg1655",
+  "fine_tuned_on": "bacillus_subtilis_168",
+  "display_name": "B. subtilis 168",
+  "source": "NCBI RefSeq",
+  "max_len": 256,
+  "corpus_gene_count": 320,
+  "training": {
+    "epochs": 1,
+    "example_count": 700,
+    "epoch_losses": [
+      3.9884
+    ]
+  },
+  "codon_weights": {
+    "ATG": 1.0,
+    "TCT": 0.832,
+    "TCC": 0.5616,
+    "TCA": 0.9976,
+    "TCG": 0.46,
+    "AGT": 0.448,
+    "AGC": 1.0,
+    "ACT": 0.3855042016806723,
+    "ACC": 0.4227941176470588,
+    "ACA": 1.0,
+    "ACG": 0.657563025210084,
+    "TTT": 1.0,
+    "TTC": 0.43204577968526464,
+    "CAA": 1.0,
+    "CAG": 0.9375379017586416,
+    "GCT": 0.9051383399209486,
+    "GCC": 0.810841332580463,
+    "GCA": 1.0,
+    "GCG": 0.9728966685488425,
+    "TTA": 0.811587147030185,
+    "TTG": 0.6684518013631938,
+    "CTT": 0.9581304771178188,
+    "CTC": 0.5063291139240507,
+    "CTA": 0.22687439143135346,
+    "CTG": 1.0,
+    "ATT": 1.0,
+    "ATC": 0.7305352798053528,
+    "ATA": 0.25304136253041365,
+    "GGT": 0.49950544015825915,
+    "GGC": 1.0,
+    "GGA": 0.9183976261127597,
+    "GGG": 0.4762611275964392,
+    "TAT": 1.0,
+    "TAC": 0.4851889683350358,
+    "GAA": 1.0,
+    "GAG": 0.47409965466206216,
+    "AAA": 1.0,
+    "AAG": 0.4442800788954635,
+    "GAT": 1.0,
+    "GAC": 0.5582542694497153,
+    "CCT": 0.6538181818181819,
+    "CCC": 0.19927272727272727,
+    "CCA": 0.4,
+    "CCG": 1.0,
+    "GTT": 0.9796044499381953,
+    "GTC": 0.9567367119901112,
+    "GTA": 0.6656365883807169,
+    "GTG": 1.0,
+    "AAT": 1.0,
+    "AAC": 0.7187663355985363,
+    "TGT": 0.7979002624671916,
+    "TGC": 1.0,
+    "CAT": 1.0,
+    "CAC": 0.4660564454614798,
+    "CGT": 0.6159822419533851,
+    "CGC": 0.6958934517203108,
+    "CGA": 0.38623751387347394,
+    "CGG": 0.6237513873473918,
+    "AGA": 1.0,
+    "AGG": 0.38290788013318533,
+    "TGG": 1.0
+  },
+  "genes_preview": [
+    {
+      "gene": "bsrE",
+      "locus_tag": "BSU_18978",
+      "product": "type I toxin (BsrE/AsrE)",
+      "length_aa": 30
+    },
+    {
+      "gene": "bsrG",
+      "locus_tag": "BSU_21546",
+      "product": "phage toxin; type I toxin-antitoxin system",
+      "length_aa": 38
+    },
+    {
+      "gene": "phrC",
+      "locus_tag": "BSU_03780",
+      "product": "secreted regulator of the activity of phosphatase RapC and competence and sporulation stimulating factor (CSF)",
+      "length_aa": 40
+    },
+    {
+      "gene": "sspL",
+      "locus_tag": "BSU_22000",
+      "product": "small acid-soluble spore protein",
+      "length_aa": 42
+    },
+    {
+      "gene": "",
+      "locus_tag": "BSU_31289",
+      "product": "hypothetical protein",
+      "length_aa": 44
+    },
+    {
+      "gene": "yflJ",
+      "locus_tag": "BSU_07660",
+      "product": "hypothetical protein",
+      "length_aa": 45
+    },
+    {
+      "gene": "yuzG",
+      "locus_tag": "BSU_32120",
+      "product": "conserved protein or unknown function",
+      "length_aa": 46
+    },
+    {
+      "gene": "sspN",
+      "locus_tag": "BSU_18020",
+      "product": "small acid-soluble spore protein",
+      "length_aa": 48
+    },
+    {
+      "gene": "yoqT",
+      "locus_tag": "BSU_20520",
+      "product": "conserved hypothetical protein; phage SPbeta",
+      "length_aa": 49
+    },
+    {
+      "gene": "",
+      "locus_tag": "BSU_37569",
+      "product": "hypothetical protein",
+      "length_aa": 51
+    },
+    {
+      "gene": "ytzL",
+      "locus_tag": "BSU_30739",
+      "product": "hypothetical protein",
+      "length_aa": 52
+    },
+    {
+      "gene": "xkdX",
+      "locus_tag": "BSU_12770",
+      "product": "phage PBSX; conserved hypothetical protein",
+      "length_aa": 54
+    }
+  ]
+}

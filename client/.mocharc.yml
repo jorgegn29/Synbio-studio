@@ -1,0 +1,10 @@
+# ══════════════════════════════════════════════════════════════
+# Mocha Configuration — SynBio-LLVM Test Suite
+# ══════════════════════════════════════════════════════════════
+ui: tdd
+color: true
+timeout: 15000
+reporter: spec
+recursive: true
+require:
+  - tsx

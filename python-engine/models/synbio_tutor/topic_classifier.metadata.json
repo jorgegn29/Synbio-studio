@@ -1,0 +1,43 @@
+{
+  "mode": "keras-retrieval",
+  "tensorflow_available": true,
+  "tensorflow_version": "2.21.0",
+  "dataset_name": "SynBio Tutor Knowledge Base",
+  "entry_count": 2673,
+  "topic_count": 20,
+  "trained_examples": 15863,
+  "class_names": [
+    "backend_ml_models",
+    "backend_python_engine",
+    "cross_architecture",
+    "cross_compile_pipeline",
+    "studio_biosafety",
+    "studio_data",
+    "studio_design",
+    "studio_editor_intelligence",
+    "studio_lab_automation",
+    "studio_navigation",
+    "studio_python_api",
+    "studio_simulation",
+    "studio_structure",
+    "studio_workflows",
+    "vscode_ai_assistance",
+    "vscode_biosafety",
+    "vscode_editor",
+    "vscode_editor_intelligence",
+    "vscode_navigation",
+    "vscode_productivity"
+  ],
+  "train_accuracy": 0.9964,
+  "trained_at": "2026-03-20T15:21:42.161834+00:00",
+  "model_version": "synbio-tutor-topic-v1",
+  "model_config": {
+    "max_tokens": 16000,
+    "sequence_length": 64,
+    "embedding_dim": 48,
+    "hidden_units": 96,
+    "batch_size": 24,
+    "epochs": 36,
+    "learning_rate": 0.004
+  }
+}

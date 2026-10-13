@@ -1,0 +1,140 @@
+{
+  "Circuit Template": {
+    "prefix": "circuit",
+    "body": [
+      "/// @author ${1:author}",
+      "/// @host ${2:ecoli_dh5alpha}",
+      "circuit ${3:CircuitName} {",
+      "    // Definir partes biológicas",
+      "    let promoter = ${4:pLac};",
+      "    let rbs = ${5:rbs_strong};",
+      "    let gene = ${6:GFP};",
+      "    let terminator = ${7:term_T1};",
+      "    ",
+      "    // Ensamblar transcripción",
+      "    promoter -> rbs -> gene -> terminator",
+      "}"
+    ],
+    "description": "Plantilla básica de circuito genético"
+  },
+  "Gene Definition": {
+    "prefix": "gene",
+    "body": [
+      "gene ${1:GeneName}: Protein {",
+      "    sequence: seq { ${2:ATGCGA} },",
+      "    molecular_weight: ${3:25} kDa,",
+      "    toxicity: ${4:low}",
+      "}"
+    ],
+    "description": "Definir un gen con su secuencia"
+  },
+  "Promoter Definition": {
+    "prefix": "promoter",
+    "body": [
+      "let ${1:myPromoter}: Promoter = Promoter {",
+      "    name: \"${2:custom_promoter}\",",
+      "    strength: ${3:0.8},",
+      "    regulation: ${4:constitutive},",
+      "    inducer: ${5:None}",
+      "};"
+    ],
+    "description": "Definir un promotor personalizado"
+  },
+  "CRISPR gRNA": {
+    "prefix": "grna",
+    "body": [
+      "let ${1:guide}: gRNA = gRNA {",
+      "    target: seq { ${2:ATGCGATCGATCGATCGATC} },",
+      "    pam: \"${3:NGG}\",",
+      "    efficiency: ${4:0.85}",
+      "};"
+    ],
+    "description": "Definir un ARN guía para CRISPR"
+  },
+  "Toggle Switch": {
+    "prefix": "toggle",
+    "body": [
+      "circuit ToggleSwitch {",
+      "    // Represor 1",
+      "    let p1 = pLac;",
+      "    let gene1 = ${1:LacI};",
+      "    ",
+      "    // Represor 2", 
+      "    let p2 = pTet;",
+      "    let gene2 = ${2:TetR};",
+      "    ",
+      "    // Represión cruzada",
+      "    gene1 ~> repress(p2);",
+      "    gene2 ~> repress(p1);",
+      "}"
+    ],
+    "description": "Interruptor toggle bistable"
+  },
+  "Oscillator Repressilator": {
+    "prefix": "repressilator",
+    "body": [
+      "circuit Repressilator {",
+      "    let a: Gene = ${1:LacI};",
+      "    let b: Gene = ${2:TetR};",
+      "    let c: Gene = ${3:CI};",
+      "    ",
+      "    // Ciclo de represión",
+      "    a ~> repress(b);",
+      "    b ~> repress(c);",
+      "    c ~> repress(a);",
+      "}"
+    ],
+    "description": "Oscilador repressilator de 3 genes"
+  },
+  "Sensor Biomarker": {
+    "prefix": "sensor",
+    "body": [
+      "circuit ${1:CancerSensor} {",
+      "    // Sensor de biomarcador",
+      "    let sensor: Riboswitch = sense(${2:\"HER2\"});",
+      "    ",
+      "    // Respuesta terapéutica",
+      "    when sensor.activated {",
+      "        secrete(${3:Interferon_alpha});",
+      "    }",
+      "}"
+    ],
+    "description": "Sensor de biomarcador con respuesta"
+  },
+  "Kill Switch": {
+    "prefix": "killswitch",
+    "body": [
+      "safe circuit ${1:ContainedCircuit} {",
+      "    kill_switch {",
+      "        trigger: absence_of(${2:\"arabinose\"}),",
+      "        mechanism: ${3:CcdB},",
+      "        delay: ${4:2} hr",
+      "    }",
+      "    ",
+      "    // Tu circuito aquí",
+      "    $0",
+      "}"
+    ],
+    "description": "Circuito con interruptor de seguridad"
+  },
+  "Import Library": {
+    "prefix": "import",
+    "body": [
+      "import { ${1:GFP, RFP} } from \"${2:reporters}\";",
+      "import { ${3:pLac, pTet} } from \"${4:promoters}\";"
+    ],
+    "description": "Importar librerías del Bio-App Store"
+  },
+  "Host Declaration": {
+    "prefix": "host",
+    "body": [
+      "chassis ${1:EcoliDH5Alpha}: Host {",
+      "    organism: \"${2:Escherichia coli}\",",
+      "    strain: \"${3:DH5-alpha}\",",
+      "    atp_capacity: ${4:100} AU,",
+      "    doubling_time: ${5:20} min",
+      "}"
+    ],
+    "description": "Declarar organismo huésped"
+  }
+}

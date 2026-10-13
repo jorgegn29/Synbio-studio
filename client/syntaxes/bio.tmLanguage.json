@@ -1,0 +1,209 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "BioScript",
+  "scopeName": "source.bio",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#bio-parts" },
+    { "include": "#functions" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#operators" },
+    { "include": "#dna-sequences" },
+    { "include": "#amino-acids" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.bio",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.bio",
+          "begin": "/\\*",
+          "end": "\\*/"
+        },
+        {
+          "name": "comment.block.documentation.bio",
+          "begin": "///",
+          "end": "$",
+          "patterns": [
+            {
+              "name": "keyword.other.documentation.bio",
+              "match": "@(param|returns|author|version|host|safety)"
+            }
+          ]
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.bio",
+          "match": "\\b(if|else|when|match|for|while|loop|return|break|continue|yield)\\b"
+        },
+        {
+          "name": "keyword.declaration.bio",
+          "match": "\\b(let|mut|const|fn|struct|enum|impl|trait|module|import|export|pub|use)\\b"
+        },
+        {
+          "name": "keyword.biological.bio",
+          "match": "\\b(circuit|gene|operon|plasmid|chassis|host|express|repress|activate|inhibit|secrete|sense|bind|rule|pathway|assembly|simulation|riboswitch|tag|transcription_unit|tu|connections)\\b"
+        },
+        {
+          "name": "keyword.safety.bio",
+          "match": "\\b(safe|unsafe|contained|kill_switch|biosafety|bsl)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "entity.name.type.biological.bio",
+          "match": "\\b(Promoter|RBS|CDS|Terminator|Gene|Protein|RNA|mRNA|tRNA|rRNA|Riboswitch|Aptamer)\\b"
+        },
+        {
+          "name": "entity.name.type.regulatory.bio",
+          "match": "\\b(Activator|Repressor|Inducer|Operator|Enhancer|Silencer|Insulator)\\b"
+        },
+        {
+          "name": "entity.name.type.circuit.bio",
+          "match": "\\b(Circuit|Gate|AND|OR|NOT|NOR|NAND|XOR|Buffer|Inverter|Oscillator|Toggle|Latch)\\b"
+        },
+        {
+          "name": "entity.name.type.primitive.bio",
+          "match": "\\b(DNA|RNA|AminoAcid|Nucleotide|Codon|Sequence|Concentration|Time|Rate)\\b"
+        },
+        {
+          "name": "entity.name.type.unit.bio",
+          "match": "\\b(bp|kb|kDa|nM|uM|mM|mol|sec|min|hr|AU|RFU|OD600)\\b"
+        }
+      ]
+    },
+    "bio-parts": {
+      "patterns": [
+        {
+          "name": "variable.other.promoter.bio",
+          "match": "\\b(pLac|pTet|pBAD|pT7|pTrc|pRha|pConst|pLux|pCMV|pSV40)\\b"
+        },
+        {
+          "name": "variable.other.rbs.bio",
+          "match": "\\b(rbs_strong|rbs_medium|rbs_weak|rbs_B0034|rbs_B0032|rbs_custom)\\b"
+        },
+        {
+          "name": "variable.other.terminator.bio",
+          "match": "\\b(term_T1|term_T7|term_rrnB|term_double|term_strong)\\b"
+        },
+        {
+          "name": "variable.other.reporter.bio",
+          "match": "\\b(GFP|RFP|BFP|YFP|CFP|mCherry|luciferase|lacZ)\\b"
+        },
+        {
+          "name": "variable.other.crispr.bio",
+          "match": "\\b(Cas9|Cas12a|Cas13|dCas9|gRNA|sgRNA|crRNA|tracrRNA|PAM)\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.bio",
+          "match": "\\b([a-z_][a-zA-Z0-9_]*)\\s*(?=\\()"
+        },
+        {
+          "name": "support.function.builtin.bio",
+          "match": "\\b(translate|transcribe|fold|optimize_codons|calculate_deltaG|predict_structure|simulate|express_level|toxicity_check|validate)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.bio",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.bio",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.bio",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.bio",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.concentration.bio",
+          "match": "\\b\\d+(\\.\\d+)?\\s*(nM|uM|mM|M|ng|ug|mg|g|bp|kb|kDa)\\b"
+        },
+        {
+          "name": "constant.numeric.float.bio",
+          "match": "\\b\\d+\\.\\d+([eE][+-]?\\d+)?\\b"
+        },
+        {
+          "name": "constant.numeric.integer.bio",
+          "match": "\\b\\d+\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.biological.bio",
+          "match": "(->|=>|\\|>|<\\||\\+>|>\\+|~>)"
+        },
+        {
+          "name": "keyword.operator.comparison.bio",
+          "match": "(==|!=|<=|>=|<|>)"
+        },
+        {
+          "name": "keyword.operator.arithmetic.bio",
+          "match": "(\\+|-|\\*|/|%)"
+        },
+        {
+          "name": "keyword.operator.logical.bio",
+          "match": "(&&|\\|\\||!)"
+        },
+        {
+          "name": "keyword.operator.assignment.bio",
+          "match": "(=|\\+=|-=|\\*=|/=)"
+        }
+      ]
+    },
+    "dna-sequences": {
+      "patterns": [
+        {
+          "name": "string.other.dna-sequence.bio",
+          "match": "\\bseq\\s*\\{\\s*[ATGCatgc\\s]+\\s*\\}"
+        },
+        {
+          "name": "constant.character.dna.bio",
+          "match": "(?<=seq\\s*\\{)[ATGCatgc]+"
+        }
+      ]
+    },
+    "amino-acids": {
+      "patterns": [
+        {
+          "name": "string.other.amino-sequence.bio",
+          "match": "\\baa\\s*\\{\\s*[ACDEFGHIKLMNPQRSTVWY\\s]+\\s*\\}"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,101 @@
+/// SynBio-LLVM: Ejemplo Básico - Circuito GFP
+/// 
+/// Este es un circuito genético simple que expresa
+/// proteína fluorescente verde (GFP) bajo control
+/// del promotor pLac inducible por IPTG.
+/// 
+/// @author SynBio-LLVM Team
+/// @host ecoli_dh5alpha
+/// @version 1.0
+
+// Importar partes del Bio-App Store
+import { pLac, pTet } from "promoters";
+import { GFP, RFP } from "reporters";
+import { rbs_strong, rbs_medium } from "rbs";
+
+/// Definir el organismo huésped
+chassis EcoliDH5Alpha: Host {
+    organism: "Escherichia coli",
+    strain: "DH5-alpha",
+    atp_capacity: 100 AU,
+    doubling_time: 20 min
+}
+
+/// Circuito principal: Expresión de GFP
+circuit SimpleGFP {
+    // Componentes del circuito
+    let promoter: Promoter = pLac;
+    let ribosome_site: RBS = rbs_strong;
+    let reporter: Protein = GFP;
+    let terminator: Terminator = term_T1;
+
+    // Ensamblar la unidad de transcripción
+    // El operador -> indica flujo de información genética
+    promoter -> ribosome_site -> reporter -> terminator
+
+    // Condiciones de expresión
+    when inducer("IPTG") > 0.1 mM {
+        express(reporter, level: high);
+    }
+}
+
+/// Circuito avanzado: Toggle Switch
+/// Un interruptor biestable con dos estados estables
+safe circuit ToggleSwitch {
+    // Mecanismo de seguridad
+    kill_switch {
+        trigger: absence_of("arabinose"),
+        mechanism: CcdB,
+        delay: 2 hr
+    }
+
+    // Represor 1: LacI
+    let gene_a: Gene = LacI;
+    let promoter_a: Promoter = pTet;
+
+    // Represor 2: TetR  
+    let gene_b: Gene = TetR;
+    let promoter_b: Promoter = pLac;
+
+    // Topología de represión cruzada
+    gene_a ~> repress(promoter_b);  // LacI reprime pLac
+    gene_b ~> repress(promoter_a);  // TetR reprime pTet
+
+    // Salida del circuito
+    match current_state() {
+        State::A => express(GFP),   // Estado A = Verde
+        State::B => express(RFP),   // Estado B = Rojo
+    }
+}
+
+/// Sensor de biomarcador de cáncer
+circuit CancerSensor {
+    // Riboswitch que detecta HER2 (biomarcador de cáncer de mama)
+    let sensor: Riboswitch = sense("HER2");
+    
+    // Fármaco terapéutico a secretar
+    let therapeutic: Protein = Interferon_alpha;
+
+    // Lógica del sensor
+    when sensor.activated && concentration("HER2") > 10 nM {
+        // Secretar interferón cuando se detecta cáncer
+        secrete(therapeutic);
+        
+        // Log para monitoreo
+        emit_signal("cancer_detected", intensity: high);
+    }
+}
+
+// Punto de entrada - seleccionar qué circuito compilar
+fn main() {
+    // Validar circuito antes de compilar
+    let validation = validate(SimpleGFP);
+    
+    if validation.atp_usage < 80% {
+        compile(SimpleGFP);
+        export_sbol("output/simple_gfp.sbol");
+        export_fasta("output/simple_gfp.fasta");
+    } else {
+        error("ATP demand exceeds safe threshold");
+    }
+}

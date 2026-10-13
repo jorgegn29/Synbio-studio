@@ -1,0 +1,28 @@
+// Repressilator — Elowitz MB & Leibler S (2000) Nature 403:335-338
+// Period ≈ 160 min (α=216 proteins/cell/mRNA, n=2, K=40 molecules)
+
+genetic_circuit repressilator {
+    // Unidad de transcripción 1: LacI → TetR
+    promoter pLac (type: "repressible", repressor: "LacI") {}
+    rbs rbs_tetR (strength: 0.3) {}
+    gene tetR (product: "TetR") {}
+    terminator t1 (efficiency: 0.98) {}
+
+    // Unidad de transcripción 2: TetR → cI
+    promoter pTet (type: "repressible", repressor: "TetR") {}
+    rbs rbs_cI (strength: 0.3) {}
+    gene cI (product: "cI") {}
+    terminator t2 (efficiency: 0.98) {}
+
+    // Unidad de transcripción 3: cI → LacI
+    promoter pLambda (type: "repressible", repressor: "cI") {}
+    rbs rbs_lacI (strength: 0.3) {}
+    gene lacI (product: "LacI") {}
+    terminator t3 (efficiency: 0.98) {}
+
+    // Sistema de seguridad obligatorio
+    kill_switch {
+        trigger: "temperature > 42°C"
+        mechanism: "CcdB toxin expression"
+    }
+}

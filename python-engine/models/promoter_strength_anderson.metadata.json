@@ -1,0 +1,123 @@
+{
+  "model_version": "anderson-cnn-v2",
+  "dataset_name": "Anderson promoter collection",
+  "source": "iGEM Registry - Promoters/Catalog/Anderson",
+  "reference": "Chris Anderson / 2006 Berkeley iGEM; measured strengths reported by the Registry",
+  "sequence_length": 35,
+  "measured_entry_count": 19,
+  "reference_only_count": 1,
+  "train_metrics": {
+    "rmse": 0.0173,
+    "mae": 0.0116,
+    "pearson_r": 0.9987,
+    "sample_count": 19
+  },
+  "crossval_metrics": {
+    "rmse": 0.2479,
+    "mae": 0.174,
+    "pearson_r": 0.6288
+  },
+  "entries": [
+    {
+      "part_id": "BBa_J23100",
+      "sequence": "TTGACGGCTAGCTCAGTCCTAGGTACAGTGCTAGC",
+      "strength_rpu": 1.0
+    },
+    {
+      "part_id": "BBa_J23101",
+      "sequence": "TTTACAGCTAGCTCAGTCCTAGGTATTATGCTAGC",
+      "strength_rpu": 0.7
+    },
+    {
+      "part_id": "BBa_J23102",
+      "sequence": "TTGACAGCTAGCTCAGTCCTAGGTACTGTGCTAGC",
+      "strength_rpu": 0.86
+    },
+    {
+      "part_id": "BBa_J23103",
+      "sequence": "CTGATAGCTAGCTCAGTCCTAGGGATTATGCTAGC",
+      "strength_rpu": 0.01
+    },
+    {
+      "part_id": "BBa_J23104",
+      "sequence": "TTGACAGCTAGCTCAGTCCTAGGTATTGTGCTAGC",
+      "strength_rpu": 0.72
+    },
+    {
+      "part_id": "BBa_J23105",
+      "sequence": "TTTACGGCTAGCTCAGTCCTAGGTACTATGCTAGC",
+      "strength_rpu": 0.24
+    },
+    {
+      "part_id": "BBa_J23106",
+      "sequence": "TTTACGGCTAGCTCAGTCCTAGGTATAGTGCTAGC",
+      "strength_rpu": 0.47
+    },
+    {
+      "part_id": "BBa_J23107",
+      "sequence": "TTTACGGCTAGCTCAGCCCTAGGTATTATGCTAGC",
+      "strength_rpu": 0.36
+    },
+    {
+      "part_id": "BBa_J23108",
+      "sequence": "CTGACAGCTAGCTCAGTCCTAGGTATAATGCTAGC",
+      "strength_rpu": 0.51
+    },
+    {
+      "part_id": "BBa_J23109",
+      "sequence": "TTTACAGCTAGCTCAGTCCTAGGGACTGTGCTAGC",
+      "strength_rpu": 0.04
+    },
+    {
+      "part_id": "BBa_J23110",
+      "sequence": "TTTACGGCTAGCTCAGTCCTAGGTACAATGCTAGC",
+      "strength_rpu": 0.33
+    },
+    {
+      "part_id": "BBa_J23111",
+      "sequence": "TTGACGGCTAGCTCAGTCCTAGGTATAGTGCTAGC",
+      "strength_rpu": 0.58
+    },
+    {
+      "part_id": "BBa_J23112",
+      "sequence": "CTGATAGCTAGCTCAGTCCTAGGGATTATGCTAGC",
+      "strength_rpu": 0.0
+    },
+    {
+      "part_id": "BBa_J23113",
+      "sequence": "CTGATGGCTAGCTCAGTCCTAGGGATTATGCTAGC",
+      "strength_rpu": 0.01
+    },
+    {
+      "part_id": "BBa_J23114",
+      "sequence": "TTTATGGCTAGCTCAGTCCTAGGTACAATGCTAGC",
+      "strength_rpu": 0.1
+    },
+    {
+      "part_id": "BBa_J23115",
+      "sequence": "TTTATAGCTAGCTCAGCCCTTGGTACAATGCTAGC",
+      "strength_rpu": 0.15
+    },
+    {
+      "part_id": "BBa_J23116",
+      "sequence": "TTGACAGCTAGCTCAGTCCTAGGGACTATGCTAGC",
+      "strength_rpu": 0.16
+    },
+    {
+      "part_id": "BBa_J23117",
+      "sequence": "TTGACAGCTAGCTCAGTCCTAGGGATTGTGCTAGC",
+      "strength_rpu": 0.06
+    },
+    {
+      "part_id": "BBa_J23118",
+      "sequence": "TTGACGGCTAGCTCAGTCCTAGGTATTGTGCTAGC",
+      "strength_rpu": 0.56
+    },
+    {
+      "part_id": "BBa_J23119",
+      "sequence": "TTGACAGCTAGCTCAGTCCTAGGTATAATGCTAGC",
+      "strength_rpu": null
+    }
+  ],
+  "onnx_sha256": "95daa72cc8a5176ca383ede69433ca8e3252d6ad78970b1b1e4169f2cb7ea620"
+}

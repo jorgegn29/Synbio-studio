@@ -1,0 +1,103 @@
+# Dependencies
+node_modules/
+.npm
+package-lock.json
+
+# Build outputs
+dist/
+out/
+*.vsix
+
+# Rust
+target/
+Cargo.lock
+
+# WebAssembly
+*.wasm
+wasm-modules/build/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.vscode/settings.json
+.vscode/launch.json
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-ml/models/*.onnx
+docker-ml/cache/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# ONNX models (too large for git)
+*.onnx
+
+# Coverage
+coverage/
+.nyc_output/
+htmlcov/
+
+# Media files (not needed in repo)
+*.m4a
+*.mp4
+*.mp3
+*.pdf
+client/.vscode-test/user-data/Preferences
+client/.vscode-test/user-data/Network/Trust Tokens
+client/.vscode-test/user-data/Shared Dictionary/cache/index
+client/.vscode-test/user-data/Shared Dictionary/cache/index-dir/the-real-index
+client/.vscode-test/user-data/Shared Dictionary/db
+client/.vscode-test/user-data/Shared Dictionary/db-journal
+client/.vscode-test/user-data/User/globalStorage/storage.json
+client/server/synbio-lsp.exe
+web-demo/.next/cache/webpack/client-development/0.pack.gz
+web-demo/.next/cache/webpack/client-development/1.pack.gz
+web-demo/.next/cache/webpack/client-development/index.pack.gz
+web-demo/.next/cache/webpack/client-development/index.pack.gz.old
+web-demo/.next/next-server.js.nft.json
+web-demo/.next/next-minimal-server.js.nft.json
+client/.vscode-test/user-data/Local State
+client/.vscode-test/user-data/Crashpad/metadata
+client/.vscode-test/user-data/Code Cache/js/index
+client/.vscode-test/user-data/Code Cache/wasm/index
+client/.vscode-test/user-data/Crashpad/settings.dat
+client/.vscode-test/user-data/Local Storage/leveldb/LOG
+client/.vscode-test/user-data/Local Storage/leveldb/LOCK
+client/.vscode-test/user-data/Network/NetworkDataMigrated
+client/.vscode-test/user-data/Network/Trust Tokens-journal
+client/.vscode-test/user-data/Local Storage/leveldb/CURRENT
+client/.vscode-test/user-data/Network/Network Persistent State
+client/.vscode-test/user-data/Local Storage/leveldb/MANIFEST-000001
+client/.vscode-test/user-data/Code Cache/js/index-dir/the-real-index
+client/.vscode-test/user-data/Code Cache/wasm/index-dir/the-real-index

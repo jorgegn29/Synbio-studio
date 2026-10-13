@@ -1,0 +1,28 @@
+{
+  "schema": "synbio.organism-scene.v1",
+  "specimen": {
+    "kind": "organism",
+    "name": "S. cerevisiae S288C",
+    "profile": "yeast",
+    "family": "Levadura por gemacion"
+  },
+  "view": {
+    "organismMode": "cutaway",
+    "organismCut": 0.3,
+    "organismZoom": 110,
+    "organismLabels": true,
+    "organismSeparation": 0.65,
+    "specimenMode": "all",
+    "yaw": 24,
+    "pitch": -8,
+    "organismEdits": {
+      "organism:mitochondria": {
+        "color": "#ef9b68",
+        "size": 1.1,
+        "position": [0, 0, 0],
+        "hidden": false
+      }
+    }
+  },
+  "evidence": "visual-edits-not-biological-engineering"
+}

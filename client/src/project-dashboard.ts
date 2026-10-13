@@ -1,0 +1,317 @@
+/**
+ * SynBio-LLVM - Dashboard de Proyecto
+ * Panel central con visión general del proyecto de biología sintética:
+ * estadísticas del circuito, estado de módulos, acceso rápido a herramientas
+ */
+
+import * as vscode from 'vscode';
+
+interface ProjectStats {
+    totalFiles: number;
+    bioFiles: number;
+    totalLines: number;
+    components: { promoters: number; rbs: number; genes: number; terminators: number; circuits: number };
+    lastBuild: string;
+    warnings: number;
+    errors: number;
+}
+
+export class ProjectDashboard implements vscode.Disposable {
+    private panel: vscode.WebviewPanel | undefined;
+    private disposables: vscode.Disposable[] = [];
+
+    constructor(private context: vscode.ExtensionContext) {}
+
+    async show(): Promise<void> {
+        if (this.panel) { this.panel.reveal(); return; }
+
+        this.panel = vscode.window.createWebviewPanel(
+            'synbioDashboard',
+            '⚡ SynBio Dashboard',
+            vscode.ViewColumn.One,
+            { enableScripts: true, retainContextWhenHidden: true }
+        );
+
+        const stats = await this.gatherStats();
+        this.panel.webview.html = this.getHTML(stats);
+
+        this.panel.webview.onDidReceiveMessage(async (msg) => {
+            switch (msg.command) {
+                case 'runCommand':
+                    vscode.commands.executeCommand(msg.commandId);
+                    break;
+                case 'refresh': {
+                    const newStats = await this.gatherStats();
+                    this.panel?.webview.postMessage({ command: 'updateStats', stats: newStats });
+                    break;
+                }
+                case 'openFile': {
+                    const files = await vscode.workspace.findFiles(msg.pattern, null, 1);
+                    if (files.length > 0) { vscode.window.showTextDocument(files[0]); }
+                    break;
+                }
+            }
+        }, undefined, this.disposables);
+
+        this.panel.onDidDispose(() => { this.panel = undefined; }, null, this.disposables);
+    }
+
+    /** Recopila estadísticas del workspace */
+    private async gatherStats(): Promise<ProjectStats> {
+        const stats: ProjectStats = {
+            totalFiles: 0, bioFiles: 0, totalLines: 0,
+            components: { promoters: 0, rbs: 0, genes: 0, terminators: 0, circuits: 0 },
+            lastBuild: new Date().toLocaleString(), warnings: 0, errors: 0
+        };
+
+        try {
+            const allFiles = await vscode.workspace.findFiles('**/*.{bio,bioscript,rs,ts,py}', '**/node_modules/**');
+            stats.totalFiles = allFiles.length;
+
+            const bioFiles = await vscode.workspace.findFiles('**/*.{bio,bioscript}');
+            stats.bioFiles = bioFiles.length;
+
+            for (const file of bioFiles) {
+                try {
+                    const doc = await vscode.workspace.openTextDocument(file);
+                    const text = doc.getText();
+                    stats.totalLines += doc.lineCount;
+
+                    const promoterMatches = text.match(/promoter\s+/g);
+                    const rbsMatches = text.match(/rbs\s+/g);
+                    const geneMatches = text.match(/gene\s+/g);
+                    const termMatches = text.match(/terminator\s+/g);
+                    const circuitMatches = text.match(/circuit\s+/g);
+
+                    stats.components.promoters += promoterMatches?.length || 0;
+                    stats.components.rbs += rbsMatches?.length || 0;
+                    stats.components.genes += geneMatches?.length || 0;
+                    stats.components.terminators += termMatches?.length || 0;
+                    stats.components.circuits += circuitMatches?.length || 0;
+                } catch { /* skip unreadable files */ }
+            }
+
+            // Contar diagnósticos
+            const allDiags = vscode.languages.getDiagnostics();
+            for (const [, diags] of allDiags) {
+                for (const d of diags) {
+                    if (d.severity === vscode.DiagnosticSeverity.Error) stats.errors++;
+                    else if (d.severity === vscode.DiagnosticSeverity.Warning) stats.warnings++;
+                }
+            }
+        } catch { /* workspace query failed */ }
+
+        return stats;
+    }
+
+    private getHTML(stats: ProjectStats): string {
+        const totalParts = stats.components.promoters + stats.components.rbs + stats.components.genes + stats.components.terminators;
+
+        return `<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 24px; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .header h1 { font-size: 24px; color: #94e2d5; }
+    .header h1 span { color: #cba6f7; }
+    .refresh-btn { background: #313244; color: #94e2d5; border: 1px solid #45475a; padding: 6px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+    .refresh-btn:hover { background: #45475a; }
+
+    /* Stat cards */
+    .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: #313244; border-radius: 12px; padding: 16px; text-align: center; border: 1px solid #45475a; }
+    .stat-card .number { font-size: 28px; font-weight: 700; }
+    .stat-card .label { font-size: 11px; color: #6c7086; text-transform: uppercase; margin-top: 4px; }
+    .stat-card.green .number { color: #a6e3a1; }
+    .stat-card.blue .number { color: #89b4fa; }
+    .stat-card.peach .number { color: #fab387; }
+    .stat-card.mauve .number { color: #cba6f7; }
+
+    /* Components breakdown */
+    .section { margin-bottom: 24px; }
+    .section-title { font-size: 16px; color: #94e2d5; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .components-bar { display: flex; height: 24px; border-radius: 12px; overflow: hidden; background: #45475a; margin-bottom: 8px; }
+    .comp-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #1e1e2e; min-width: 30px; transition: width 0.5s; }
+    .comp-legend { display: flex; gap: 16px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* Tools grid */
+    .tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .tool-card { background: #313244; border-radius: 10px; padding: 14px; border: 1px solid #45475a; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .tool-card:hover { border-color: #94e2d5; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .tool-card .icon { font-size: 28px; margin-bottom: 6px; }
+    .tool-card .name { font-size: 13px; font-weight: 600; color: #cdd6f4; }
+    .tool-card .desc { font-size: 10px; color: #6c7086; margin-top: 4px; }
+
+    /* Health status */
+    .health { background: #313244; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+    .health-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; }
+    .health-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .health-dot.ok { background: #a6e3a1; }
+    .health-dot.warn { background: #f9e2af; }
+    .health-dot.err { background: #f38ba8; }
+    .health-label { flex: 1; }
+    .health-status { font-size: 12px; color: #a6adc8; }
+
+    /* Activity log */
+    .log { background: #313244; border-radius: 12px; padding: 16px; max-height: 200px; overflow-y: auto; }
+    .log-entry { font-size: 12px; padding: 4px 0; border-bottom: 1px solid #45475a; display: flex; align-items: center; gap: 8px; }
+    .log-entry:last-child { border-bottom: none; }
+    .log-time { color: #6c7086; font-size: 10px; font-family: monospace; flex-shrink: 0; }
+
+    /* Two-column layout */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 700px) { .stat-row, .tools-grid { grid-template-columns: repeat(2, 1fr); } .two-col { grid-template-columns: 1fr; } }
+</style>
+</head><body>
+    <div class="header">
+        <h1>⚡ SynBio<span>-LLVM</span> Dashboard</h1>
+        <button class="refresh-btn" onclick="refresh()">🔄 Actualizar</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stat-row">
+        <div class="stat-card green"><div class="number" id="bioFiles">${stats.bioFiles}</div><div class="label">Archivos .bio</div></div>
+        <div class="stat-card blue"><div class="number" id="totalParts">${totalParts}</div><div class="label">Partes Genéticas</div></div>
+        <div class="stat-card peach"><div class="number" id="circuits">${stats.components.circuits}</div><div class="label">Circuitos</div></div>
+        <div class="stat-card mauve"><div class="number" id="totalLines">${stats.totalLines}</div><div class="label">Líneas BioScript</div></div>
+    </div>
+
+    <div class="two-col">
+        <!-- Left: Components -->
+        <div class="section">
+            <h3 class="section-title">🧬 Composición del Circuito</h3>
+            <div class="components-bar" id="compBar">
+                ${totalParts > 0 ? `
+                <div class="comp-seg" style="width:${(stats.components.promoters / totalParts) * 100}%; background:#fab387;">${stats.components.promoters}</div>
+                <div class="comp-seg" style="width:${(stats.components.rbs / totalParts) * 100}%; background:#a6e3a1;">${stats.components.rbs}</div>
+                <div class="comp-seg" style="width:${(stats.components.genes / totalParts) * 100}%; background:#89b4fa;">${stats.components.genes}</div>
+                <div class="comp-seg" style="width:${(stats.components.terminators / totalParts) * 100}%; background:#f38ba8;">${stats.components.terminators}</div>
+                ` : '<div class="comp-seg" style="width:100%; background:#45475a; color:#6c7086;">Sin partes detectadas</div>'}
+            </div>
+            <div class="comp-legend">
+                <div class="legend-item"><div class="legend-dot" style="background:#fab387;"></div>Promotores (${stats.components.promoters})</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#a6e3a1;"></div>RBS (${stats.components.rbs})</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#89b4fa;"></div>Genes (${stats.components.genes})</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#f38ba8;"></div>Terminadores (${stats.components.terminators})</div>
+            </div>
+        </div>
+
+        <!-- Right: System Health -->
+        <div class="section">
+            <h3 class="section-title">💊 Estado del Sistema</h3>
+            <div class="health">
+                <div class="health-row">
+                    <div class="health-dot ok"></div>
+                    <span class="health-label">Servidor LSP (Rust)</span>
+                    <span class="health-status">Activo</span>
+                </div>
+                <div class="health-row">
+                    <div class="health-dot ok"></div>
+                    <span class="health-label">Motor Python (ONNX)</span>
+                    <span class="health-status">Puerto 8765</span>
+                </div>
+                <div class="health-row">
+                    <div class="health-dot ${stats.errors > 0 ? 'err' : 'ok'}"></div>
+                    <span class="health-label">Errores de compilación</span>
+                    <span class="health-status">${stats.errors}</span>
+                </div>
+                <div class="health-row">
+                    <div class="health-dot ${stats.warnings > 0 ? 'warn' : 'ok'}"></div>
+                    <span class="health-label">Advertencias</span>
+                    <span class="health-status">${stats.warnings}</span>
+                </div>
+                <div class="health-row">
+                    <div class="health-dot ok"></div>
+                    <span class="health-label">Última actualización</span>
+                    <span class="health-status">${stats.lastBuild}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tools -->
+    <div class="section">
+        <h3 class="section-title">🧰 Herramientas Rápidas</h3>
+        <div class="tools-grid">
+            <div class="tool-card" onclick="runCmd('synbio.compile')">
+                <div class="icon">⚙️</div>
+                <div class="name">Compilar</div>
+                <div class="desc">BioScript → IR → Circuito</div>
+            </div>
+            <div class="tool-card" onclick="runCmd('synbio.simulate')">
+                <div class="icon">📊</div>
+                <div class="name">Simular</div>
+                <div class="desc">Gillespie SSA estocástico</div>
+            </div>
+            <div class="tool-card" onclick="runCmd('synbio.export')">
+                <div class="icon">📦</div>
+                <div class="name">Exportar</div>
+                <div class="desc">SBOL / FASTA / GenBank</div>
+            </div>
+            <div class="tool-card" onclick="runCmd('synbio.partsLibrary')">
+                <div class="icon">📚</div>
+                <div class="name">Partes</div>
+                <div class="desc">Biblioteca iGEM/BioBrick</div>
+            </div>
+            <div class="tool-card" onclick="runCmd('synbio.biosecurity')">
+                <div class="icon">🛡️</div>
+                <div class="name">Bioseguridad</div>
+                <div class="desc">Escaneo de amenazas</div>
+            </div>
+            <div class="tool-card" onclick="runCmd('synbio.showMoleculeViewer')">
+                <div class="icon">🔬</div>
+                <div class="name">Visualizador 3D</div>
+                <div class="desc">NGL Viewer proteínas</div>
+            </div>
+            <div class="tool-card" onclick="runCmd('synbio.optimizeCodons')">
+                <div class="icon">🧬</div>
+                <div class="name">Codones</div>
+                <div class="desc">Optimización de codones</div>
+            </div>
+            <div class="tool-card" onclick="runCmd('synbio.optimizeCircuit')">
+                <div class="icon">🎯</div>
+                <div class="name">Optimizar Circuito</div>
+                <div class="desc">Algoritmo genético</div>
+            </div>
+            <div class="tool-card" onclick="runCmd('synbio.analyzeProtein')">
+                <div class="icon">🧪</div>
+                <div class="name">Predecir Proteína</div>
+                <div class="desc">ONNX Runtime predicción</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+
+        function runCmd(id) {
+            vscode.postMessage({ command: 'runCommand', commandId: id });
+        }
+
+        function refresh() {
+            vscode.postMessage({ command: 'refresh' });
+        }
+
+        window.addEventListener('message', event => {
+            if (event.data.command === 'updateStats') {
+                const s = event.data.stats;
+                const tp = s.components.promoters + s.components.rbs + s.components.genes + s.components.terminators;
+                document.getElementById('bioFiles').textContent = s.bioFiles;
+                document.getElementById('totalParts').textContent = tp;
+                document.getElementById('circuits').textContent = s.components.circuits;
+                document.getElementById('totalLines').textContent = s.totalLines;
+            }
+        });
+    </script>
+</body></html>`;
+    }
+
+    dispose(): void {
+        this.panel?.dispose();
+        this.disposables.forEach(d => d.dispose());
+    }
+}

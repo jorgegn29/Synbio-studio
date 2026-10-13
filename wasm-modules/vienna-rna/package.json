@@ -1,0 +1,40 @@
+{
+  "name": "@synbio-llvm/vienna-rna-wasm",
+  "version": "1.0.0",
+  "description": "ViennaRNA compiled to WebAssembly for real-time RNA secondary structure prediction",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "wasm"
+  ],
+  "scripts": {
+    "build:wasm": "bash scripts/build-wasm.sh",
+    "build:ts": "tsc && rollup -c",
+    "build": "npm run build:wasm && npm run build:ts",
+    "test": "jest",
+    "clean": "rimraf dist wasm/*.wasm"
+  },
+  "keywords": [
+    "vienna-rna",
+    "webassembly",
+    "wasm",
+    "rna",
+    "folding",
+    "thermodynamics",
+    "synthetic-biology"
+  ],
+  "author": "SynBio-LLVM Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "rimraf": "^5.0.0",
+    "rollup": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

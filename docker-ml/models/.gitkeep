@@ -1,0 +1,8 @@
+# Modelos ONNX pre-entrenados
+# Descargar con: python scripts/download_models.py
+
+# ESMFold distilado para predicción de estructura
+*.onnx
+
+# Cache de modelos de Hugging Face
+cache/

@@ -1,0 +1,170 @@
+# Changelog
+
+All notable changes to SynBio-LLVM will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.0] - 2025-06-16
+
+### 🚀 Vanguardia Release — Engineering Excellence
+
+This release transforms SynBio-LLVM from a feature-complete IDE into a
+production-grade, scientifically validated, regulation-aware platform.
+
+### Added
+
+#### Engineering Quality — Test Infrastructure
+- **80+ automated tests** across 5 suites: unit, smoke, integration, benchmark, performance
+- **Unit tests**: Thermodynamics (12), Restriction Enzymes (9), Protein Analysis (13), Codon Tables (6), Simplex Solver (6)
+- **Integration tests**: 8 cross-module workflow tests (sequence pipeline, protein characterization, metabolic engineering, full design cycle)
+- **Scientific benchmarks**: 22 tests validated against published literature:
+  - SantaLucia 1998 (NN thermodynamics ΔH/ΔS)
+  - ExPASy ProtParam (MW, pI, GRAVY, Instability Index)
+  - REBASE/NEB (restriction enzyme recognition sites)
+  - Orth et al. 2010 (E. coli core metabolic model)
+  - Kazusa Database (codon usage frequencies)
+- **Coverage**: 88.53% lines, 80.45% branches via c8 + lcov
+- **CI integration**: GitHub Actions runs `test:ci` with Codecov upload and coverage artifacts
+
+#### Performance Profiling
+- **SynBioProfiler** class: microsecond-precision benchmarking with warmup, statistical summary (mean, median, p95, p99, stddev, ops/sec), memory tracking, throughput measurement
+- **12 performance tests** with regression thresholds:
+  - GC% < 1ms, Tm < 5ms, ΔG < 5ms, batch 1000 sequences < 100ms
+  - ProtParam < 10ms, batch 100 proteins < 500ms
+  - Restriction site scan (1KB) < 10ms, BioBrick check < 5ms
+  - FBA solver < 100ms, codon table lookup < 1ms
+  - Memory: 1000 analyses < 10MB heap growth
+
+#### UX — Onboarding & Walkthrough
+- **OnboardingManager**: first-run detection, version-upgrade notifications
+- **6-step guided tour**: Explorer → Create → Snippets → Compile → Simulate → Safety
+- **Quick-start file generator**: commented tutorial .bio circuit with BioScript syntax
+- **Contextual tips**: missing promoter/terminator/RBS/kill switch detection
+- **Milestone tracking**: 1st compilation, 1st simulation, 10th compilation achievements
+- **VS Code Walkthroughs**: 6 markdown walkthrough documents
+- **2 new commands**: `synbio.showOnboarding`, `synbio.showContextualTip`
+
+#### Governance & Compliance
+- **AuditTrailManager**: SHA-256 hash-chained audit log (tamper-evident)
+  - 17 audit action types covering entire workflow
+  - Chain verification API with integrity checking
+  - JSONL export format for institutional review systems
+  - VS Code output channel for real-time audit display
+- **10 biosafety compliance rules** covering 6 regulatory frameworks:
+  - NIH Guidelines for Recombinant DNA (2024)
+  - BMBL 6th Edition (CDC/NIH)
+  - CDC/USDA Select Agent Regulations (42 CFR Part 73)
+  - EU Directive 2009/41/EC (Contained Use of GMOs)
+  - iGEM Safety Guidelines (2024)
+  - Cartagena Protocol on Biosafety
+- **Compliance report generator**: auto-exemption for BSL-1, recommendations per BSL level
+- **4 new governance commands**: `verifyAuditChain`, `exportAuditTrail`, `complianceReport`, `showAuditTrail`
+- **DATA-GOVERNANCE.md**: Data classification (4 levels), local-first architecture, GDPR/NIH/EAR compliance
+- **COMPLIANCE-MATRIX.md**: Full regulatory mapping for BSL-1 through BSL-3+
+
+#### Product Operations
+- **Telemetry module**: opt-in anonymous usage analytics with GDPR-compliant data minimization
+- **CHANGELOG.md**: Full semver changelog from v0.1.0 to v0.2.0
+- **ROADMAP.md**: Public product roadmap with quarterly milestones
+
+### Changed
+- **Node.js compatibility**: Switched from ts-node to tsx for Node 24 ESM compatibility
+- **CI pipeline**: Added test + coverage steps with Codecov integration
+- **Package version**: 0.1.0 → 0.2.0
+
+### Fixed
+- Fixed ~29 code warnings (async return types, regex patterns, unused variables, CSS linting)
+- Fixed ESM module resolution issues with Node 24 + Mocha 11
+
+### Metrics
+- **92+ tests** passing in 86ms
+- **88.53% line coverage**, 80.45% branch coverage
+- **38 VS Code commands** registered (was 34)
+- **~26,000+ lines** across 60+ files
+
+## [0.1.0] - 2025-02-08
+
+### 🎉 Initial Release
+
+Complete IDE for synthetic biology with 8 phases of development.
+
+### Added
+
+#### Phase 1 — Language Design
+- BioScript language with TextMate grammar (syntax highlighting)
+- 15+ VS Code snippets for common genetic circuit patterns
+- Language configuration (auto-brackets, commenting, folding)
+- `.bio` file extension support
+
+#### Phase 2 — Rust LSP Server (7,333 lines)
+- **Lexer**: 112 token types including biological keywords, types, units, DNA sequences (`logos` crate)
+- **Parser**: Recursive descent parser supporting circuits, genes, chassis, functions, structs
+- **AST**: Fully typed abstract syntax tree with span information for precise diagnostics
+- **Bio-IR**: Intermediate representation with GeneticCircuit, TranscriptionUnit, KillSwitchIR
+- **CodeGen**: SBOL 3.0 (XML/RDF), FASTA, GenBank, LAMMPS output formats
+- **Insulation Engine**: Automatic terminator/spacer injection (B0010, B0012, B0015, L3S2P21, ECK120029600)
+- **Codon Optimizer**: 4 host organisms with embedded codon tables
+- **Circuit Optimizer**: Genetic algorithm for multi-objective circuit optimization
+- **LSP Backend**: Full Language Server Protocol with diagnostics, completion, hover
+- **17 diagnostic types**: SyntaxError, InvalidDNASequence, ToxicityWarning, HighMetabolicLoad, etc.
+- **Thermodynamics engine**: SantaLucia 1998 nearest-neighbor with ΔH/ΔS matrices
+- **FBA analyzer**: Metabolic model with Simplex solver
+- **RNA folding**: Secondary structure prediction by minimum free energy
+
+#### Phase 3 — Python Engine (406 lines)
+- FastAPI server on localhost:8765
+- ONNX Runtime for protein structure prediction (with fallback mode)
+- Protein properties endpoint (MW, pI, extinction coefficient)
+- RNA folding endpoint
+
+#### Phase 4 — Simulation & Visualization
+- **Gillespie SSA simulator**: Stochastic simulation with Elowitz 2000 parameters (α=216, γm=0.3466, γp=0.0693)
+- **NGL Molecule Viewer**: 3D protein structure visualization in WebView
+- **Split View**: Synchronized code editor + circuit diagram panel
+- **Thermodynamic Linter**: Real-time ΔG validation using SantaLucia 1998
+
+#### Phase 5 — Optimization
+- **Codon Optimizer (TS)**: Kazusa Database tables for E. coli, S. cerevisiae, B. subtilis, H. sapiens
+- **Circuit Optimizer (TS)**: Genetic algorithm (100 individuals, 100 generations, tournament selection k=3)
+- **LRU Cache Manager**: TTL-based caching for thermodynamic/codon/folding results
+- **Simplex Solver**: Two-phase Dantzig Simplex method for FBA
+
+#### Phase 6 — Professional Tools
+- **Professional Exporter**: SBOL 3.0, FASTA, GenBank, CSV, SVG export
+- **Parts Library**: iGEM Registry browser with 16 pre-loaded parts
+- **Biosecurity Scanner**: 22 rules against CDC/NIH/EU regulations, 40+ select agents
+- **Project Dashboard**: Overview with circuit stats, safety metrics, complexity analysis
+
+#### Phase 7 — Lab Tools
+- **Protocol Generator**: Gibson Assembly, Golden Gate, transformation, colony PCR, miniprep (NEB kits)
+- **Design Rule Checker**: 13 rules with citations (Salis 2009, Chen 2013, Mutalik 2013, etc.)
+- **Bio Test Framework**: Unit tests with real Kd values (IPTG-LacI: 1.26 µM, aTc-TetR: 0.1 µM)
+- **Genetic Debugger**: ODE solver with step-through, breakpoints, variable inspection
+
+#### Phase 8 — AI & Advanced Design
+- **AI Design Assistant**: 6 validated templates (Toggle Switch, Repressilator, Sensor-Reporter, FFL, Kill Switch, NOT Gate), 16 parts with RPU values, 4 compatibility rules, full LSP providers
+- **Genetic Version Control**: Snapshots, diff, branch, timeline for circuit evolution
+- **Auto-Documentation**: Complete docs generation with BSL assignment by organism (BMBL 6th Ed.)
+- **Pathway Designer**: Glycolysis (10 steps), mevalonate (7 steps), shikimate (7 steps) with BRENDA kinetics
+
+#### Scientific Modules (5 modules, 2,828 lines)
+- **Real Thermodynamics**: SantaLucia 1998 NN with 10 unique ΔH/ΔS parameters + salt correction (Owczarzy 2008)
+- **Real Codon Tables**: Kazusa DB for 4 organisms (64 codons each) + CAI (Sharp & Li 1987)
+- **Real Protein Analysis**: ProtParam reimplementation (pI: Bjellqvist 1993, ε: Pace 1995, GRAVY: Kyte-Doolittle 1982)
+- **Real Restriction Enzymes**: 18 enzymes from REBASE (Roberts 2015) with BioBrick RFC[10] compatibility check
+- **Simplex Solver**: Two-phase Dantzig method + E. coli core FBA model
+
+### Scientific References
+- 34+ peer-reviewed publications cited with journal, year, and page numbers
+- All kinetic parameters from primary experimental papers
+- Zero invented values — every constant has a citation
+
+### Metrics
+- **23,469 lines** of source code across 49 files
+- **27 VS Code commands** registered
+- **3 languages**: Rust (7,333 LOC), TypeScript (15,730 LOC), Python (406 LOC)
+- **Build outputs**: extension.js (1.34 MB), synbio-lsp.exe (2.85 MB)
+
+[0.2.0]: https://github.com/synbio-llvm/synbio-llvm/releases/tag/v0.2.0
+[0.1.0]: https://github.com/synbio-llvm/synbio-llvm/releases/tag/v0.1.0

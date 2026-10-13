@@ -1,0 +1,530 @@
+{
+  "Circuit Template": {
+    "prefix": "circuit",
+    "body": [
+      "// ═══════════════════════════════════════════",
+      "// Circuito: ${1:nombre}",
+      "// Fecha: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+      "// ═══════════════════════════════════════════",
+      "circuit ${1:nombre} {",
+      "    host: \"${2|ecoli_k12,ecoli_dh5alpha,ecoli_bl21,yeast_s288c,bacillus_subtilis|}\"",
+      "",
+      "    promoter ${3:pLac} {",
+      "        type: \"${4|inducible,constitutive|}\"",
+      "        sequence: \"${5:TGTTTGACAATTAATCATCCGGCTCGTATAATGTGTGG}\"",
+      "    }",
+      "",
+      "    gene ${6:gfp} {",
+      "        promoter: ${3:pLac}",
+      "        rbs: B0034",
+      "        terminator: B0015",
+      "    }",
+      "}"
+    ],
+    "description": "Circuito genético completo con promotor, gen y metadata"
+  },
+  "Gene Definition": {
+    "prefix": "gene",
+    "body": [
+      "gene ${1:nombre} {",
+      "    promoter: ${2:pLac}",
+      "    rbs: ${3:B0034}",
+      "    sequence: \"${4:ATGAAACAGTAA}\"",
+      "    terminator: ${5:B0015}",
+      "    product: \"${6:protein}\"",
+      "}"
+    ],
+    "description": "Definición de gen con promotor, RBS, secuencia y terminador"
+  },
+  "Promoter Definition": {
+    "prefix": "promoter",
+    "body": [
+      "promoter ${1:nombre} {",
+      "    type: \"${2|constitutive,inducible|}\"",
+      "    strength: ${3|strong,medium,weak|}",
+      "    sequence: \"${4:TTGACA-N17-TATAAT}\"",
+      "    inducer: \"${5:IPTG}\"",
+      "}"
+    ],
+    "description": "Promotor con tipo, fuerza y secuencia consensus"
+  },
+  "CRISPR gRNA": {
+    "prefix": "grna",
+    "body": [
+      "grna ${1:nombre} {",
+      "    target: \"${2:gene_target}\"",
+      "    spacer: \"${3:ATCGATCGATCGATCGATCG}\"",
+      "    pam: \"${4|NGG,NAG,NGA,NNGRRT,TTTV|}\"",
+      "    scaffold: \"GTTTTAGAGCTAGAAATAGCAAGTTAAAATAAGGCTAGTCCGTTATCAACTTGAAAAAGTGGCACCGAGTCGGTGC\"",
+      "    nuclease: \"${5|SpCas9,SaCas9,Cas12a|}\"",
+      "}"
+    ],
+    "description": "CRISPR guide RNA con spacer, PAM y scaffold completo"
+  },
+  "Toggle Switch": {
+    "prefix": "toggle",
+    "body": [
+      "// Toggle Switch — Gardner et al. 2000 Nature",
+      "circuit toggle_${1:switch} {",
+      "    host: \"ecoli_dh5alpha\"",
+      "",
+      "    promoter pLac_tgl { type: \"inducible\", inducer: \"IPTG\" }",
+      "    promoter pTet_tgl { type: \"inducible\", inducer: \"aTc\" }",
+      "",
+      "    gene lacI_tgl { promoter: pTet_tgl, rbs: B0034, terminator: B0015 }",
+      "    gene tetR_tgl { promoter: pLac_tgl, rbs: B0034, terminator: B0015 }",
+      "    gene gfp_tgl  { promoter: pLac_tgl, rbs: B0034, terminator: B0015 }",
+      "",
+      "    rule lacI_tgl represses pLac_tgl",
+      "    rule tetR_tgl represses pTet_tgl",
+      "}"
+    ],
+    "description": "Toggle switch bistable completo (Gardner et al. 2000)"
+  },
+  "Repressilator": {
+    "prefix": "repressilator",
+    "body": [
+      "// Repressilator — Elowitz & Leibler 2000 Nature",
+      "circuit repressilator_${1:v1} {",
+      "    host: \"ecoli_dh5alpha\"",
+      "",
+      "    promoter pLac_rep { type: \"inducible\" }",
+      "    promoter pTet_rep { type: \"inducible\" }",
+      "    promoter pCI_rep  { type: \"inducible\" }",
+      "",
+      "    gene lacI_rep { promoter: pCI_rep, rbs: B0034, terminator: B0015 }",
+      "    gene tetR_rep { promoter: pLac_rep, rbs: B0034, terminator: B0015 }",
+      "    gene cI_rep   { promoter: pTet_rep, rbs: B0034, terminator: B0015 }",
+      "    gene gfp_rep  { promoter: pTet_rep, rbs: B0034, terminator: B0015 }",
+      "",
+      "    rule lacI_rep represses pLac_rep",
+      "    rule tetR_rep represses pTet_rep",
+      "    rule cI_rep represses pCI_rep",
+      "}"
+    ],
+    "description": "Repressilator de 3 nodos completo (Elowitz & Leibler 2000)"
+  },
+  "Biosensor": {
+    "prefix": "sensor",
+    "body": [
+      "circuit sensor_${1:analito} {",
+      "    host: \"${2:ecoli_k12}\"",
+      "",
+      "    promoter p_sensor { type: \"inducible\", inducer: \"${1:analito}\" }",
+      "    gene receptor { promoter: pConst, rbs: B0034, terminator: B0015 }",
+      "    gene reporter { promoter: p_sensor, rbs: B0034, terminator: B0015, product: \"${3|gfp,mCherry,luciferase|}\" }",
+      "",
+      "    rule receptor activates p_sensor",
+      "}"
+    ],
+    "description": "Circuito biosensor con receptor y reporter"
+  },
+  "Kill Switch": {
+    "prefix": "killswitch",
+    "body": [
+      "circuit killswitch_${1:v1} {",
+      "    host: \"ecoli_k12\"",
+      "",
+      "    gene antitoxin { promoter: pControlled, rbs: B0034, terminator: B0015 }",
+      "    gene toxin { promoter: pEscape, rbs: B0034, terminator: B0015, product: \"${2|ccdB,mazF,relE,hok|}\" }",
+      "",
+      "    rule antitoxin inhibits toxin",
+      "}"
+    ],
+    "description": "Kill switch toxina/antitoxina para biocontención"
+  },
+  "Import Host": {
+    "prefix": "import",
+    "body": [
+      "import host \"${1|ecoli_k12,ecoli_dh5alpha,ecoli_bl21,ecoli_mg1655,yeast_s288c,bacillus_subtilis_168,pseudomonas_putida|}\""
+    ],
+    "description": "Importar organismo huésped"
+  },
+  "Rule Repression": {
+    "prefix": "repress",
+    "body": ["rule ${1:repressor} represses ${2:promoter}"],
+    "description": "Regla de represión transcripcional"
+  },
+  "Rule Activation": {
+    "prefix": "activate",
+    "body": ["rule ${1:activator} activates ${2:promoter}"],
+    "description": "Regla de activación transcripcional"
+  },
+  "Rule Inhibition": {
+    "prefix": "inhibit",
+    "body": ["rule ${1:inhibitor} inhibits ${2:target}"],
+    "description": "Regla de inhibición"
+  },
+  "Pathway Definition": {
+    "prefix": "pathway",
+    "body": [
+      "pathway ${1:nombre} {",
+      "    host: \"${2:ecoli_k12}\"",
+      "    step ${3:step1} { enzyme: \"${4:enz}\", substrate: \"${5:sub}\", product: \"${6:prod}\", km: ${7:0.1}, kcat: ${8:10} }",
+      "    step ${9:step2} { enzyme: \"${10:enz2}\", substrate: \"${6:prod}\", product: \"${11:final}\", km: ${12:0.05}, kcat: ${13:5} }",
+      "}"
+    ],
+    "description": "Ruta metabólica con pasos enzimáticos y cinética"
+  },
+  "Protein Definition": {
+    "prefix": "protein",
+    "body": [
+      "protein ${1:nombre} {",
+      "    type: \"${2|reporter,enzyme,repressor,activator,structural,transporter|}\"",
+      "    sequence: \"${3:MVSKGEELFTGVV...}\"",
+      "    tag: \"${4|none,6xHis_N,6xHis_C,GST,MBP,SUMO,FLAG|}\"",
+      "    localization: \"${5|cytoplasm,periplasm,membrane,secreted|}\"",
+      "}"
+    ],
+    "description": "Definición de proteína con tipo, secuencia y tag"
+  },
+  "RBS Definition": {
+    "prefix": "rbs",
+    "body": [
+      "rbs ${1:nombre} {",
+      "    strength: ${2|strong,medium,weak|}",
+      "    sequence: \"${3:AAAGAGGAGAAA}\"",
+      "    tir: ${4:5000}",
+      "}"
+    ],
+    "description": "Ribosome Binding Site con TIR"
+  },
+  "Terminator Definition": {
+    "prefix": "terminator",
+    "body": [
+      "terminator ${1:nombre} {",
+      "    type: \"${2|rho-independent,rho-dependent|}\"",
+      "    efficiency: ${3:0.99}",
+      "    sequence: \"${4:CCAGGCATCAAATAAAACGAAAGGCTCAGTCGAAAGACTGGGCCTTTCGTTTTATCTGTTGTTTGTCGGTGAACGCTCTCC}\"",
+      "}"
+    ],
+    "description": "Terminador transcripcional con eficiencia"
+  },
+  "Plasmid Backbone": {
+    "prefix": "plasmid",
+    "body": [
+      "plasmid ${1:nombre} {",
+      "    backbone: \"${2|pUC19,pET28a,pSB1C3,pBAD33,pACYCDuet1,pRS426|}\"",
+      "    origin: \"${3|pMB1,p15A,pSC101,ColE1,2mu|}\"",
+      "    resistance: \"${4|ampicillin,kanamycin,chloramphenicol,spectinomycin|}\"",
+      "}"
+    ],
+    "description": "Backbone de plásmido"
+  },
+  "Quorum Sensing Module": {
+    "prefix": "quorum",
+    "body": [
+      "circuit qs_${1:module} {",
+      "    host: \"ecoli_k12\"",
+      "    gene luxI { promoter: pConst, rbs: B0034, terminator: B0015, product: \"AHL_synthase\" }",
+      "    gene luxR { promoter: pConst, rbs: B0034, terminator: B0015, product: \"AHL_receptor\" }",
+      "    promoter pLux { type: \"inducible\", inducer: \"AHL\" }",
+      "    gene ${2:output} { promoter: pLux, rbs: B0034, terminator: B0015 }",
+      "    rule luxR activates pLux",
+      "}"
+    ],
+    "description": "Módulo de quorum sensing LuxI/LuxR"
+  },
+  "IPTG Inducible": {
+    "prefix": "iptg",
+    "body": [
+      "gene ${1:target} {",
+      "    promoter: pLac",
+      "    rbs: B0034",
+      "    inducer: \"IPTG\"",
+      "    concentration: \"${2:1mM}\"",
+      "    terminator: B0015",
+      "}"
+    ],
+    "description": "Expresión inducible por IPTG"
+  },
+  "Arabinose Inducible": {
+    "prefix": "arabinose",
+    "body": [
+      "gene ${1:target} {",
+      "    promoter: pBAD",
+      "    rbs: B0034",
+      "    inducer: \"L-arabinose\"",
+      "    concentration: \"${2:0.2%}\"",
+      "    terminator: B0015",
+      "}"
+    ],
+    "description": "Expresión inducible por arabinosa"
+  },
+  "Negative Feedback Loop": {
+    "prefix": "negfeedback",
+    "body": [
+      "circuit nfl_${1:gene} {",
+      "    promoter p_nfl { type: \"inducible\" }",
+      "    gene ${1:gene} { promoter: p_nfl, rbs: B0034, terminator: B0015 }",
+      "    rule ${1:gene} represses p_nfl",
+      "}"
+    ],
+    "description": "Autorepresión (feedback negativo)"
+  },
+  "AND Gate": {
+    "prefix": "andgate",
+    "body": [
+      "circuit and_gate_${1:name} {",
+      "    promoter p_in1 { type: \"inducible\", inducer: \"${2:IPTG}\" }",
+      "    promoter p_in2 { type: \"inducible\", inducer: \"${3:aTc}\" }",
+      "    gene act1 { promoter: p_in1, rbs: B0034, terminator: B0015 }",
+      "    gene act2 { promoter: p_in2, rbs: B0034, terminator: B0015 }",
+      "    promoter p_and { type: \"AND_controlled\" }",
+      "    gene output { promoter: p_and, rbs: B0034, terminator: B0015, product: \"gfp\" }",
+      "    rule act1 activates p_and",
+      "    rule act2 activates p_and",
+      "}"
+    ],
+    "description": "Puerta lógica AND genética"
+  },
+  "NOT Gate": {
+    "prefix": "notgate",
+    "body": [
+      "circuit not_gate_${1:name} {",
+      "    promoter p_in { type: \"inducible\" }",
+      "    promoter p_out { type: \"constitutive\" }",
+      "    gene rep { promoter: p_in, rbs: B0034, terminator: B0015 }",
+      "    gene out { promoter: p_out, rbs: B0034, terminator: B0015, product: \"gfp\" }",
+      "    rule rep represses p_out",
+      "}"
+    ],
+    "description": "Puerta lógica NOT (inversor)"
+  },
+  "Oscillator": {
+    "prefix": "oscillator",
+    "body": [
+      "circuit osc_${1:name} {",
+      "    host: \"ecoli_k12\"",
+      "    promoter p1 { type: \"inducible\" }",
+      "    promoter p2 { type: \"inducible\" }",
+      "    promoter p3 { type: \"inducible\" }",
+      "    gene r1 { promoter: p3, rbs: B0034, terminator: B0015 }",
+      "    gene r2 { promoter: p1, rbs: B0034, terminator: B0015 }",
+      "    gene r3 { promoter: p2, rbs: B0034, terminator: B0015 }",
+      "    rule r1 represses p1",
+      "    rule r2 represses p2",
+      "    rule r3 represses p3",
+      "}"
+    ],
+    "description": "Oscilador de anillo de 3 nodos"
+  },
+  "Degradation Tag": {
+    "prefix": "degtag",
+    "body": [
+      "tag ${1:protein}_deg {",
+      "    type: \"ssrA\"",
+      "    variant: \"${2|AAV,ASV,LAA,DAS|}\"",
+      "    half_life: \"${3:40} min\"",
+      "}"
+    ],
+    "description": "Tag de degradación ssrA"
+  },
+  "Riboswitch": {
+    "prefix": "riboswitch",
+    "body": [
+      "riboswitch ${1:nombre} {",
+      "    type: \"${2|theophylline,tetracycline,lysine,guanine,adenine|}\"",
+      "    mechanism: \"${3|translational_ON,translational_OFF|}\"",
+      "    target_gene: \"${4:gene}\"",
+      "    kd: ${5:0.1}",
+      "    dynamic_range: ${6:20}",
+      "}"
+    ],
+    "description": "Riboswitch sintético"
+  },
+  "Gibson Assembly": {
+    "prefix": "gibson",
+    "body": [
+      "assembly gibson_${1:name} {",
+      "    method: \"gibson\"",
+      "    overlap: 20",
+      "    fragment ${2:f1} { source: \"${3:template1}\", fwd: \"${4}\", rev: \"${5}\" }",
+      "    fragment ${6:f2} { source: \"${7:template2}\", fwd: \"${8}\", rev: \"${9}\" }",
+      "}"
+    ],
+    "description": "Gibson Assembly con fragmentos"
+  },
+  "Golden Gate Assembly": {
+    "prefix": "goldengate",
+    "body": [
+      "assembly gg_${1:name} {",
+      "    method: \"golden_gate\"",
+      "    enzyme: \"${2|BsaI,BbsI,SapI|}\"",
+      "    part ${3:p1} { type: \"${4|promoter,rbs,cds,terminator|}\", oh5: \"${5:GGAG}\", oh3: \"${6:AATG}\" }",
+      "    part ${7:p2} { type: \"${8|promoter,rbs,cds,terminator|}\", oh5: \"${6:AATG}\", oh3: \"${9:GCTT}\" }",
+      "}"
+    ],
+    "description": "Golden Gate Assembly con overhangs TypeIIS"
+  },
+  "Metabolic Engineering": {
+    "prefix": "metabolic",
+    "body": [
+      "pathway ${1:metabolito}_production {",
+      "    host: \"${2:ecoli_k12}\"",
+      "    overexpress ${3:gene1} { promoter: pTrc, copy: \"high\" }",
+      "    knockout ${4:comp_gene} { method: \"${5|CRISPR_Cas9,lambda_red|}\" }",
+      "}"
+    ],
+    "description": "Ingeniería metabólica con overexpresión y knockouts"
+  },
+  "Sequence Annotation": {
+    "prefix": "sequence",
+    "body": [
+      "sequence ${1:nombre} {",
+      "    type: \"${2|dna,rna,protein|}\"",
+      "    data: \"${3:ATGCGATCG}\"",
+      "    source: \"${4|synthetic,genomic,codon_optimized|}\"",
+      "}"
+    ],
+    "description": "Anotación de secuencia"
+  },
+  "Simulation Parameters": {
+    "prefix": "simulate",
+    "body": [
+      "simulation ${1:nombre} {",
+      "    method: \"gillespie_ssa\"",
+      "    runs: ${2:1000}",
+      "    timespan: ${3:1000}",
+      "    parameters: { txn_rate: ${4:0.5}, tln_rate: ${5:0.167}, deg_rate: ${6:0.002} }",
+      "}"
+    ],
+    "description": "Parámetros de simulación Gillespie SSA"
+  },
+  "Safety Declaration": {
+    "prefix": "safety",
+    "body": [
+      "// ═══ BIOSAFETY ═══",
+      "// BSL: ${1|BSL-1,BSL-2,BSL-3|}",
+      "// Organisms: ${2:E. coli K-12}",
+      "// IBC Protocol: ${3:IBC-2024-XXX}",
+      "// ═════════════════"
+    ],
+    "description": "Declaración de bioseguridad"
+  },
+  "Band-Pass Filter": {
+    "prefix": "bandpass",
+    "body": [
+      "circuit bandpass_${1:name} {",
+      "    gene act_low { promoter: pSensor, rbs: B0035, terminator: B0015 }",
+      "    gene rep_high { promoter: pSensor, rbs: B0030, terminator: B0015 }",
+      "    gene output { promoter: pOut, rbs: B0034, terminator: B0015 }",
+      "    rule act_low activates pOut",
+      "    rule rep_high represses pOut",
+      "}"
+    ],
+    "description": "Band-pass filter genético (Basu et al. 2005)"
+  },
+  "Doc Block": {
+    "prefix": "docblock",
+    "body": [
+      "// ═══════════════════════════════════════════",
+      "// ${1:Título}",
+      "// Autor: ${2:nombre}",
+      "// Fecha: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+      "// Ref: ${3:referencia}",
+      "// ═══════════════════════════════════════════"
+    ],
+    "description": "Bloque de documentación"
+  },
+  "Transcription Unit Basic": {
+    "prefix": ["tu:basic", "tu"],
+    "body": [
+      "// Transcription Unit: ${1:tu_name}",
+      "gene ${2:gfp} {",
+      "    promoter: ${3|pLac,pTet,pBAD,pT7,pConst|}",
+      "    rbs: ${4|B0034,B0032,B0030,B0035|}",
+      "    sequence: \"${5:ATGAGTAAAGGAGAAGAACTTTTCACTGGAGTTGTCCC}\"",
+      "    terminator: ${6|B0015,B0010,B0012|}",
+      "    product: \"${7:GFP}\"",
+      "}"
+    ],
+    "description": "Transcription Unit básica — promotor, RBS, gen, terminador"
+  },
+  "Transcription Unit Regulated": {
+    "prefix": "tu:regulated",
+    "body": [
+      "// Regulated TU: ${1:tu_name}",
+      "promoter ${2:pReg} {",
+      "    type: \"${3|inducible,repressible|}\"",
+      "    inducer: \"${4|IPTG,aTc,Arabinose,AHL|}\"",
+      "    strength: ${5|strong,medium,weak|}",
+      "}",
+      "",
+      "gene ${6:reporter} {",
+      "    promoter: ${2:pReg}",
+      "    rbs: ${7|B0034,B0032|}",
+      "    terminator: B0015",
+      "    product: \"${8:GFP}\"",
+      "}",
+      "",
+      "rule ${9:regulator} ${10|represses,activates|} ${2:pReg}"
+    ],
+    "description": "Transcription Unit regulada con control transcripcional"
+  },
+  "CRISPR Knockout": {
+    "prefix": "crispr:ko",
+    "body": [
+      "// CRISPR Knockout: ${1:target_gene}",
+      "gene cas9 {",
+      "    promoter: ${2|pBAD,pT7,pTet|}",
+      "    rbs: B0034",
+      "    terminator: B0015",
+      "    product: \"Cas9\"",
+      "}",
+      "",
+      "gene sgRNA_${1:target_gene} {",
+      "    promoter: pJ23119",
+      "    sequence: \"${3:NNNNNNNNNNNNNNNNNNNN}GTTTTAGAGCTAGAAATAGCAAGTTAAAATAAGGCTAGTCCGTTATCAAC\"",
+      "    // 20nt target + scaffold",
+      "    product: \"sgRNA\"",
+      "}",
+      "",
+      "rule Cas9 represses ${1:target_gene}  // Cas9-mediated knockout"
+    ],
+    "description": "CRISPR Cas9 knockout — sgRNA + Cas9 para eliminar gen diana"
+  },
+  "Bio Sensor Circuit": {
+    "prefix": "bio:sensor",
+    "body": [
+      "circuit sensor_${1:analyte} {",
+      "    host: \"${2|ecoli_k12,ecoli_bl21|}\"",
+      "",
+      "    promoter pSense {",
+      "        type: \"inducible\"",
+      "        inducer: \"${1:analyte}\"",
+      "    }",
+      "",
+      "    gene reporter {",
+      "        promoter: pSense",
+      "        rbs: B0034",
+      "        terminator: B0015",
+      "        product: \"${3|GFP,sfGFP,Luciferase|}\"",
+      "    }",
+      "",
+      "    kill_switch {",
+      "        trigger: \"${4:nutrient_depletion}\"",
+      "        toxin: CcdB",
+      "        antitoxin: CcdA",
+      "    }",
+      "}"
+    ],
+    "description": "Biosensor completo con reporter fluorescente y kill switch"
+  },
+  "Bio Induction Experiment": {
+    "prefix": "bio:induction",
+    "body": [
+      "// Induction experiment setup",
+      "// Inducer: ${1|IPTG,aTc,Arabinose,AHL|}",
+      "// Concentration range: ${2:0.001} - ${3:10} mM",
+      "simulation {",
+      "    type: \"dose_response\"",
+      "    inducer: \"${1:IPTG}\"",
+      "    range: [${2:0.001}, ${3:10}]",
+      "    steps: ${4:20}",
+      "    time: ${5:600} min",
+      "}"
+    ],
+    "description": "Experimento de inducción — barrido de concentraciones"
+  }
+}

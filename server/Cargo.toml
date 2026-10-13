@@ -1,0 +1,42 @@
+[package]
+name = "synbio-lsp"
+version = "0.1.0"
+edition = "2021"
+authors = ["SynBio-LLVM Team"]
+description = "Language Server Protocol para BioScript - Compilador de Sistemas Genéticos"
+license = "MIT"
+repository = "https://github.com/synbio-llvm/synbio-llvm"
+
+[dependencies]
+# LSP Server
+tower-lsp = "0.20"
+tokio = { version = "1.34", features = ["full"] }
+
+# Serialización
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Parser y AST
+logos = "0.14"          # Lexer rápido
+rowan = "0.15"          # Sintaxis incremental (como rust-analyzer)
+
+# Bioinformática
+bio = "1.4"             # Librería de bioinformática en Rust
+
+# Utilidades
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[[bin]]
+name = "synbio-lsp"
+path = "src/main.rs"
