@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es"><head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiobiosafety-biosafety-classification";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiobiosafety-biosafety-classification", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiobiosafety-biosafety-classification") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<style>
+:root { --bg: #1e1e2e; --surface: #181825; --text: #cdd6f4; --accent: #89b4fa; --border: #313244; --green: #a6e3a1; --red: #f38ba8; --yellow: #f9e2af; --mauve: #cba6f7; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 16px; }
+h1 { font-size: 18px; color: var(--accent); margin-bottom: 8px; }
+.subtitle { font-size: 12px; color: #a6adc8; margin-bottom: 16px; }
+button { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; margin: 4px; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--bg); font-weight: 600; }
+.btn-row { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+.result-container { margin-top: 16px; }
+.bsl-badge { display: inline-block; font-size: 28px; font-weight: bold; padding: 12px 24px; border-radius: 12px; margin: 12px 0; }
+.bsl-1 { background: rgba(166,227,161,0.2); color: var(--green); border: 2px solid var(--green); }
+.bsl-2 { background: rgba(249,226,175,0.2); color: var(--yellow); border: 2px solid var(--yellow); }
+.bsl-3 { background: rgba(250,179,135,0.2); color: #fab387; border: 2px solid #fab387; }
+.bsl-4 { background: rgba(243,139,168,0.2); color: var(--red); border: 2px solid var(--red); }
+.status-badge { display: inline-block; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 13px; }
+.status-compliant { background: rgba(166,227,161,0.2); color: var(--green); }
+.status-noncompliant { background: rgba(243,139,168,0.2); color: var(--red); }
+.status-review { background: rgba(249,226,175,0.2); color: var(--yellow); }
+.section { background: var(--surface); padding: 16px; border-radius: 8px; margin: 12px 0; border-left: 4px solid var(--border); }
+.section h3 { font-size: 14px; margin-bottom: 8px; color: var(--accent); }
+.section ul { list-style: none; padding: 0; }
+.section li { padding: 4px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
+.section li:last-child { border-bottom: none; }
+.warning-item { padding: 8px; margin: 4px 0; background: rgba(243,139,168,0.05); border-radius: 6px; font-size: 12px; border-left: 3px solid var(--yellow); }
+.organism-card { padding: 10px; margin: 6px 0; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
+.organism-card .name { font-weight: bold; font-size: 13px; }
+.organism-card .details { font-size: 11px; color: #a6adc8; margin-top: 4px; }
+.gene-card { padding: 8px; margin: 4px 0; background: var(--bg); border-radius: 6px; border-left: 3px solid var(--mauve); }
+.risk-badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: bold; }
+.risk-critical { background: rgba(243,139,168,0.3); color: var(--red); }
+.risk-high { background: rgba(250,179,135,0.3); color: #fab387; }
+.risk-medium { background: rgba(249,226,175,0.3); color: var(--yellow); }
+.risk-low { background: rgba(166,227,161,0.3); color: var(--green); }
+.empty-state { text-align: center; padding: 40px; color: #6c7086; }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+</style></head><body>
+<h1>🛡️ Biosafety Classification System</h1>
+<p class="subtitle">Clasificación BSL-1 a BSL-4 · CDC Select Agent List · NIH Guidelines · EU Directives · WHO Risk Groups · DURC Policy</p>
+
+<div class="btn-row">
+    <button class="primary" onclick="classifyFromEditor()">🔍 Clasificar Archivo Actual</button>
+    <button onclick="generateCert()">📜 Generar Certificado</button>
+</div>
+
+<div class="result-container" id="resultContainer">
+    <div class="empty-state">
+        <div class="icon">🔬</div>
+        <p>Abre un archivo .bio y haz clic en "Clasificar" para evaluar el nivel de bioseguridad</p>
+        <p style="margin-top:8px;font-size:11px">Base de datos: 14 organismos · 14 genes regulados</p>
+    </div>
+</div>
+
+<script>
+const vscode = acquireVsCodeApi();
+let lastResult = null;
+
+function classifyFromEditor() {
+    vscode.postMessage({ type: 'classifyFromEditor' });
+}
+
+function classifyText(text) {
+    vscode.postMessage({ type: 'classifyText', text });
+}
+
+function generateCert() {
+    if (lastResult) {
+        vscode.postMessage({ type: 'generateCertificate', result: lastResult });
+    }
+}
+
+window.addEventListener('message', (event) => {
+    const msg = event.data;
+    if (msg.type === 'classificationResult') {
+        lastResult = msg.result;
+        renderResult(msg.result);
+    }
+});
+
+function renderResult(r) {
+    const statusClass = r.complianceStatus === 'COMPLIANT' ? 'status-compliant' :
+                        r.complianceStatus === 'NON_COMPLIANT' ? 'status-noncompliant' : 'status-review';
+    const statusText = r.complianceStatus === 'COMPLIANT' ? '✅ COMPLIANT' :
+                       r.complianceStatus === 'NON_COMPLIANT' ? '🚫 NON-COMPLIANT' : '⚠️ REVIEW REQUIRED';
+
+    let html = '<div class="bsl-badge bsl-' + r.requiredBSL + '">BSL-' + r.requiredBSL + '</div>';
+    html += ' <span class="status-badge ' + statusClass + '">' + statusText + '</span>';
+    html += '<p style="margin:8px 0;font-size:12px;color:#a6adc8">Lab configurado: ' + r.labBSL + ' · Select Agent: ' + (r.isSelectAgent ? '⚠️ SÍ':'✅ NO') + ' · Dual-Use: ' + (r.isDualUse ? '⚠️ SÍ':'✅ NO') + '</p>';
+
+    // Warnings
+    if (r.warnings.length > 0) {
+        html += '<div class="section" style="border-left-color:var(--red)"><h3>⚠️ Advertencias (' + r.warnings.length + ')</h3>';
+        r.warnings.forEach(w => html += '<div class="warning-item">' + w + '</div>');
+        html += '</div>';
+    }
+
+    // Organisms
+    if (r.organisms.length > 0) {
+        html += '<div class="section"><h3>🦠 Organismos Detectados (' + r.organisms.length + ')</h3>';
+        r.organisms.forEach(o => {
+            html += '<div class="organism-card"><div class="name">' + o.organism.name + ' <span class="bsl-badge bsl-' + o.organism.bsl + '" style="font-size:11px;padding:2px 6px">BSL-' + o.organism.bsl + '</span></div>';
+            html += '<div class="details">' + o.organism.description + '</div>';
+            html += '<div class="details" style="margin-top:4px">Detectado: <code>' + o.matchedKeyword + '</code></div></div>';
+        });
+        html += '</div>';
+    }
+
+    // Regulated genes
+    if (r.regulatedGenes.length > 0) {
+        html += '<div class="section" style="border-left-color:var(--mauve)"><h3>🧬 Genes Regulados (' + r.regulatedGenes.length + ')</h3>';
+        r.regulatedGenes.forEach(g => {
+            html += '<div class="gene-card"><strong>' + g.gene.name + '</strong> → ' + g.gene.product + 
+                ' <span class="risk-badge risk-' + g.gene.risk + '">' + g.gene.risk.toUpperCase() + '</span>';
+            if (g.gene.selectAgent) html += ' <span class="risk-badge risk-critical">SELECT AGENT</span>';
+            html += '<div style="font-size:11px;color:#a6adc8;margin-top:4px">' + g.gene.description + '</div>';
+            html += '<div style="font-size:10px;color:#6c7086;margin-top:2px">' + g.gene.regulation + '</div></div>';
+        });
+        html += '</div>';
+    }
+
+    // Regulations
+    if (r.regulations.length > 0) {
+        html += '<div class="section"><h3>📋 Regulaciones Aplicables</h3><ul>';
+        r.regulations.forEach(reg => html += '<li>• ' + reg + '</li>');
+        html += '</ul></div>';
+    }
+
+    // Containment
+    if (r.containmentRequirements.length > 0) {
+        html += '<div class="section" style="border-left-color:var(--green)"><h3>🔒 Requisitos de Contención</h3><ul>';
+        r.containmentRequirements.forEach(c => html += '<li>• ' + c + '</li>');
+        html += '</ul></div>';
+    }
+
+    if (r.organisms.length === 0 && r.regulatedGenes.length === 0) {
+        html += '<div class="section" style="border-left-color:var(--green)"><h3>✅ Sin riesgos detectados</h3><p style="font-size:12px">No se detectaron organismos regulados ni genes de virulencia en el archivo. Nivel BSL-1 suficiente para trabajo estándar con E. coli K-12.</p></div>';
+    }
+
+    document.getElementById('resultContainer').innerHTML = html;
+}
+</script></body></html>

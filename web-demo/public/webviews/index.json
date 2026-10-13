@@ -1,0 +1,297 @@
+[
+  {
+    "file": "parts-library.ts",
+    "export": "PartsLibraryBrowser",
+    "id": "synbiopartslibrary-biblioteca-de-partes",
+    "title": "📚 Biblioteca de Partes",
+    "filename": "synbiopartslibrary-biblioteca-de-partes.html",
+    "bytes": 13942
+  },
+  {
+    "file": "plasmid-map.ts",
+    "export": "PlasmidMapViewer",
+    "id": "synbioplasmidmap-mapa-de-pl-smido",
+    "title": "🧬 Mapa de Plásmido",
+    "filename": "synbioplasmidmap-mapa-de-pl-smido.html",
+    "bytes": 14517
+  },
+  {
+    "file": "sbol-visual-renderer.ts",
+    "export": "SBOLVisualPanel",
+    "error": "this._panel.onDidDispose is not a function"
+  },
+  {
+    "file": "sbol-visual-renderer.ts",
+    "export": "SBOLVisualPanel",
+    "id": "sbolvisual-sbol-visual-diagram",
+    "title": "🧬 SBOL Visual Diagram",
+    "filename": "sbolvisual-sbol-visual-diagram.html",
+    "bytes": 8066
+  },
+  {
+    "file": "sbol-visual-renderer.ts",
+    "export": "generateSBOLSVG",
+    "error": "circuits.map is not a function"
+  },
+  {
+    "file": "sbol-visual-renderer.ts",
+    "export": "parseBioToSBOL",
+    "error": "text.split is not a function"
+  },
+  {
+    "file": "project-dashboard.ts",
+    "export": "ProjectDashboard",
+    "id": "synbiodashboard-synbio-dashboard",
+    "title": "⚡ SynBio Dashboard",
+    "filename": "synbiodashboard-synbio-dashboard.html",
+    "bytes": 10237
+  },
+  {
+    "file": "split-view.ts",
+    "export": "SplitViewManager",
+    "id": "synbiosplitview-vista-circuito",
+    "title": "🧬 Vista Circuito",
+    "filename": "synbiosplitview-vista-circuito.html",
+    "bytes": 17146
+  },
+  {
+    "file": "sequence-analysis.ts",
+    "export": "SequenceAnalysisPanel",
+    "id": "synbiosequenceanalysis-sequence-analysis",
+    "title": "🧬 Sequence Analysis",
+    "filename": "synbiosequenceanalysis-sequence-analysis.html",
+    "bytes": 11903
+  },
+  {
+    "file": "sequence-alignment.ts",
+    "export": "SequenceAlignmentEngine",
+    "id": "seqalignment-sequence-alignment",
+    "title": "🧬 Sequence Alignment",
+    "filename": "seqalignment-sequence-alignment.html",
+    "bytes": 38172
+  },
+  {
+    "file": "sequence-intelligence.ts",
+    "export": "SequenceIntelligence",
+    "id": "sequenceintelligence-sequence-intelligence-dashboard",
+    "title": "🧬 Sequence Intelligence Dashboard",
+    "filename": "sequenceintelligence-sequence-intelligence-dashboard.html",
+    "bytes": 14382
+  },
+  {
+    "file": "codon-optimizer.ts",
+    "export": "CodonOptimizerUI",
+    "id": "synbiocodonoptimizer-optimizador-de-codones",
+    "title": "🧬 Optimizador de Codones",
+    "filename": "synbiocodonoptimizer-optimizador-de-codones.html",
+    "bytes": 17503
+  },
+  {
+    "file": "circuit-optimizer.ts",
+    "export": "CircuitOptimizerUI",
+    "id": "synbiocircuitoptimizer-optimizador-de-circuitos",
+    "title": "⚡ Optimizador de Circuitos",
+    "filename": "synbiocircuitoptimizer-optimizador-de-circuitos.html",
+    "bytes": 25083
+  },
+  {
+    "file": "circuit-failure-predictor.ts",
+    "export": "CircuitFailurePredictor",
+    "id": "failuredatabase-synbio-failure-knowledge-base",
+    "title": "📚 SynBio Failure Knowledge Base",
+    "filename": "failuredatabase-synbio-failure-knowledge-base.html",
+    "bytes": 23514
+  },
+  {
+    "file": "circuit-failure-predictor.ts",
+    "export": "CircuitFailurePredictor",
+    "id": "circuitfailurereport-circuit-failure-report",
+    "title": "🔬 Circuit Failure Report",
+    "filename": "circuitfailurereport-circuit-failure-report.html",
+    "bytes": 15893
+  },
+  {
+    "file": "biosecurity-scanner.ts",
+    "export": "BiosecurityScanner",
+    "id": "synbiobiosecurity-bioseguridad",
+    "title": "🛡️ Bioseguridad",
+    "filename": "synbiobiosecurity-bioseguridad.html",
+    "bytes": 7649
+  },
+  {
+    "file": "biosafety-classifier.ts",
+    "export": "BiosafetyClassifier",
+    "id": "synbiobiosafety-biosafety-classification",
+    "title": "🛡️ Biosafety Classification",
+    "filename": "synbiobiosafety-biosafety-classification.html",
+    "bytes": 8191
+  },
+  {
+    "file": "protocol-generator.ts",
+    "export": "ProtocolGenerator",
+    "id": "synbioprotocol-protocolo-de-laboratorio",
+    "title": "🧪 Protocolo de Laboratorio",
+    "filename": "synbioprotocol-protocolo-de-laboratorio.html",
+    "bytes": 9768
+  },
+  {
+    "file": "professional-exporter.ts",
+    "export": "ProfessionalExporter",
+    "id": "synbioexporter-exportador-profesional",
+    "title": "📦 Exportador Profesional",
+    "filename": "synbioexporter-exportador-profesional.html",
+    "bytes": 10485
+  },
+  {
+    "file": "plate-layout-designer.ts",
+    "export": "PlateLayoutDesigner",
+    "id": "platedesigner-plate-layout-designer",
+    "title": "🧫 Plate Layout Designer",
+    "filename": "platedesigner-plate-layout-designer.html",
+    "bytes": 7668
+  },
+  {
+    "file": "molecule-viewer.ts",
+    "export": "MoleculeViewer",
+    "id": "synbiomoleculeviewer3d-visor-molecular-3d",
+    "title": "🧬 Visor Molecular 3D",
+    "filename": "synbiomoleculeviewer3d-visor-molecular-3d.html",
+    "bytes": 23454
+  },
+  {
+    "file": "pathway-designer.ts",
+    "export": "PathwayDesigner",
+    "id": "synbiopathway-pathway-designer",
+    "title": "🔬 Pathway Designer",
+    "filename": "synbiopathway-pathway-designer.html",
+    "bytes": 14906
+  },
+  {
+    "file": "gillespie-simulator.ts",
+    "export": "GillespieSimulator",
+    "id": "synbiogillespie-simulaci-n-estoc-stica",
+    "title": "📊 Simulación Estocástica",
+    "filename": "synbiogillespie-simulaci-n-estoc-stica.html",
+    "bytes": 14519
+  },
+  {
+    "file": "genetic-version-control.ts",
+    "export": "GeneticVersionControl",
+    "id": "synbioversioncontrol-genetic-version-control",
+    "title": "📜 Genetic Version Control",
+    "filename": "synbioversioncontrol-genetic-version-control.html",
+    "bytes": 13000
+  },
+  {
+    "file": "genetic-debugger.ts",
+    "export": "GeneticDebugger",
+    "id": "synbiodebugger-depurador-gen-tico",
+    "title": "🔍 Depurador Genético",
+    "filename": "synbiodebugger-depurador-gen-tico.html",
+    "bytes": 15233
+  },
+  {
+    "file": "genetic-debugger.ts",
+    "export": "GeneticDebugger",
+    "id": "synbiodebugger-depurador-inverter",
+    "title": "🔍 Depurador: inverter",
+    "filename": "synbiodebugger-depurador-inverter.html",
+    "bytes": 15233
+  },
+  {
+    "file": "growth-curve-analyzer.ts",
+    "export": "GrowthCurveAnalyzer",
+    "id": "growthcurve-growth-curve-analyzer",
+    "title": "📈 Growth Curve Analyzer",
+    "filename": "growthcurve-growth-curve-analyzer.html",
+    "bytes": 32070
+  },
+  {
+    "file": "ai-design-assistant.ts",
+    "export": "AIDesignAssistant",
+    "id": "synbioaiassistant-ai-design-assistant",
+    "title": "🤖 AI Design Assistant",
+    "filename": "synbioaiassistant-ai-design-assistant.html",
+    "bytes": 32393
+  },
+  {
+    "file": "auto-documentation.ts",
+    "export": "AutoDocumentationGenerator",
+    "id": "synbiodocumentation-auto-documentation",
+    "title": "📄 Auto Documentation",
+    "filename": "synbiodocumentation-auto-documentation.html",
+    "bytes": 10518
+  },
+  {
+    "file": "bio-test-framework.ts",
+    "export": "BioTestFramework",
+    "id": "synbiotests-bioscript-tests",
+    "title": "🧪 BioScript Tests",
+    "filename": "synbiotests-bioscript-tests.html",
+    "bytes": 7181
+  },
+  {
+    "file": "experiment-planner.ts",
+    "export": "ExperimentPlanner",
+    "id": "experimentplanner-experiment-planner-lab-notebook",
+    "title": "🧪 Experiment Planner & Lab Notebook",
+    "filename": "experimentplanner-experiment-planner-lab-notebook.html",
+    "bytes": 2798
+  },
+  {
+    "file": "crispr-designer.ts",
+    "export": "CRISPRDesigner",
+    "id": "synbiocrispr-crispr-grna-designer",
+    "title": "🔬 CRISPR gRNA Designer",
+    "filename": "synbiocrispr-crispr-grna-designer.html",
+    "bytes": 10792
+  },
+  {
+    "file": "cloning-strategy-planner.ts",
+    "export": "CloningStrategyPlanner",
+    "id": "cloningplanner-comparador-de-m-todos-de-ensamblaje",
+    "title": "🧬 Comparador de Métodos de Ensamblaje",
+    "filename": "cloningplanner-comparador-de-m-todos-de-ensamblaje.html",
+    "bytes": 30239
+  },
+  {
+    "file": "rna-structure-predictor.ts",
+    "export": "RNAStructurePredictor",
+    "id": "rnaprediction-rna-structure-28-nt",
+    "title": "RNA Structure — 28 nt",
+    "filename": "rnaprediction-rna-structure-28-nt.html",
+    "bytes": 14458
+  },
+  {
+    "file": "rna-structure-predictor.ts",
+    "export": "RNAStructurePredictor",
+    "id": "rnaprediction-rna-structure-81-nt",
+    "title": "RNA Structure — 81 nt",
+    "filename": "rnaprediction-rna-structure-81-nt.html",
+    "bytes": 36850
+  },
+  {
+    "file": "synbio-tutor.ts",
+    "export": "SynBioTutor",
+    "id": "synbiotutorinstall-configurar-tutor-ai-de-synbio",
+    "title": "Configurar Tutor AI de SynBio",
+    "filename": "synbiotutorinstall-configurar-tutor-ai-de-synbio.html",
+    "bytes": 1439
+  },
+  {
+    "file": "protein-predictor.ts",
+    "export": "ProteinPredictor",
+    "id": "synbioengineinstall-instalar-synbio-engine",
+    "title": "Instalar SynBio Engine",
+    "filename": "synbioengineinstall-instalar-synbio-engine.html",
+    "bytes": 2053
+  },
+  {
+    "file": "protein-predictor.ts",
+    "export": "ProteinPredictor",
+    "id": "proteinprediction-predicci-n-tetr",
+    "title": "Predicción: TetR",
+    "filename": "proteinprediction-predicci-n-tetr.html",
+    "bytes": 3313
+  }
+]

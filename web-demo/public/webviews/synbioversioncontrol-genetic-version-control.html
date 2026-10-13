@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbioversioncontrol-genetic-version-control";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbioversioncontrol-genetic-version-control", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbioversioncontrol-genetic-version-control") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Genetic Version Control</title>
+<style>
+    :root { --bg: #1e1e2e; --surface: #2a2a3e; --primary: #7c3aed; --accent: #22d3ee;
+            --success: #10b981; --warning: #f59e0b; --error: #ef4444; --text: #e2e8f0;
+            --text2: #94a3b8; --border: #334155; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); padding:16px; }
+    h1 { font-size:1.4em; margin-bottom:4px; }
+    h2 { font-size:1.05em; color:var(--accent); margin:14px 0 8px; }
+    .subtitle { color:var(--text2); font-size:0.85em; margin-bottom:14px; }
+    .btn { padding:7px 14px; border:none; border-radius:6px; cursor:pointer; font-size:0.8em; font-weight:600; transition:all 0.2s; }
+    .btn-primary { background:var(--primary); color:white; }
+    .btn-primary:hover { background:#6d28d9; }
+    .btn-accent { background:var(--accent); color:#000; }
+    .btn-sm { padding:4px 10px; font-size:0.75em; }
+    .btn-outline { background:transparent; border:1px solid var(--border); color:var(--text); }
+    .btn-outline:hover { border-color:var(--primary); }
+    .row { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+    .branch-bar { display:flex; gap:6px; align-items:center; margin-bottom:14px; padding:8px 12px;
+                  background:var(--surface); border-radius:8px; border:1px solid var(--border); }
+    .branch-name { font-weight:700; color:var(--success); }
+    .branch-pill { padding:3px 10px; border-radius:12px; font-size:0.75em; cursor:pointer;
+                   border:1px solid var(--border); background:var(--surface); color:var(--text2); }
+    .branch-pill.active { background:var(--success); color:#000; border-color:var(--success); }
+    .branch-pill:hover { border-color:var(--accent); }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:8px; }
+    .version-card { position:relative; border-left:3px solid var(--primary); }
+    .version-card.auto { border-left-color: var(--text2); }
+    .version-card.manual { border-left-color: var(--accent); }
+    .version-header { display:flex; justify-content:space-between; align-items:start; }
+    .version-label { font-weight:700; font-size:0.95em; }
+    .version-time { font-size:0.75em; color:var(--text2); }
+    .version-desc { color:var(--text2); font-size:0.82em; margin:4px 0; }
+    .version-stats { display:flex; gap:10px; font-size:0.75em; color:var(--text2); margin-top:6px; }
+    .stat { display:flex; align-items:center; gap:3px; }
+    .tag { display:inline-block; padding:1px 8px; border-radius:10px; font-size:0.7em; font-weight:600;
+           background:var(--primary); color:white; margin-right:4px; }
+    .tag.auto { background:var(--border); color:var(--text2); }
+    .tag.manual { background:var(--accent); color:#000; }
+    .version-actions { display:flex; gap:4px; margin-top:8px; }
+    .diff-container { background:#111827; border-radius:8px; padding:12px; font-family:'Cascadia Code',monospace;
+                      font-size:0.82em; margin:10px 0; max-height:400px; overflow-y:auto; }
+    .diff-line { padding:2px 6px; border-radius:3px; margin:1px 0; }
+    .diff-add { background:rgba(16,185,129,.15); color:#6ee7b7; }
+    .diff-remove { background:rgba(239,68,68,.15); color:#fca5a5; }
+    .diff-modify { background:rgba(245,158,11,.15); color:#fcd34d; }
+    .diff-summary { font-size:0.85em; color:var(--text2); margin-bottom:8px; }
+    .timeline { position:relative; padding-left:24px; }
+    .timeline::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:2px; background:var(--border); }
+    .timeline .version-card { position:relative; }
+    .timeline .version-card::before { content:''; position:absolute; left:-20px; top:14px; width:10px; height:10px;
+        border-radius:50%; background:var(--primary); border:2px solid var(--bg); }
+    .timeline .version-card.auto::before { background:var(--text2); }
+    .select-version { padding:3px 8px; background:var(--surface); border:1px solid var(--border); border-radius:4px;
+                      color:var(--text); font-size:0.8em; cursor:pointer; }
+    .input { padding:6px 10px; background:var(--surface); border:1px solid var(--border); border-radius:6px;
+             color:var(--text); font-size:0.85em; }
+    .input:focus { outline:none; border-color:var(--primary); }
+    .empty { text-align:center; padding:40px; color:var(--text2); }
+    .empty .icon { font-size:2.5em; margin-bottom:8px; }
+    .complexity-bar { width:80px; height:6px; background:var(--border); border-radius:3px; display:inline-block; }
+    .complexity-fill { height:100%; border-radius:3px; }
+</style>
+</head>
+<body>
+    <h1>📜 Genetic Version Control</h1>
+    <p class="subtitle">Historial de iteraciones, diff visual y ramas de diseño genético</p>
+
+    <div class="branch-bar">
+        <span>🌿</span>
+        <span class="branch-name" id="currentBranchName">main</span>
+        <div id="branchPills" style="display:flex;gap:4px;margin-left:8px;flex-wrap:wrap;"></div>
+        <button class="btn btn-sm btn-outline" onclick="createBranch()">+ Nueva rama</button>
+    </div>
+
+    <div class="row">
+        <button class="btn btn-primary" onclick="createSnapshot()">📸 Crear Snapshot</button>
+        <button class="btn btn-accent" onclick="toggleDiff()">🔀 Comparar versiones</button>
+    </div>
+
+    <div id="diffPanel" style="display:none;">
+        <div class="card">
+            <h2>Comparar Versiones</h2>
+            <div class="row" style="align-items:center">
+                <select id="diffA" class="select-version"></select>
+                <span>vs</span>
+                <select id="diffB" class="select-version"></select>
+                <button class="btn btn-sm btn-primary" onclick="runDiff()">Comparar</button>
+            </div>
+            <div id="diffResult"></div>
+        </div>
+    </div>
+
+    <h2>📅 Timeline</h2>
+    <div id="timeline" class="timeline">
+        <div class="empty"><div class="icon">📸</div><p>No hay versiones aún. Guarde un archivo .bio o cree un snapshot.</p></div>
+    </div>
+
+<script>
+    const vscode = acquireVsCodeApi();
+    let versions = [];
+    let branches = [];
+    let currentBranch = 'main';
+
+    function createSnapshot() {
+        const label = prompt('Nombre del snapshot:', 'v' + (versions.length + 1));
+        if (label) vscode.postMessage({ command: 'createSnapshot', label });
+    }
+
+    function createBranch() {
+        const name = prompt('Nombre de la nueva rama:');
+        if (name) vscode.postMessage({ command: 'createBranch', name });
+    }
+
+    function switchBranch(name) {
+        vscode.postMessage({ command: 'switchBranch', name });
+    }
+
+    function restoreVersion(id) {
+        if (confirm('¿Restaurar esta versión? Reemplazará el contenido del editor.')) {
+            vscode.postMessage({ command: 'restoreVersion', versionId: id });
+        }
+    }
+
+    function toggleDiff() {
+        const panel = document.getElementById('diffPanel');
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function runDiff() {
+        const idA = document.getElementById('diffA').value;
+        const idB = document.getElementById('diffB').value;
+        if (idA && idB && idA !== idB) {
+            vscode.postMessage({ command: 'diffVersions', idA, idB });
+        }
+    }
+
+    function formatDate(ts) {
+        const d = new Date(ts);
+        return d.toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' }) +
+               ' ' + d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+    }
+
+    function getComplexityColor(c) {
+        if (c <= 3) return 'var(--success)';
+        if (c <= 6) return 'var(--warning)';
+        return 'var(--error)';
+    }
+
+    function renderVersions() {
+        const container = document.getElementById('timeline');
+        if (versions.length === 0) {
+            container.innerHTML = '<div class="empty"><div class="icon">📸</div><p>No hay versiones en la rama <b>' + currentBranch + '</b>.<br>Guarde un archivo .bio o cree un snapshot.</p></div>';
+            return;
+        }
+
+        container.innerHTML = versions.map(v => {
+            const isManual = v.tags.includes('manual');
+            return `
+                <div class="version-card card ${isManual ? 'manual' : 'auto'}">
+                    <div class="version-header">
+                        <div>
+                            <div class="version-label">${v.label}</div>
+                            ${v.tags.map(t => '<span class="tag ' + t + '">' + t + '</span>').join('')}
+                        </div>
+                        <div class="version-time">${formatDate(v.timestamp)}</div>
+                    </div>
+                    <div class="version-desc">${v.description || ''}</div>
+                    <div class="version-stats">
+                        <span class="stat">📢 ${v.stats.promoters}P</span>
+                        <span class="stat">🔗 ${v.stats.rbsCount}R</span>
+                        <span class="stat">🧬 ${v.stats.genes}G</span>
+                        <span class="stat">🛑 ${v.stats.terminators}T</span>
+                        <span class="stat">📝 ${v.stats.linesOfCode}L</span>
+                        <span class="stat">
+                            <span class="complexity-bar">
+                                <div class="complexity-fill" style="width:${v.stats.complexity*10}%;background:${getComplexityColor(v.stats.complexity)}"></div>
+                            </span>
+                            C:${v.stats.complexity}
+                        </span>
+                    </div>
+                    <div class="version-actions">
+                        <button class="btn btn-sm btn-primary" onclick="restoreVersion('${v.id}')">⏪ Restaurar</button>
+                        <button class="btn btn-sm btn-outline" onclick="tagVersion('${v.id}')">🏷️ Tag</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Actualizar selectores de diff
+        const optionsHtml = versions.map(v =>
+            `<option value="${v.id}">${v.label} (${formatDate(v.timestamp)})</option>`
+        ).join('');
+        document.getElementById('diffA').innerHTML = optionsHtml;
+        document.getElementById('diffB').innerHTML = optionsHtml;
+    }
+
+    function renderBranches() {
+        const pills = document.getElementById('branchPills');
+        pills.innerHTML = branches.map(b =>
+            `<span class="branch-pill ${b.name === currentBranch ? 'active' : ''}"
+                  onclick="switchBranch('${b.name}')">${b.name} (${b.versionCount})</span>`
+        ).join('');
+        document.getElementById('currentBranchName').textContent = currentBranch;
+    }
+
+    function tagVersion(id) {
+        const tag = prompt('Nombre del tag:', 'release');
+        if (tag) vscode.postMessage({ command: 'tagVersion', versionId: id, tag });
+    }
+
+    window.addEventListener('message', event => {
+        const msg = event.data;
+        if (msg.command === 'stateUpdate') {
+            versions = msg.versions;
+            branches = msg.branches;
+            currentBranch = msg.currentBranch;
+            renderVersions();
+            renderBranches();
+        } else if (msg.command === 'diffResult') {
+            renderDiff(msg.diff);
+        }
+    });
+
+    function renderDiff(diff) {
+        const el = document.getElementById('diffResult');
+        let html = '<div class="diff-summary">' + diff.summary + '</div>';
+        if (diff.partsAdded.length) html += '<div style="color:var(--success);font-size:0.85em">+ Partes añadidas: ' + diff.partsAdded.join(', ') + '</div>';
+        if (diff.partsRemoved.length) html += '<div style="color:var(--error);font-size:0.85em">- Partes eliminadas: ' + diff.partsRemoved.join(', ') + '</div>';
+        html += '<div class="diff-container">';
+        for (const line of diff.added) html += `<div class="diff-line diff-add">+ L${line.lineNumber}: ${escapeHtml(line.content)}</div>`;
+        for (const line of diff.removed) html += `<div class="diff-line diff-remove">- L${line.lineNumber}: ${escapeHtml(line.content)}</div>`;
+        for (const line of diff.modified) html += `<div class="diff-line diff-modify">~ L${line.lineNumber}: ${escapeHtml(line.content)}</div>`;
+        if (diff.added.length === 0 && diff.removed.length === 0 && diff.modified.length === 0) {
+            html += '<div style="color:var(--text2);text-align:center;padding:20px;">Sin diferencias</div>';
+        }
+        html += '</div>';
+        el.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // Solicitar estado inicial
+    vscode.postMessage({ command: 'refresh' });
+</script>
+</body>
+</html>

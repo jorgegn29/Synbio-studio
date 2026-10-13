@@ -23,6 +23,7 @@ const ACTIVITIES: { id: Activity; label: string }[] = [
   { id: 'outline', label: 'Outline' },
   { id: 'git', label: 'Hist' },
   { id: 'settings', label: 'Ajustes' },
+  { id: 'panels', label: 'Paneles' },
 ];
 
 function Shell() {
@@ -32,6 +33,10 @@ function Shell() {
       <header className="titlebar">
         <strong>SynBio Studio</strong>
         <button type="button" onClick={() => { studio.setActivity('map'); studio.setCenter('map'); }}>Mapa Vivo</button>
+        <button type="button" onClick={() => studio.setCenter('programa')}>Programa</button>
+        <button type="button" onClick={() => { studio.setActivity('lab'); studio.setCenter('lab'); }}>Lab Run</button>
+        <button type="button" onClick={() => studio.setCenter('hub')}>Design Hub</button>
+        <button type="button" onClick={() => studio.setCenter('entorno')}>Entorno</button>
         <button type="button" onClick={studio.newBioScript}>+ BioScript</button>
         <button type="button" onClick={() => document.getElementById('open-file')?.click()}>Abrir</button>
         <button type="button" onClick={studio.saveProject}>Guardar</button>
@@ -49,6 +54,7 @@ function Shell() {
                 const direct: Partial<Record<Activity, typeof studio.center>> = {
                   map: 'map', workflows: 'workflows', sim: 'sim', design: 'design', lab: 'lab', results: 'results',
                   atlas: 'atlas', chassis: 'chassis', safety: 'safety', tutorials: 'tutorials', diff: 'diff', settings: 'settings',
+                  panels: 'webview',
                 };
                 if (direct[item.id]) studio.setCenter(direct[item.id]!);
               }}

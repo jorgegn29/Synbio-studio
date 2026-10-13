@@ -1,0 +1,119 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"proteinprediction-predicci-n-tetr";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"proteinprediction-predicci-n-tetr", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "proteinprediction-predicci-n-tetr") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+            <style>
+                body { 
+                    font-family: 'Consolas', monospace; 
+                    padding: 20px;
+                    background: var(--vscode-editor-background);
+                    color: var(--vscode-editor-foreground);
+                }
+                h2 { color: var(--vscode-textLink-foreground); }
+                .property { 
+                    display: flex;
+                    padding: 5px 0;
+                }
+                .property-name { 
+                    font-weight: bold; 
+                    width: 200px;
+                }
+                .warning { 
+                    background: rgba(255, 180, 0, 0.2);
+                    padding: 10px;
+                    margin: 5px 0;
+                    border-left: 3px solid orange;
+                }
+                .structure {
+                    font-family: 'Courier New', monospace;
+                    background: var(--vscode-textCodeBlock-background);
+                    padding: 15px;
+                    overflow-x: auto;
+                    white-space: pre;
+                }
+                .plot {
+                    font-family: 'Courier New', monospace;
+                    background: #000;
+                    color: #0f0;
+                    padding: 15px;
+                    overflow-x: auto;
+                }
+            </style>
+        </head>
+        <body>
+            <h2>🧬 Análisis de Proteína: TetR</h2>
+            
+            <h3>Propiedades Bioquímicas</h3>
+            <div class="property">
+                <span class="property-name">Secuencia:</span>
+                <span>MSTETR</span>
+            </div>
+            <div class="property">
+                <span class="property-name">Longitud:</span>
+                <span>6 aminoácidos</span>
+            </div>
+            <div class="property">
+                <span class="property-name">Peso Molecular:</span>
+                <span>2931.00 Da</span>
+            </div>
+            <div class="property">
+                <span class="property-name">Punto Isoeléctrico (pI):</span>
+                <span>4.56</span>
+            </div>
+            <div class="property">
+                <span class="property-name">Índice de Inestabilidad:</span>
+                <span>36.70 (estable)</span>
+            </div>
+            <div class="property">
+                <span class="property-name">Confianza de Predicción:</span>
+                <span>42%</span>
+            </div>
+            
+            
+                <h3>⚠️ Advertencias</h3>
+                <div class="warning">Servidor ESMFold no está en el navegador; gráfica local de hidrofobicidad.</div>
+            
+            
+            <h3>Estructura Secundaria Predicha</h3>
+            <div class="structure">H = α-helix | E = β-sheet | C = coil
+
+CCCCCC
+            </div>
+            
+            <h3>Gráfica de Hidrofobicidad</h3>
+            <div class="plot">  4.0 |      
+  3.5 |      
+  2.9 |      
+  2.4 |      
+  1.9 |      
+  1.3 |      
+  0.8 |      
+  0.3 |    █ 
+ -0.3 |█ ████
+ -0.8 |██████
+ -1.3 |██████
+ -1.9 |██████
+ -2.4 |██████
+ -2.9 |██████
+ -3.5 |██████
+      +------
+       Posición en secuencia →</div>
+            
+            
+        </body>
+        </html>
+        

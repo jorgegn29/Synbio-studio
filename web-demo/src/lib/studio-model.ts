@@ -38,6 +38,7 @@ steps:
 export function starterFiles(): StudioFile[] {
   return [
     { name: 'inverter.bio', language: 'bioscript', contents: INVERTER_SOURCE },
+    { name: 'tu1.bio', language: 'bioscript', contents: TU1_SOURCE },
     { name: 'constructo.bio', language: 'bioscript', contents: CONSTRUCT_SOURCE },
     { name: 'hello-biology.bio', language: 'bioscript', contents: EXAMPLES[0].code },
     { name: 'project.synbio', language: 'json', contents: JSON.stringify({ name: 'Proyecto Synbio', format: 'project.synbio', files: ['inverter.bio', 'constructo.bio', 'hello-biology.bio'] }, null, 2) },
@@ -114,14 +115,26 @@ export interface HypNode {
   tipo: string;
   meta: string;
   hipotesis: string;
+  locus?: string;
+  promoter?: string;
+  rbs?: string;
 }
 
 export function initialHypotheses(): HypNode[] {
   return [
     { id: 'root', parentId: null, name: 'Programa principal', tipo: 'programa', meta: 'Definir el circuito', hipotesis: 'Un inversor TetR constituye una puerta NOT.' },
     { id: 'rama-a', parentId: 'root', name: 'Rama A', tipo: 'diseno', meta: 'Compilar inverter.bio', hipotesis: 'J23101-B0034-tetR-B0015 expresa TetR de forma constitutiva.' },
+    { id: 'silvestre', parentId: 'root', name: 'Diseño inicial/silvestre', tipo: 'variante', meta: 'base', hipotesis: 'La variante silvestre es el punto de partida.', locus: 'vía 136', promoter: 'pAm', rbs: 'T7ptac' },
+    { id: 'variante', parentId: 'silvestre', name: 'Nueva Variante', tipo: 'variante', meta: 'gfp', hipotesis: 'La variante añade el reportero gfp.', locus: 'locus A', promoter: 'pAm', rbs: 'B0034' },
+    { id: 'sublocus', parentId: 'variante', name: 'Nuevo Sublocus', tipo: 'sublocus', meta: 'B0015', hipotesis: 'El sublocus cierra con el doble terminador.', locus: 'sublocus 1', promoter: 'T7ptac', rbs: 'B0034' },
   ];
 }
+
+export const TU1_SOURCE = `circuit tu1 {
+    // Nombres del recorrido. pAm y T7ptac no tienen secuencia en el catálogo; gfp y B0015 sí.
+    pAm -> T7ptac -> gfp -> B0015
+}
+`;
 
 export interface AtlasLayer {
   id: string;
@@ -143,6 +156,23 @@ export const ECOLI_LAYERS: AtlasLayer[] = [
   { id: 'nuc', group: 'Interior', name: 'Nucleoide', description: 'Cromosoma condensado. DH5α no es un corte cryo-EM.', color: '#f1e3a0', size: 'región central', x: 0, y: 4, z: 4 },
   { id: 'rib', group: 'Interior', name: 'Ribosomas 70S', description: 'Traducción bacteriana. No se dibujan 10^4 copias; el punto representa la población.', color: '#3fb950', size: '~20 nm', x: 18, y: 8, z: 5 },
   { id: 'surf', group: 'Superficie', name: 'Superficie', description: 'DH5α no ensambla flagelo. No se inventa un flagelo.', color: '#8b949e', size: 'envoltura', x: 0, y: -6, z: 1 },
+];
+
+export const BL21_LAYERS: AtlasLayer[] = [
+  { id: 'om', group: 'Envoltura', name: 'Membrana externa', description: 'BL21(DE3), cepa B. Corte esquemático, no una tomografía.', color: '#8b5a2b', size: 'bacilo', x: 0, y: 0, z: 0 },
+  { id: 'wall', group: 'Envoltura', name: 'Pared celular', description: 'Peptidoglicano entre las dos membranas.', color: '#d2a679', size: 'fina', x: 0, y: 0, z: 1 },
+  { id: 'cyto', group: 'Interior', name: 'Citosol', description: 'Volumen donde corre el modelo. T7 RNAP es del lisógeno DE3, no se dibuja como un orgánulo.', color: '#6ea8fe', size: '~1 fL', x: 0, y: 0, z: 2 },
+  { id: 'nuc', group: 'Interior', name: 'Nucleoide', description: 'Cromosoma bacteriano. No hay núcleo.', color: '#f1e3a0', size: 'región central', x: 0, y: 4, z: 3 },
+  { id: 'flag', group: 'Apéndices', name: 'Flagelos', description: 'BL21 es móvil. El filamento es un esquema, no un modelo del motor.', color: '#e6edf3', size: 'varios µm', x: 40, y: 0, z: 1 },
+];
+
+export const S288C_LAYERS: AtlasLayer[] = [
+  { id: 'wall', group: 'Envoltura', name: 'Pared celular', description: 'Pared de S. cerevisiae. Esquema, no una reconstrucción.', color: '#b08968', size: '2–5 µm', x: 0, y: 0, z: 0 },
+  { id: 'pm', group: 'Envoltura', name: 'Membrana plasmática', description: 'Límite del citosol.', color: '#e6b17e', size: '~8 nm', x: 0, y: 0, z: 1 },
+  { id: 'nuc', group: 'Interior', name: 'Núcleo', description: 'Compartimento nuclear de levadura.', color: '#f1e3a0', size: '~1 µm', x: 0, y: -4, z: 3 },
+  { id: 'mit', group: 'Interior', name: 'Mitocondrias', description: 'Varias mitocondrias esquemáticas.', color: '#f85149', size: '~0.5 µm', x: -18, y: 8, z: 3 },
+  { id: 'vac', group: 'Interior', name: 'Vacuola', description: 'Vacuola de levadura.', color: '#58a6ff', size: 'fracción del volumen', x: 16, y: 6, z: 2 },
+  { id: 'rib', group: 'Interior', name: 'Ribosomas 80S', description: 'Traducción eucariota. Un punto representa la población.', color: '#3fb950', size: '~25 nm', x: 10, y: -10, z: 4 },
 ];
 
 export const PICHIA_LAYERS: AtlasLayer[] = [

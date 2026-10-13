@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es"><head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbioprotocol-protocolo-de-laboratorio";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbioprotocol-protocolo-de-laboratorio", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbioprotocol-protocolo-de-laboratorio") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; }
+    h1 { font-size: 22px; color: #94e2d5; margin-bottom: 4px; }
+    .subtitle { color: #6c7086; font-size: 13px; margin-bottom: 20px; }
+    .config-section { background: #313244; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .config-section h3 { color: #cba6f7; font-size: 14px; margin-bottom: 12px; }
+    .summary { color: #bac2de; font-size: 12px; margin-bottom: 12px; line-height: 1.5; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 11px; color: #a6adc8; margin-bottom: 4px; text-transform: uppercase; }
+    .form-group select, .form-group input { width: 100%; background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a; border-radius: 6px; padding: 8px; font-size: 13px; }
+    .form-group select:focus, .form-group input:focus { border-color: #94e2d5; outline: none; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    th { background: #45475a; color: #cdd6f4; padding: 8px 12px; font-size: 12px; text-align: left; }
+    td { padding: 8px 12px; border-bottom: 1px solid #313244; font-size: 13px; }
+    .type-badge { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+    .type-badge.promoter { background: #fab38720; color: #fab387; }
+    .type-badge.rbs { background: #a6e3a120; color: #a6e3a1; }
+    .type-badge.cds { background: #89b4fa20; color: #89b4fa; }
+    .type-badge.terminator { background: #f38ba820; color: #f38ba8; }
+    .type-badge.other { background: #cba6f720; color: #cba6f7; }
+    .gen-btn { width: 100%; padding: 12px; background: #94e2d5; color: #1e1e2e; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+    .gen-btn:hover { filter: brightness(1.1); }
+    .protocol-output { display: none; margin-top: 20px; }
+    .protocol-output.visible { display: block; }
+    .step { background: #313244; border-radius: 10px; padding: 14px; margin-bottom: 10px; border-left: 3px solid #94e2d5; }
+    .step-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .step-num { background: #94e2d5; color: #1e1e2e; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+    .step-title { font-weight: 600; font-size: 14px; flex: 1; }
+    .step-dur { font-size: 11px; color: #94e2d5; background: #94e2d520; padding: 2px 8px; border-radius: 10px; }
+    .step-temp { font-size: 11px; color: #f9e2af; background: #f9e2af20; padding: 2px 8px; border-radius: 10px; }
+    .step-body { font-size: 13px; color: #a6adc8; line-height: 1.6; white-space: pre-wrap; }
+    .step-tip { background: #89b4fa15; border-left: 2px solid #89b4fa; padding: 6px 10px; margin-top: 8px; font-size: 12px; color: #89b4fa; border-radius: 0 6px 6px 0; }
+    .step-safety { background: #f38ba815; border-left: 2px solid #f38ba8; padding: 6px 10px; margin-top: 6px; font-size: 12px; color: #f38ba8; border-radius: 0 6px 6px 0; }
+    .export-bar { display: flex; gap: 8px; margin-top: 16px; }
+    .exp-btn { padding: 8px 18px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .exp-btn:hover { background: #45475a; }
+    .exp-btn.primary { background: #cba6f7; color: #1e1e2e; border-color: #cba6f7; }
+</style>
+</head><body>
+    <h1>🧪 Generador de Protocolos de Laboratorio</h1>
+    <p class="subtitle">Compila BioScript moderno a SOP reproducible con primers, Tm y pasos wet-lab</p>
+
+    <div class="config-section">
+        <h3>🧬 Diseño detectado</h3>
+        <p class="summary">Bloques: circuit DemoCircuit. Host detectado: Escherichia coli. Selección detectada: Ampicillin 100 µg/mL.</p>
+        <table><tr><th>Alias</th><th>Parte</th><th>Tipo</th><th>Ubicación</th><th>Longitud</th></tr><tr><td>promoter</td><td>pLac</td><td><span class="type-badge promoter">Promoter</span></td><td>DemoCircuit/TU1</td><td>200</td></tr><tr><td>rbs_strong</td><td>B0034</td><td><span class="type-badge rbs">RBS</span></td><td>DemoCircuit/TU1</td><td>12</td></tr><tr><td>reporter</td><td>GFP</td><td><span class="type-badge cds">CDS</span></td><td>DemoCircuit/TU1</td><td>720</td></tr><tr><td>term_B0015</td><td>B0015</td><td><span class="type-badge terminator">Terminator</span></td><td>DemoCircuit/TU1</td><td>112</td></tr></table>
+    </div>
+
+    <div class="config-section">
+        <h3>⚙️ Configuración del Protocolo</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Método de Ensamblaje</label>
+                <select id="method">
+                    <option value="gibson" selected>Gibson Assembly</option>
+                    <option value="golden_gate">Golden Gate</option>
+                    <option value="biobrick">BioBrick</option>
+                    <option value="restriction_ligation">Restriction-Ligation</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Células Competentes</label>
+                <select id="cells">
+                    <option value="DH5α" selected>E. coli DH5α</option>
+                    <option value="BL21(DE3)">E. coli BL21(DE3)</option>
+                    <option value="TOP10">E. coli TOP10</option>
+                    <option value="NEB 5-alpha">NEB 5-alpha</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Selección Antibiótica</label>
+                <select id="antibiotic"><option value="Ampicillin 100 µg/mL" selected>Ampicillin 100 µg/mL</option><option value="Kanamicina 50 µg/mL">Kanamicina 50 µg/mL</option><option value="Cloranfenicol 25 µg/mL">Cloranfenicol 25 µg/mL</option><option value="Spectinomicina 100 µg/mL">Spectinomicina 100 µg/mL</option></select>
+            </div>
+            <div class="form-group">
+                <label>Vector Backbone</label>
+                <input type="text" id="vector" value="pSB1C3" placeholder="ej: pSB1C3, pET-28a">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Host</label>
+                <input type="text" id="host" value="Escherichia coli">
+            </div>
+            <div class="form-group">
+                <label>Verificación</label>
+                <select id="verification">
+                    <option value="sanger" selected>Sanger</option>
+                    <option value="whole_plasmid">Whole plasmid sequencing</option>
+                </select>
+            </div>
+        </div>
+        <button class="gen-btn" onclick="generateProtocol()">🧪 Generar SOP reproducible</button>
+    </div>
+
+    <div class="protocol-output" id="protocolOutput"></div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        let currentProtocol = null;
+
+        function generateProtocol() {
+            const config = {
+                assemblyMethod: document.getElementById('method').value,
+                competentCells: document.getElementById('cells').value,
+                antibioticSelection: document.getElementById('antibiotic').value,
+                vector: document.getElementById('vector').value,
+                host: document.getElementById('host').value,
+                verificationMethod: document.getElementById('verification').value
+            };
+            vscode.postMessage({ command: 'generate', config });
+        }
+
+        window.addEventListener('message', event => {
+            if (event.data.command === 'protocolReady') {
+                currentProtocol = event.data.protocol;
+                renderProtocol(currentProtocol);
+            }
+        });
+
+        function renderProtocol(protocol) {
+            const out = document.getElementById('protocolOutput');
+            let html = '<h2 style="color:#94e2d5; margin-bottom:4px;">📋 ' + protocol.title + '</h2>';
+            html += '<p style="color:#6c7086; font-size:12px; margin-bottom:16px;">Tiempo total estimado: ' + protocol.totalTime + ' | Generado: ' + protocol.date + '</p>';
+
+            for (const step of protocol.steps) {
+                html += '<div class="step"><div class="step-header">';
+                html += '<div class="step-num">' + step.number + '</div>';
+                html += '<span class="step-title">' + step.title + '</span>';
+                html += '<span class="step-dur">⏱ ' + step.duration + '</span>';
+                if (step.temperature) html += '<span class="step-temp">🌡 ' + step.temperature + '</span>';
+                html += '</div>';
+                html += '<div class="step-body">' + step.instructions.join('
+') + '</div>';
+                if (step.tips.length > 0) html += '<div class="step-tip">💡 ' + step.tips.join(' | ') + '</div>';
+                if (step.safety.length > 0) html += '<div class="step-safety">⚠️ ' + step.safety.join(' | ') + '</div>';
+                html += '</div>';
+            }
+
+            html += '<div class="export-bar">';
+            html += '<button class="exp-btn primary" onclick="exportMD()">📄 Exportar Markdown</button>';
+            html += '</div>';
+
+            out.innerHTML = html;
+            out.classList.add('visible');
+        }
+
+        function exportMD() {
+            if (currentProtocol) vscode.postMessage({ command: 'exportMarkdown', protocol: currentProtocol });
+        }
+    </script>
+</body></html>

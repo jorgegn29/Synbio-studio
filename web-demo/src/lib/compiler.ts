@@ -108,6 +108,8 @@ const KNOWN_PROMOTERS: Record<string, { strength: number; ref: string }> = {
   'pTet': { strength: 0.7, ref: 'Kelly et al. 2009' },
   'pBad': { strength: 0.6, ref: 'Schleif 2000' },
   'pT7': { strength: 1.0, ref: 'Studier 1990' },
+  'pAm': { strength: 0.5, ref: 'Nombre del recorrido de escritorio; esta copia no trae secuencia' },
+  'T7ptac': { strength: 0.85, ref: 'Nombre del recorrido de escritorio; esta copia no trae secuencia' },
   'pLux': { strength: 0.5, ref: 'Schaefer et al. 1996' },
   'pConst': { strength: 0.9, ref: 'Anderson collection' },
   'arsR_promoter': { strength: 0.4, ref: 'Wu & Bhatt 2005' },

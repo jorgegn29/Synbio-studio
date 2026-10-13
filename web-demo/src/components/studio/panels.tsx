@@ -5,11 +5,17 @@ import dynamic from 'next/dynamic';
 import SimulationView from '@/components/SimulationView';
 import { useStudio } from './studio-context';
 import {
-  annotatePart, CATALOG, catalogSequence, ECOLI_LAYERS, LITERATURE, lineDiff, ORGANISMS, PICHIA_LAYERS,
+  annotatePart, BL21_LAYERS, CATALOG, catalogSequence, ECOLI_LAYERS, LITERATURE, lineDiff, ORGANISMS, PICHIA_LAYERS, S288C_LAYERS,
   removePart, renamePart, TOOLBOX, type AtlasLayer,
 } from '@/lib/studio-model';
 import { researchGauges } from '@/lib/science';
 import { EXAMPLES } from '@/lib/examples';
+import { ExplorerTrees, useWebviewCatalog, WebviewHost } from './webview-host';
+import { ThreeCell, ThreeConstruct, type CellToggles } from './three-views';
+import {
+  AtlasTransdermal, DesignHub, EntornoPanel, equivalentOf, GuidedFlows, HomeExtras, LabRun,
+  NodeCanvas, PlasmidGauge, pointMutation, ProgramaView, TerminatorCard, TransdermalEditor, WorkspaceTasks,
+} from './tour-views';
 
 const BioEditor = dynamic(() => import('@/components/BioEditor'), { ssr: false });
 
@@ -36,6 +42,7 @@ export function Sidebar() {
   if (studio.activity === 'git') return <HistoryPane />;
   if (studio.activity === 'outline') return <OutlinePane />;
   if (studio.activity === 'bookmarks') return <BookmarkPane />;
+  if (studio.activity === 'panels') return <PanelList />;
   const centerFor: Record<string, 'map' | 'workflows' | 'sim' | 'design' | 'lab' | 'results' | 'atlas' | 'chassis' | 'safety' | 'tutorials' | 'diff' | 'settings' | undefined> = {
     map: 'map', workflows: 'workflows', sim: 'sim', design: 'design', lab: 'lab', results: 'results',
     atlas: 'atlas', chassis: 'chassis', safety: 'safety', tutorials: 'tutorials', diff: 'diff', settings: 'settings',
@@ -55,6 +62,7 @@ function Explorer() {
   return (
     <div className="side-pad">
       <h2>SYNBIO EXPLORER</h2>
+      <WorkspaceTasks />
       <section>
         <h3>Proyecto Synbio</h3>
         {studio.projectOpen ? <p>{studio.files.length} archivos · rama local {studio.branch}</p> : <p>No hay proyecto abierto</p>}
@@ -69,6 +77,11 @@ function Explorer() {
           <button key={file.name} className={file.name === studio.activeFile ? 'file on' : 'file'} onClick={() => studio.setActiveFile(file.name)}>{file.name}</button>
         )) : <p className="muted">Abre o crea un proyecto para ver los archivos.</p>}
       </section>
+      <section>
+        <h3>Paneles del cliente</h3>
+        <Button onClick={() => studio.openWebview('sbolvisual-sbol-visual-diagram')}>Abrir webviews</Button>
+      </section>
+      <ExplorerTrees />
       <section>
         <h3>Herramientas ({TOOLBOX.length})</h3>
         <div className="tool-scroll">
@@ -112,6 +125,7 @@ function SearchPane() {
     <div className="side-pad">
       <h2>Buscar</h2>
       <input value={studio.query} onChange={event => studio.setQuery(event.target.value)} placeholder="Parte, organismo, archivo" />
+      {(q.includes('termin') || q.includes('b0015') || q.includes('double')) && <TerminatorCard />}
       <h3>Partes</h3>
       {parts.map(part => <button key={part.name} className="file" onClick={() => studio.insertNamedPart(part.name, part.type)}>{part.name} · {part.group}</button>)}
       <h3>Organismos</h3>
@@ -203,8 +217,27 @@ function HistoryPane() {
   );
 }
 
+function PanelList() {
+  const studio = useStudio();
+  const { items } = useWebviewCatalog();
+  return (
+    <div className="side-pad">
+      <h2>Paneles client/</h2>
+      <p className="muted">HTML generado por la extensión, no una copia dibujada a mano.</p>
+      {items.map(item => (
+        <button key={item.id} className={item.id === studio.webviewId ? 'file on' : 'file'} onClick={() => item.id && studio.openWebview(item.id)}>{item.title}</button>
+      ))}
+    </div>
+  );
+}
+
 export function Center() {
   const studio = useStudio();
+  if (studio.center === 'webview') return <WebviewHost />;
+  if (studio.center === 'programa') return <ProgramaView />;
+  if (studio.center === 'hub') return <DesignHub />;
+  if (studio.center === 'graph') return <TransdermalEditor />;
+  if (studio.center === 'entorno') return <EntornoPanel />;
   if (studio.center === 'welcome') return <Welcome />;
   if (studio.center === 'editor') return <EditorPane />;
   if (studio.center === 'design' || studio.center === 'construct') return <DesignPane />;
@@ -269,6 +302,7 @@ function Welcome() {
         <button onClick={() => { studio.openProject(); studio.validateNow(); }}>Validate</button>
       </div>
       <pre className="code-card" onClick={() => studio.openProject('inverter.bio', 'editor')}>{studio.files.find(file => file.name === 'inverter.bio')?.contents}</pre>
+      <HomeExtras />
     </div>
   );
 }
@@ -310,6 +344,9 @@ function DesignPane() {
     <div className="design">
       <div className="cad-toolbar">
         <Button onClick={() => studio.setCenter('construct')}>Constructo 3D</Button>
+        <span className="muted">{studio.circuit?.connections[0] ? `TU 1: ${studio.circuit.connections[0].join(' → ')}` : 'sin TU'}</span>
+        <Button onClick={() => studio.openWebview('sbolvisual-sbol-visual-diagram')}>SBOL Visual</Button>
+        <Button onClick={() => studio.openWebview('synbioplasmidmap-mapa-de-pl-smido')}>Mapa de plásmido</Button>
         <Button onClick={() => studio.setCad3d(!studio.cad3d)}>{studio.cad3d ? 'Glifos 2D' : 'Formas 3D'}</Button>
         <input value={studio.labelFilter} onChange={event => studio.setLabelFilter(event.target.value)} placeholder="Filtrar etiquetas" />
       </div>
@@ -325,9 +362,17 @@ function DesignPane() {
           ))}
         </div>
         <div className="track-wrap">
-          {studio.center === 'construct' ? <Construct3D /> : (
-            <svg viewBox="0 0 920 180" className={studio.cad3d ? 'track iso' : 'track'} onClick={() => setMenu(null)}>
+          {studio.center === 'construct' ? <Construct3D /> : studio.cad3d ? <ThreeConstruct /> : (
+            <svg viewBox="0 0 920 180" className="track" onClick={() => setMenu(null)}>
               <line x1="30" y1="90" x2="890" y2="90" stroke="#8b949e" strokeWidth="3" />
+              {studio.construct.edges.filter(edge => edge.kind === 'repression' || edge.kind === 'activation').map((edge, index) => {
+                const from = nodes.findIndex(node => node.id === edge.from);
+                const to = nodes.findIndex(node => node.id === edge.to);
+                if (from < 0 || to < 0) return null;
+                const x1 = 50 + from * 78;
+                const x2 = 50 + to * 78;
+                return <path key={edge.kind + index} d={`M ${x1} 70 Q ${(x1 + x2) / 2} 20 ${x2} 70`} fill="none" stroke={edge.kind === 'repression' ? '#f85149' : '#22C55E'} strokeDasharray="4 3" />;
+              })}
               {nodes.map((node, index) => {
                 const x = 50 + index * 78;
                 return (
@@ -354,12 +399,17 @@ function DesignPane() {
             <text x="110" y="106" textAnchor="middle" fill="#c9d1d9" fontSize="12">{studio.circuit?.name ?? 'plásmido'}</text>
             <text x="110" y="124" textAnchor="middle" fill="#8b949e" fontSize="10">{plasmid.reduce((sum, part) => sum + part.sequence.length, 0)} bp</text>
           </svg>
+          <PlasmidGauge expression={studio.circuit?.transcriptionUnits[0]?.expressionLevel ?? 0.4} series={studio.sim ? studio.sim.points.slice(0, 24).map(point => Object.values(point.species)[0] ?? 0).map(value => Math.min(1, value / 5000)) : []} />
         </div>
         <PartEditor selectedName={selected?.name} selectedType={selected?.type} selectedSequence={selected?.sequence} />
       </div>
       {menu && (
         <div className="context" style={{ left: menu.x, top: menu.y }}>
           <button onClick={() => { const seq = catalogSequence(menu.name) ?? ''; localStorage.setItem(`synbio-part-${menu.name}`, seq); studio.log(`${menu.name} guardado en la biblioteca local.`); setMenu(null); }}>Añadir a biblioteca</button>
+          <button onClick={() => { studio.setSelectedPart(studio.selectedPart); setMenu(null); }}>Editar propiedades</button>
+          <button onClick={() => { const next = equivalentOf(menu.name); if (!next) { studio.log(`${menu.name} no tiene equivalente en el catálogo.`); } else { studio.mutateSource(source => source.replaceAll(menu.name, next)); studio.log(`${menu.name} reemplazado por ${next}.`); } setMenu(null); }}>Reemplazar con equivalente</button>
+          <button onClick={() => { studio.setCenter('construct'); setMenu(null); }}>Ver en 3D</button>
+          <button onClick={() => { studio.setToolText(pointMutation(menu.name)); studio.setBottom('analysis'); setMenu(null); }}>Simular mutación</button>
           <button onClick={() => { studio.mutateSource(source => removePart(source, menu.name)); setMenu(null); }}>Eliminar pieza</button>
           <button onClick={() => { studio.mutateSource(source => annotatePart(source, menu.name, note)); setMenu(null); }}>Añadir anotación</button>
           <button onClick={() => { studio.setToolText(catalogSequence(menu.name) || selected?.sequence || 'Sin secuencia de catálogo.'); studio.setBottom('analysis'); setMenu(null); }}>Ver secuencia</button>
@@ -411,18 +461,6 @@ function PartEditor({ selectedName, selectedType, selectedSequence }: { selected
 
 function Construct3D() {
   const studio = useStudio();
-  const nodes = studio.construct.nodes.filter(node => studio.group === 'todos' || node.type === studio.group);
-  const visible = new Set(nodes.map(node => node.id));
-  const placed = nodes.map((node, index) => {
-    const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2 + studio.rotation;
-    const z = Math.sin(angle);
-    return {
-      node,
-      x: 260 + Math.cos(angle) * 140 * studio.separation + z * 28,
-      y: 150 + Math.sin(angle * 0.5) * 50 * studio.separation - z * 16,
-    };
-  });
-  const byId = new Map(placed.map(item => [item.node.id, item]));
   return (
     <div className="construct">
       <div className="row wrap">
@@ -440,22 +478,8 @@ function Construct3D() {
         <label><input type="checkbox" checked={studio.showLabels} onChange={event => studio.setShowLabels(event.target.checked)} /> Etiquetas</label>
         <label>Orbitar <input type="range" min={0} max={6.28} step={0.05} value={studio.rotation} onChange={event => studio.setRotation(Number(event.target.value))} /></label>
       </div>
-      <p>{studio.construct.nodes.length} piezas, {studio.construct.edges.length} conexiones</p>
-      <svg viewBox="0 0 520 300">
-        {studio.construct.edges.filter(edge => visible.has(edge.from) && visible.has(edge.to)).map((edge, index) => {
-          const a = byId.get(edge.from);
-          const b = byId.get(edge.to);
-          if (!a || !b) return null;
-          const color = edge.kind === 'repression' ? '#f85149' : edge.kind === 'activation' ? '#3fb950' : '#8b949e';
-          return <line key={index} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={color} strokeWidth={edge.kind === 'adjacency' ? 2 : 2.5} />;
-        })}
-        {placed.map(item => (
-          <g key={item.node.id} onClick={() => studio.setSelectedPart(item.node.id)}>
-            <circle cx={item.x} cy={item.y} r="16" fill={GLYPH[item.node.type]} />
-            {studio.showLabels && <text x={item.x} y={item.y + 28} textAnchor="middle" fill="#c9d1d9" fontSize="11">{item.node.name}</text>}
-          </g>
-        ))}
-      </svg>
+      <p>{studio.construct.nodes.length} piezas, {studio.construct.edges.length} conexiones · Three.js</p>
+      <ThreeConstruct />
     </div>
   );
 }
@@ -540,6 +564,7 @@ function MapPane() {
         <Button onClick={studio.triggerGate}>Gatillo</Button>
         <Button tone="green" onClick={studio.launchStudio}>Lanzar Studio</Button>
       </div>
+      <NodeCanvas />
       <svg viewBox="0 0 640 280" className="hyp-graph">
         {studio.hypotheses.filter(node => node.parentId).map(node => {
           const parent = studio.hypotheses.find(item => item.id === node.parentId);
@@ -580,6 +605,7 @@ function TranslationalAtlas() {
   const [score, setScore] = useState(0.5);
   return (
     <div className="atlas-t">
+      <AtlasTransdermal />
       <p className="banner">Atlas translacional · casos conceptuales. No autoriza trabajo de banco ni de campo.</p>
       <label>Caso<input value={caso} onChange={event => setCaso(event.target.value)} /></label>
       <label>Evidencia<textarea value={evidencia} onChange={event => setEvidencia(event.target.value)} /></label>
@@ -596,19 +622,33 @@ function TranslationalAtlas() {
 
 function ChassisPane() {
   const studio = useStudio();
-  const layers = studio.organism === 'ecoli' ? ECOLI_LAYERS : PICHIA_LAYERS;
+  const layers = studio.organism === 'bl21' ? BL21_LAYERS : studio.organism === 's288c' ? S288C_LAYERS : studio.organism === 'pichia' ? PICHIA_LAYERS : ECOLI_LAYERS;
+  const [toggles, setToggles] = useState<CellToggles>({ membrana: true, nucleo: true, mitocondrias: true, flagelos: studio.organism === 'bl21', pared: true, citosol: true, membranaExterna: true });
+  const [induction, setInduction] = useState(0.45);
+  const [promoterForce, setPromoterForce] = useState(0.7);
+  const [temperature, setTemperature] = useState(30);
+  const [surface, setSurface] = useState(false);
   const shown = studio.isolate ? layers.filter(layer => layer.group === studio.isolate) : layers;
   const [selected, setSelected] = useState<AtlasLayer>(layers[0]);
   const phenotype = studio.circuit?.transcriptionUnits.flatMap(tu => tu.parts).find(part => part.type === 'reporter')?.name;
-  const fill = phenotype === 'RFP' ? '#f85149' : phenotype === 'GFP' ? '#3fb950' : '#6ea8fe';
   const groups = ['Envoltura', 'Interior', 'Apéndices', 'Superficie', 'Comunidad'];
   return (
     <div className="chassis">
       <p className="banner">Chassis Studio · conceptual-prelab. Esquema anatómico, no una reconstrucción ni una autorización de liberación.</p>
       <div className="row wrap">
-        <select value={studio.organism} onChange={event => studio.setOrganism(event.target.value as 'ecoli' | 'pichia')}>
+        <select value={studio.organism} onChange={event => {
+          const next = event.target.value as 'ecoli' | 'pichia' | 'bl21' | 's288c';
+          studio.setOrganism(next);
+          setToggles(current => ({ ...current, flagelos: next === 'bl21', nucleo: next !== 'ecoli' && next !== 'bl21', mitocondrias: next === 's288c' || next === 'pichia' }));
+        }}>
           <option value="ecoli">E. coli DH5α</option>
+          <option value="bl21">E. coli BL21(DE3)</option>
+          <option value="s288c">S. cerevisiae S288C</option>
           <option value="pichia">P. pastoris</option>
+        </select>
+        <select value={surface ? 'superficie' : 'corte'} onChange={event => { const next = event.target.value === 'superficie'; setSurface(next); studio.setCut(!next); }}>
+          <option value="corte">Corte anatómico</option>
+          <option value="superficie">Superficie</option>
         </select>
         <Button onClick={() => studio.setCut(!studio.cut)}>{studio.cut ? 'Vista completa' : 'Vista corte anatómico'}</Button>
         <label>Zoom <input type="range" min={0.7} max={1.6} step={0.05} value={studio.zoom} onChange={event => studio.setZoom(Number(event.target.value))} /></label>
@@ -618,17 +658,20 @@ function ChassisPane() {
       <div className="row wrap">
         {groups.map(group => <Button key={group} onClick={() => studio.setIsolate(studio.isolate === group ? null : group)}>{group}</Button>)}
       </div>
+      <div className="row wrap">
+        <label>Nivel de inducción <input type="range" min={0} max={1} step={0.05} value={induction} onChange={event => setInduction(Number(event.target.value))} /></label>
+        <label>Fuerza promotor <input type="range" min={0.1} max={1} step={0.05} value={promoterForce} onChange={event => setPromoterForce(Number(event.target.value))} /></label>
+        <label>Temp. crecimiento <input type="range" min={20} max={42} value={temperature} onChange={event => setTemperature(Number(event.target.value))} /></label>
+      </div>
+      <p className="muted">Inducción {induction.toFixed(2)} cambia el brillo del citosol. Fuerza {promoterForce.toFixed(2)} es un factor de vista, no un RPU medido. {temperature} °C no ajusta un modelo de crecimiento.</p>
+      {studio.organism !== 'bl21' && toggles.flagelos && <p className="muted">Este organismo no lleva flagelo en el modelo. DH5α no ensambla flagelo; la levadura tampoco.</p>}
+      <div className="row wrap">
+        {(Object.keys(toggles) as (keyof CellToggles)[]).map(key => (
+          <label key={key} className="check"><input type="checkbox" checked={toggles[key]} onChange={() => setToggles(current => ({ ...current, [key]: !current[key] }))} />{key}</label>
+        ))}
+      </div>
       <div className="chassis-body">
-        <svg viewBox="0 0 360 220" style={{ transform: `scale(${studio.zoom})` }}>
-          <ellipse cx="180" cy="110" rx={studio.organism === 'ecoli' ? 150 : 90} ry={studio.organism === 'ecoli' ? 60 : 80} fill={fill} opacity={studio.cut ? 0.35 : 0.8} />
-          {studio.cut && <rect x="180" y="20" width="180" height="180" fill="#0d1117" opacity="0.55" />}
-          {shown.map(layer => (
-            <g key={layer.id} onClick={() => setSelected(layer)} transform={`translate(${layer.x * (1 + studio.explode / 40)} ${layer.y * (1 + studio.explode / 40)})`}>
-              <circle cx="180" cy="110" r={layer.group === 'Envoltura' ? 18 : 12} fill={layer.color} stroke="#fff" />
-              <text x="180" y="140" textAnchor="middle" fill="#c9d1d9" fontSize="10">{layer.name}</text>
-            </g>
-          ))}
-        </svg>
+        <ThreeCell onSelect={setSelected} toggles={toggles} induction={induction * promoterForce} surface={surface} />
         <aside>
           <h3>{selected.name}</h3>
           <p>{selected.description}</p>
@@ -684,6 +727,7 @@ function LabPane() {
   });
   return (
     <div className="lab">
+      <LabRun />
       <div className="row wrap">
         <Button onClick={() => studio.downloadText(`${studio.circuit?.name ?? 'protocol'}.md`, studio.protocol)}>Descargar protocolo</Button>
         <Button onClick={() => studio.downloadText('assembly.py', studio.ot)}>Descargar OpenTrons</Button>
@@ -778,6 +822,7 @@ function Workflows() {
   ];
   return (
     <div className="flows">
+      <GuidedFlows />
       {flows.map(flow => (
         <section key={flow.id}>
           <h3>{flow.title}</h3>

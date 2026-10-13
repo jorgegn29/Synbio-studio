@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbioaiassistant-ai-design-assistant";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbioaiassistant-ai-design-assistant", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbioaiassistant-ai-design-assistant") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI Design Assistant</title>
+<style>
+    :root { --bg: #1e1e2e; --surface: #2a2a3e; --primary: #7c3aed; --accent: #22d3ee;
+            --success: #10b981; --warning: #f59e0b; --error: #ef4444; --text: #e2e8f0;
+            --text2: #94a3b8; --border: #334155; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 16px; }
+    h1 { font-size: 1.5em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    h2 { font-size: 1.1em; margin: 16px 0 8px; color: var(--accent); }
+    h3 { font-size: 0.95em; margin: 10px 0 6px; color: var(--text); }
+    .subtitle { color: var(--text2); font-size: 0.85em; margin-bottom: 16px; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab { padding: 8px 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text2);
+           border-radius: 6px; cursor: pointer; font-size: 0.8em; transition: all 0.2s; }
+    .tab:hover { border-color: var(--primary); color: var(--text); }
+    .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em;
+           font-weight: 600; transition: all 0.2s; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #6d28d9; }
+    .btn-accent { background: var(--accent); color: #000; }
+    .btn-accent:hover { background: #06b6d4; }
+    .btn-success { background: var(--success); color: #000; }
+    .btn-sm { padding: 5px 12px; font-size: 0.8em; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+    .card:hover { border-color: var(--primary); }
+    .pattern-card { cursor: pointer; }
+    .pattern-card .complexity { font-size: 0.7em; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .complexity.basic { background: #10b981; color: #000; }
+    .complexity.intermediate { background: #f59e0b; color: #000; }
+    .complexity.advanced { background: #ef4444; color: white; }
+    .pattern-name { font-weight: 700; font-size: 1.05em; display: flex; justify-content: space-between; align-items: center; }
+    .pattern-desc { color: var(--text2); font-size: 0.85em; margin: 6px 0; }
+    .pattern-use { font-size: 0.8em; color: var(--accent); }
+    .pattern-ref { font-size: 0.75em; color: var(--text2); font-style: italic; margin-top: 4px; }
+    .suggestion { border-left: 3px solid; padding-left: 12px; margin-bottom: 10px; }
+    .suggestion.warning { border-color: var(--warning); }
+    .suggestion.optimization { border-color: var(--accent); }
+    .suggestion.pattern { border-color: var(--primary); }
+    .suggestion.fix { border-color: var(--success); }
+    .suggestion-title { font-weight: 600; font-size: 0.95em; }
+    .suggestion-desc { color: var(--text2); font-size: 0.85em; margin-top: 4px; white-space: pre-line; }
+    .confidence { font-size: 0.75em; color: var(--text2); }
+    .actions-row { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+    .part-item { display: flex; justify-content: space-between; align-items: center; padding: 8px;
+                 background: var(--surface); border-radius: 6px; margin-bottom: 6px; border: 1px solid var(--border); }
+    .part-info { flex: 1; }
+    .part-name { font-weight: 600; font-size: 0.9em; }
+    .part-id { color: var(--text2); font-size: 0.8em; }
+    .score-bar { width: 60px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 3px; }
+    .explanation { line-height: 1.6; }
+    .comp-item { padding: 4px 0; font-size: 0.9em; }
+    .search-box { width: 100%; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border);
+                  border-radius: 6px; color: var(--text); font-size: 0.9em; margin-bottom: 10px; }
+    .search-box:focus { outline: none; border-color: var(--primary); }
+    .empty-state { text-align: center; padding: 30px; color: var(--text2); }
+    .empty-state .icon { font-size: 2.5em; margin-bottom: 10px; }
+    #results { min-height: 100px; }
+    /* Score Card styles */
+    .score-card { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
+    .score-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+    .score-label { font-size: 0.8em; color: var(--text2); margin-bottom: 4px; }
+    .score-value { font-size: 1.8em; font-weight: 700; }
+    .score-detail { font-size: 0.75em; color: var(--text2); margin-top: 4px; }
+    .grade { display: inline-block; font-size: 2.5em; font-weight: 800; padding: 8px 16px; border-radius: 12px; }
+    .grade-A { background: #10b981; color: #000; }
+    .grade-B { background: #22d3ee; color: #000; }
+    .grade-C { background: #f59e0b; color: #000; }
+    .grade-D { background: #f97316; color: #000; }
+    .grade-F { background: #ef4444; color: white; }
+    .overall-score { text-align: center; margin: 16px 0; }
+    .overall-number { font-size: 1.2em; color: var(--text2); margin-top: 4px; }
+    /* Motif card */
+    .motif-card { background: var(--surface); border-left: 3px solid var(--primary); padding: 10px 12px; margin-bottom: 8px; border-radius: 0 6px 6px 0; }
+    .motif-type { font-weight: 600; color: var(--accent); font-size: 0.9em; text-transform: capitalize; }
+    .motif-desc { font-size: 0.85em; color: var(--text); margin: 4px 0; }
+    .motif-behavior { font-size: 0.8em; color: var(--text2); }
+    .motif-ref { font-size: 0.75em; color: var(--text2); font-style: italic; }
+    /* Burden */
+    .burden-meter { width: 100%; height: 24px; background: var(--border); border-radius: 12px; overflow: hidden; margin: 12px 0; }
+    .burden-fill { height: 100%; border-radius: 12px; transition: width 0.5s; display: flex; align-items: center; justify-content: center; font-size: 0.75em; font-weight: 600; }
+    .burden-low { background: var(--success); color: #000; }
+    .burden-moderate { background: var(--warning); color: #000; }
+    .burden-high { background: #f97316; color: #000; }
+    .burden-critical { background: var(--error); color: white; }
+    .burden-gene { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.85em; }
+    /* Network SVG container */
+    .network-svg { margin: 12px 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .network-svg svg { width: 100%; height: auto; }
+    .edge-list { font-size: 0.85em; color: var(--text2); margin: 8px 0; }
+    .edge-item { padding: 2px 0; }
+    .loop-badge { display: inline-block; background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; margin: 2px; }
+    /* Recommendation list */
+    .rec-item { padding: 4px 0 4px 16px; font-size: 0.85em; color: var(--text2); position: relative; }
+    .rec-item::before { content: '💡'; position: absolute; left: 0; }
+    .issue-item { padding: 4px 0 4px 16px; font-size: 0.85em; color: var(--warning); position: relative; }
+    .issue-item::before { content: '⚠️'; position: absolute; left: 0; }
+</style>
+</head>
+<body>
+    <h1>🤖 AI Design Assistant</h1>
+    <p class="subtitle">Análisis de red regulatoria, score card, carga metabólica y recomendaciones inteligentes</p>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('analyze')">📊 Análisis</div>
+        <div class="tab" onclick="switchTab('network')">🕸️ Red</div>
+        <div class="tab" onclick="switchTab('patterns')">🧩 Patrones</div>
+        <div class="tab" onclick="switchTab('parts')">🔧 Partes</div>
+        <div class="tab" onclick="switchTab('explain')">📖 Explicar</div>
+        <div class="tab" onclick="switchTab('optimize')">⚡ Optimizar</div>
+    </div>
+
+    <!-- Análisis -->
+    <div id="tab-analyze" class="panel active">
+        <div class="actions-row">
+            <button class="btn btn-primary" onclick="analyzeCurrent()">🔍 Analizar Circuito</button>
+            <button class="btn btn-accent" onclick="scoreCard()">📋 Score Card</button>
+            <button class="btn btn-success" onclick="metabolicBurden()">🧪 Carga Metabólica</button>
+        </div>
+        <div id="analysis-results">
+            <div class="empty-state">
+                <div class="icon">🔬</div>
+                <p>Analiza el circuito actual: topología de red, reglas de compatibilidad, score card y carga metabólica.</p>
+            </div>
+        </div>
+        <div id="scorecard-results"></div>
+        <div id="burden-results"></div>
+    </div>
+
+    <!-- Network -->
+    <div id="tab-network" class="panel">
+        <div class="actions-row">
+            <button class="btn btn-primary" onclick="networkAnalysis()">🕸️ Analizar Red Regulatoria</button>
+        </div>
+        <div id="network-results">
+            <div class="empty-state">
+                <div class="icon">🕸️</div>
+                <p>Construye el grafo de interacciones regulatorias, detecta motifs (toggle switch, repressilator, FFL, cascadas) y feedback loops.</p>
+                <p style="font-size:0.8em;margin-top:8px;color:var(--text2)">Basado en: Alon U (2007) "An Introduction to Systems Biology" · Shen-Orr et al. (2002) Nat Genet 31:64</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patrones -->
+    <div id="tab-patterns" class="panel">
+        <h2>Patrones de Diseño Genético</h2>
+        <div id="patterns-list"></div>
+    </div>
+
+    <!-- Partes -->
+    <div id="tab-parts" class="panel">
+        <h2>Recomendador de Partes iGEM</h2>
+        <input type="text" class="search-box" id="partSearch" placeholder="¿Qué necesita? (ej: 'strong promoter', 'gfp', 'arabinose', 'terminador'...)" onkeyup="if(event.key==='Enter')suggestParts()">
+        <button class="btn btn-accent btn-sm" onclick="suggestParts()">🔍 Buscar partes</button>
+        <p style="font-size:0.75em;color:var(--text2);margin-top:4px">Scoring multi-factor: tipo, nombre, nivel de expresión, contexto del editor, especificidad</p>
+        <div id="parts-results" style="margin-top:12px;">
+            <div class="empty-state">
+                <div class="icon">🔧</div>
+                <p>Describa lo que necesita y le recomendaré partes iGEM compatibles con scoring multi-factor.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Explicar -->
+    <div id="tab-explain" class="panel">
+        <div class="actions-row">
+            <button class="btn btn-primary" onclick="explainCircuit()">📖 Explicar Circuito Actual</button>
+        </div>
+        <div id="explanation-results">
+            <div class="empty-state">
+                <div class="icon">📖</div>
+                <p>Explicación detallada: componentes, flujo regulatorio, motifs de red, predicción de comportamiento dinámico.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Optimizar -->
+    <div id="tab-optimize" class="panel">
+        <div class="actions-row">
+            <button class="btn btn-accent" onclick="getOptimizations()">⚡ Generar Sugerencias de Optimización</button>
+        </div>
+        <div id="optimization-results">
+            <div class="empty-state">
+                <div class="icon">⚡</div>
+                <p>Sugerencias de optimización: expresión, codones, RBS, balanceo de carga.</p>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const vscode = acquireVsCodeApi();
+    const patterns = [{"name":"Toggle Switch","description":"Interruptor biestable con dos estados estables mutuamente excluyentes","components":["promoter_inducible","repressor_A","promoter_inducible","repressor_B"],"reference":"Gardner TS, Cantor CR & Collins JJ (2000) Nature 403:339-342","template":"// Toggle Switch — Gardner TS, Cantor CR & Collins JJ (2000) Nature 403:339-342\n// Strength values in RPU (Relative Promoter Units, Kelly et al. 2009 J Biol Eng 3:4)\ngenetic_circuit toggle_switch {\n    // Estado A: LacI reprime TetR\n    promoter pLac_TetR (type: \"inducible\", inducer: \"IPTG\") {} // BBa_R0010\n    rbs rbs_tetR (strength: 0.6) {} // BBa_B0032 ≈ 0.6 RPU (Salis et al. 2009 Nat Biotechnol 27:946)\n    gene tetR (product: \"TetR\") {} // UniProt P04483, 207 aa\n    terminator term_A (efficiency: 0.98) {} // BBa_B0015 (Chen et al. 2013 Nucleic Acids Res 41:2541)\n\n    // Estado B: TetR reprime LacI\n    promoter pTet_LacI (type: \"inducible\", inducer: \"aTc\") {} // BBa_R0040\n    rbs rbs_lacI (strength: 0.6) {} // BBa_B0032\n    gene lacI (product: \"LacI\") {} // UniProt P03023, 360 aa\n    terminator term_B (efficiency: 0.98) {} // BBa_B0015\n}","useCase":"Memoria celular, decisiones binarias, almacenamiento de información digital","complexity":"intermediate"},{"name":"Repressilator","description":"Oscilador sintético con tres represores en cascada cíclica","components":["promoter","repressor","promoter","repressor","promoter","repressor"],"reference":"Elowitz MB & Leibler S (2000) Nature 403:335-338","template":"// Repressilator — Elowitz MB & Leibler S (2000) Nature 403:335-338\n// Period ≈ 160 min (Table S2: α=216 proteins/cell/mRNA, n=2, K=40 molecules)\ngenetic_circuit repressilator {\n    promoter pLac (type: \"repressible\", repressor: \"LacI\") {} // PLlac-O1\n    rbs rbs_tetR (strength: 0.3) {} // Weak RBS to match original construct\n    gene tetR (product: \"TetR\") {} // UniProt P04483\n    terminator t1 (efficiency: 0.98) {} // BBa_B0015\n\n    promoter pTet (type: \"repressible\", repressor: \"TetR\") {} // PLtet-O1\n    rbs rbs_cI (strength: 0.3) {} // Matched to repressilator stoichiometry\n    gene cI (product: \"cI\") {} // Lambda cI, UniProt P03034\n    terminator t2 (efficiency: 0.98) {} // BBa_B0015\n\n    promoter pLambda (type: \"repressible\", repressor: \"cI\") {} // PR (lambda)\n    rbs rbs_lacI (strength: 0.3) {} // Balanced expression\n    gene lacI (product: \"LacI\") {} // UniProt P03023\n    terminator t3 (efficiency: 0.98) {} // BBa_B0015\n}","useCase":"Expresión periódica, relojes biológicos, sincronización celular","complexity":"advanced"},{"name":"Sensor-Reporter","description":"Circuito sensor con promotor inducible acoplado a gen reportero","components":["promoter_inducible","rbs","reporter_gene","terminator"],"reference":"Schleif R (2000) Trends Genet 16:559","template":"// Sensor-Reporter — Schleif R (2000) Trends Genet 16:559 (arabinose system)\ngenetic_circuit biosensor {\n    promoter pSensor (type: \"inducible\", inducer: \"arabinose\") {} // BBa_I0500/pBAD\n    rbs rbs_strong (strength: 1.0) {} // BBa_B0034 = 1.0 RPU (Kelly et al. 2009)\n    gene gfp (product: \"GFP\") {} // BBa_E0040, GFPmut3b (Cormack et al. 1996 Gene 173:33)\n    terminator dblTerm (efficiency: 0.98) {} // BBa_B0015 (Chen et al. 2013 NAR)\n}","useCase":"Detección de analitos, biosensores ambientales, diagnóstico","complexity":"basic"},{"name":"Feed-Forward Loop","description":"Motivo regulatorio de tipo I coherente con filtrado de señal","components":["promoter","activator","promoter_dual","target_gene"],"reference":"Mangan S & Alon U (2003) PNAS 100:11980","template":"// Feed-Forward Loop Type 1 Coherent — Mangan S & Alon U (2003) PNAS 100:11980\n// C1-FFL filters transient pulses; delay ~1 generation (Shen-Orr et al. 2002 Nat Genet 31:64)\ngenetic_circuit ffl_coherent {\n    // Regulador maestro X\n    promoter pConst_X (type: \"constitutive\", strength: 0.5) {} // ~0.5 RPU (Anderson library mid)\n    rbs rbs_X (strength: 0.6) {} // BBa_B0032 ≈ 0.6 RPU\n    gene regX (product: \"RegX\") {} // Transcription factor\n    terminator t1 (efficiency: 0.98) {} // BBa_B0015\n\n    // Regulador intermedio Y (activado por X)\n    promoter pX (type: \"inducible\", activator: \"RegX\") {}\n    rbs rbs_Y (strength: 0.6) {} // BBa_B0032\n    gene regY (product: \"RegY\") {} // Second transcription factor\n    terminator t2 (efficiency: 0.98) {} // BBa_B0015\n\n    // Gen objetivo Z (requiere X AND Y)\n    promoter pXY (type: \"AND_gate\", inputs: [\"RegX\", \"RegY\"]) {}\n    rbs rbs_Z (strength: 1.0) {} // BBa_B0034 = 1.0 RPU — strong for output\n    gene targetZ (product: \"GFP\") {} // BBa_E0040 reporter\n    terminator t3 (efficiency: 0.98) {} // BBa_B0015\n}","useCase":"Filtrado de pulsos transitorios, retardo temporal, robustez","complexity":"advanced"},{"name":"Kill Switch","description":"Mecanismo de seguridad con autodestrucción condicional","components":["promoter_inducible","toxin","antitoxin","terminator"],"reference":"Chan CT et al. (2016) Nat Chem Biol 12:82","template":"// Kill Switch — CcdB/CcdA toxin-antitoxin system (Bernard & Couturier 1992 J Mol Biol 226:735)\n// Ref: Chan CT et al. (2016) Nat Chem Biol 12:82 — synthetic biocontainment\ngenetic_circuit kill_switch {\n    // Antitoxina constitutiva (mantiene la célula viva)\n    promoter pConst (type: \"constitutive\", strength: 0.5) {} // Anderson mid-strength\n    rbs rbs_anti (strength: 1.0) {} // BBa_B0034, strong for antitoxin excess\n    gene antitoxin (product: \"CcdA\") {} // UniProt P62553, 72 aa, DNA gyrase protector\n    terminator t1 (efficiency: 0.98) {} // BBa_B0015\n\n    // Toxina activada por pérdida de señal\n    promoter pSafe (type: \"inducible\", inducer: \"absence_of_signal\") {}\n    rbs rbs_tox (strength: 0.6) {} // Moderate — avoid premature killing\n    gene toxin (product: \"CcdB\") {} // UniProt P62554, 101 aa, gyrase poison (IC50 ≈ 10 nM)\n    terminator t2 (efficiency: 0.98) {} // BBa_B0015\n}","useCase":"Biocontención, seguridad biológica, liberación controlada","complexity":"intermediate"},{"name":"Inverter (NOT Gate)","description":"Puerta lógica NOT que invierte la señal de entrada","components":["promoter_inducible","repressor","promoter_repressible","output"],"reference":"Stanton BC et al. (2014) Nat Chem Biol 10:99","template":"// NOT Gate (Inverter) — Stanton BC et al. (2014) Nat Chem Biol 10:99\n// Ref: Nielsen AAK et al. (2016) Science 352:aac7341 — genetic logic gates\ngenetic_circuit not_gate {\n    // Entrada: promotor inducible controla el represor\n    promoter pInput (type: \"inducible\", inducer: \"IPTG\") {} // BBa_R0010\n    rbs rbs_rep (strength: 0.6) {} // BBa_B0032, moderate expression\n    gene repressor (product: \"CI\") {} // Lambda cI (UniProt P03034), strong repressor\n    terminator t1 (efficiency: 0.98) {} // BBa_B0015\n\n    // Salida invertida\n    promoter pCI (type: \"repressible\", repressor: \"CI\") {} // PR (lambda)\n    rbs rbs_out (strength: 1.0) {} // BBa_B0034 = 1.0 RPU — maximize output signal\n    gene output (product: \"GFP\") {} // BBa_E0040, GFPmut3b\n    terminator t2 (efficiency: 0.98) {} // BBa_B0015\n}","useCase":"Lógica digital, inversión de señal, circuitos combinacionales","complexity":"basic"}];
+
+    function switchTab(name) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('tab-' + name).classList.add('active');
+    }
+
+    // Patrones
+    function renderPatterns() {
+        const container = document.getElementById('patterns-list');
+        container.innerHTML = patterns.map((p, i) => `
+            <div class="card pattern-card" onclick="insertPattern(${i})">
+                <div class="pattern-name">
+                    ${p.name}
+                    <span class="complexity ${p.complexity}">${p.complexity}</span>
+                </div>
+                <div class="pattern-desc">${p.description}</div>
+                <div class="pattern-use">📌 ${p.useCase}</div>
+                <div class="pattern-ref">📚 ${p.reference || ''}</div>
+                <div style="margin-top:8px">
+                    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();insertPattern(${i})">
+                        📋 Insertar en editor
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function insertPattern(index) { vscode.postMessage({ command: 'insertPattern', patternIndex: index }); }
+    function analyzeCurrent() { vscode.postMessage({ command: 'analyzeCurrent' }); }
+    function suggestParts() {
+        const ctx = document.getElementById('partSearch').value;
+        if (ctx) vscode.postMessage({ command: 'suggestParts', context: ctx });
+    }
+    function explainCircuit() { vscode.postMessage({ command: 'explainCircuit' }); }
+    function getOptimizations() { vscode.postMessage({ command: 'optimizeSuggestions' }); }
+    function networkAnalysis() { vscode.postMessage({ command: 'networkAnalysis' }); }
+    function scoreCard() { vscode.postMessage({ command: 'scoreCard' }); }
+    function metabolicBurden() { vscode.postMessage({ command: 'metabolicBurden' }); }
+
+    window.addEventListener('message', event => {
+        const msg = event.data;
+        switch(msg.command) {
+            case 'analysisResult':
+                renderSuggestions('analysis-results', msg.suggestions);
+                break;
+            case 'partsResult':
+                renderParts(msg.parts);
+                break;
+            case 'explanationResult':
+                renderExplanation(msg.explanation);
+                break;
+            case 'optimizationsResult':
+                renderSuggestions('optimization-results', msg.optimizations);
+                break;
+            case 'networkResult':
+                renderNetwork(msg.topology);
+                break;
+            case 'scoreCardResult':
+                renderScoreCard(msg.scoreCard);
+                break;
+            case 'burdenResult':
+                renderBurden(msg.burden);
+                break;
+        }
+    });
+
+    function renderSuggestions(containerId, suggestions) {
+        const el = document.getElementById(containerId);
+        if (!suggestions || suggestions.length === 0) {
+            el.innerHTML = '<div class="card" style="text-align:center;color:var(--success)">✅ No se encontraron problemas. El diseño se ve bien.</div>';
+            return;
+        }
+        el.innerHTML = suggestions.map(s => `
+            <div class="suggestion ${s.type}">
+                <div class="suggestion-title">${s.type === 'warning' ? '⚠️' : s.type === 'optimization' ? '💡' : s.type === 'pattern' ? '🧩' : '🔧'} ${s.title}</div>
+                <div class="suggestion-desc">${s.description}</div>
+                <div class="confidence">Confianza: ${Math.round(s.confidence * 100)}% · ${s.category}</div>
+            </div>
+        `).join('');
+    }
+
+    function renderParts(parts) {
+        const el = document.getElementById('parts-results');
+        if (!parts || parts.length === 0) {
+            el.innerHTML = '<div class="card">No se encontraron partes relevantes. Intente con otros términos.</div>';
+            return;
+        }
+        el.innerHTML = parts.map(p => {
+            const pct = Math.round(p.score * 100);
+            const color = pct >= 70 ? 'var(--success)' : pct >= 40 ? 'var(--accent)' : 'var(--warning)';
+            return `
+            <div class="part-item">
+                <div class="part-info">
+                    <div class="part-name">${p.name}</div>
+                    <div class="part-id">${p.partId} · ${p.type} · ${p.reason}</div>
+                </div>
+                <div style="text-align:right;min-width:80px">
+                    <div class="score-bar"><div class="score-fill" style="width:${pct}%;background:${color}"></div></div>
+                    <div style="font-size:0.7em;color:var(--text2);margin-top:2px">${pct}% match</div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderExplanation(exp) {
+        const el = document.getElementById('explanation-results');
+        let html = `
+            <div class="card explanation">
+                <h2>🧬 ${exp.name}</h2>
+                <p style="margin:8px 0;color:var(--text2)">${exp.summary}</p>
+                <h2>Componentes</h2>
+                ${exp.components.map(c => '<div class="comp-item">' + c + '</div>').join('')}
+                <h2 style="margin-top:12px">Flujo Regulatorio</h2>
+                <p style="color:var(--text2)">${exp.flowDescription}</p>`;
+
+        // Network info
+        if (exp.networkInfo && exp.networkInfo.nodes.length > 0) {
+            html += '<h2 style="margin-top:12px">🕸️ Red Regulatoria</h2>';
+            html += '<p style="font-size:0.85em;color:var(--text2)">' + exp.networkInfo.nodes.length + ' nodos, ' + exp.networkInfo.edges + ' interacciones</p>';
+            if (exp.networkInfo.motifs.length > 0) {
+                html += '<h3>Motifs Detectados</h3>';
+                for (const m of exp.networkInfo.motifs) {
+                    html += '<div class="motif-card"><div class="motif-type">' + m.type.replace(/_/g, ' ') + '</div>';
+                    html += '<div class="motif-desc">' + m.description + '</div>';
+                    html += '<div class="motif-behavior">📊 ' + m.behavior + '</div>';
+                    html += '<div class="motif-ref">📚 ' + m.reference + '</div></div>';
+                }
+            }
+            if (exp.networkInfo.feedbackLoops.length > 0) {
+                html += '<h3>Feedback Loops</h3>';
+                for (const loop of exp.networkInfo.feedbackLoops) {
+                    html += '<div style="margin:4px 0">';
+                    loop.forEach(n => { html += '<span class="loop-badge">' + n + '</span> → '; });
+                    html += '<span class="loop-badge">' + loop[0] + '</span></div>';
+                }
+            }
+        }
+
+        // Predicted behavior
+        if (exp.predictedBehavior) {
+            html += '<h2 style="margin-top:12px">🔮 Predicción de Comportamiento</h2>';
+            html += '<p style="color:var(--text2);white-space:pre-line;font-size:0.9em">' + exp.predictedBehavior + '</p>';
+        }
+
+        // Burden summary
+        if (exp.burdenTotal !== undefined) {
+            const burdenColor = exp.burdenCategory === 'low' ? 'var(--success)' : exp.burdenCategory === 'moderate' ? 'var(--warning)' : 'var(--error)';
+            html += '<h2 style="margin-top:12px">🧪 Carga Metabólica</h2>';
+            html += '<p style="font-size:0.9em">Total: <span style="color:' + burdenColor + ';font-weight:700">' + exp.burdenTotal + '</span> (' + exp.burdenCategory + ')</p>';
+        }
+
+        html += '</div>';
+        el.innerHTML = html;
+    }
+
+    function renderNetwork(topo) {
+        const el = document.getElementById('network-results');
+        if (!topo || topo.nodes.length === 0) {
+            el.innerHTML = '<div class="card"><p style="color:var(--text2)">No se detectaron interacciones regulatorias. Asegúrese de que los promotores tengan propiedades repressor/activator y los genes tengan product definido.</p></div>';
+            return;
+        }
+
+        let html = '<div class="card">';
+        html += '<h3>🕸️ Grafo de Red Regulatoria</h3>';
+        html += '<p style="font-size:0.85em;color:var(--text2)">' + topo.nodes.length + ' nodos (proteínas), ' + topo.edgeCount + ' interacciones</p>';
+
+        // SVG diagram
+        html += '<div class="network-svg">' + topo.svg + '</div>';
+
+        // Edge list
+        html += '<h3>Interacciones</h3>';
+        html += '<div class="edge-list">';
+        for (const e of topo.edges) {
+            html += '<div class="edge-item">' + e + '</div>';
+        }
+        html += '</div>';
+
+        // Motifs
+        if (topo.motifs.length > 0) {
+            html += '<h3>Motifs de Red Detectados</h3>';
+            for (const m of topo.motifs) {
+                html += '<div class="motif-card">';
+                html += '<div class="motif-type">' + m.type.replace(/_/g, ' ') + ' (' + m.nodes.join(', ') + ')</div>';
+                html += '<div class="motif-desc">' + m.description + '</div>';
+                html += '<div class="motif-behavior">📊 ' + m.dynamicBehavior + '</div>';
+                html += '<div class="motif-ref">📚 ' + m.reference + '</div>';
+                html += '</div>';
+            }
+        }
+
+        // Feedback loops
+        if (topo.feedbackLoops.length > 0) {
+            html += '<h3>Feedback Loops (' + topo.feedbackLoops.length + ')</h3>';
+            for (const loop of topo.feedbackLoops) {
+                html += '<div style="margin:4px 0">';
+                loop.forEach(n => { html += '<span class="loop-badge">' + n + '</span> → '; });
+                html += '<span class="loop-badge">' + loop[0] + '</span></div>';
+            }
+        }
+
+        html += '</div>';
+        el.innerHTML = html;
+    }
+
+    function renderScoreCard(sc) {
+        const el = document.getElementById('scorecard-results');
+        const cats = [
+            { key: 'structure', label: '🏗️ Estructura', data: sc.structure },
+            { key: 'safety', label: '🛡️ Seguridad', data: sc.safety },
+            { key: 'expression', label: '📊 Expresión', data: sc.expression },
+            { key: 'modularity', label: '🧩 Modularidad', data: sc.modularity },
+            { key: 'predictability', label: '🎯 Predictibilidad', data: sc.predictability }
+        ];
+
+        let html = '<div class="card"><div class="overall-score">';
+        html += '<span class="grade grade-' + sc.grade + '">' + sc.grade + '</span>';
+        html += '<div class="overall-number">' + sc.overall + '/100 puntos</div></div>';
+
+        html += '<div class="score-card">';
+        for (const cat of cats) {
+            const pct = Math.round((cat.data.score / cat.data.max) * 100);
+            const color = pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--error)';
+            html += '<div class="score-item">';
+            html += '<div class="score-label">' + cat.label + '</div>';
+            html += '<div class="score-value" style="color:' + color + '">' + cat.data.score + '<span style="font-size:0.4em;color:var(--text2)">/' + cat.data.max + '</span></div>';
+            html += '<div class="score-detail">' + pct + '%</div>';
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // Issues and recommendations
+        const allIssues = cats.flatMap(c => c.data.issues || []);
+        const allRecs = cats.flatMap(c => c.data.recommendations || []);
+        if (allIssues.length > 0) {
+            html += '<h3>Problemas Detectados</h3>';
+            for (const issue of allIssues) { html += '<div class="issue-item">' + issue + '</div>'; }
+        }
+        if (allRecs.length > 0) {
+            html += '<h3>Recomendaciones</h3>';
+            for (const rec of allRecs) { html += '<div class="rec-item">' + rec + '</div>'; }
+        }
+        html += '</div>';
+        el.innerHTML = html;
+    }
+
+    function renderBurden(burden) {
+        const el = document.getElementById('burden-results');
+        const pct = Math.min((burden.totalBurden / 4.0) * 100, 100);
+        const cls = 'burden-' + burden.category;
+
+        let html = '<div class="card">';
+        html += '<h3>🧪 Carga Metabólica Estimada</h3>';
+        html += '<div class="burden-meter"><div class="burden-fill ' + cls + '" style="width:' + pct + '%">' + burden.totalBurden + ' unidades</div></div>';
+        html += '<p style="font-size:0.9em;color:var(--text2)">' + burden.recommendation + '</p>';
+
+        if (burden.breakdown.length > 0) {
+            html += '<h3 style="margin-top:12px">Desglose por Gen</h3>';
+            for (const b of burden.breakdown) {
+                const bPct = Math.min((b.burden / 2.0) * 100, 100);
+                const bColor = b.burden < 0.5 ? 'var(--success)' : b.burden < 1.0 ? 'var(--warning)' : 'var(--error)';
+                html += '<div class="burden-gene"><span>' + b.gene + '</span><span style="color:' + bColor + '">' + b.burden + ' (' + b.reason + ')</span></div>';
+            }
+        }
+        html += '<p style="font-size:0.75em;color:var(--text2);margin-top:10px;font-style:italic">📚 ' + burden.reference + '</p>';
+        html += '</div>';
+        el.innerHTML = html;
+    }
+
+    renderPatterns();
+</script>
+</body>
+</html>

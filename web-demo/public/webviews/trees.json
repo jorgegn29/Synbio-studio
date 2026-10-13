@@ -1,0 +1,1931 @@
+{
+  "ToolboxProvider": [
+    {
+      "label": "Flujo recomendado",
+      "description": "",
+      "children": [
+        {
+          "label": "Buscar activos del workspace",
+          "description": "Salto rapido a circuitos, genes y secuencias",
+          "command": "synbio.searchComponents"
+        },
+        {
+          "label": "BioScript Command Center",
+          "description": "Entrada unica para comandos y tareas",
+          "command": "synbio.commandCenter"
+        },
+        {
+          "label": "Compilar Circuito",
+          "description": "Salida SBOL/FASTA/GenBank",
+          "command": "synbio.compile"
+        },
+        {
+          "label": "Revisar Bioseguridad",
+          "description": "BSL, contencion y compliance",
+          "command": "synbio.biosafetyClassify"
+        },
+        {
+          "label": "Generar Protocolo",
+          "description": "SOP wet-lab desde el diseno activo",
+          "command": "synbio.generateProtocol"
+        },
+        {
+          "label": "Registrar Observación",
+          "description": "Cierra el ciclo experimental",
+          "command": "synbio.recordObservation"
+        }
+      ]
+    },
+    {
+      "label": "Diseño & Construcción",
+      "description": "",
+      "children": [
+        {
+          "label": "AI Design Assistant",
+          "description": "Diseño asistido por IA",
+          "command": "synbio.aiAssistant"
+        },
+        {
+          "label": "Tutor AI de SynBio",
+          "description": "Tutoriales y explicaciones del código",
+          "command": "synbio.askTutor"
+        },
+        {
+          "label": "Vista Dividida Editor/Preview",
+          "description": "Ctrl+Shift+V",
+          "command": "synbio.splitView"
+        },
+        {
+          "label": "Workbench de Ensamblaje Gibson",
+          "description": "Solapamientos, carga molar, junctions, colony PCR",
+          "command": "synbio.gibsonAssemblyWorkbench"
+        },
+        {
+          "label": "Comparador de Métodos de Ensamblaje",
+          "description": "Gibson, Golden Gate, BioBrick, Gateway",
+          "command": "synbio.plasmidMap"
+        },
+        {
+          "label": "Diseñador CRISPR gRNA",
+          "description": "Off-targets, scores",
+          "command": "synbio.crisprDesigner"
+        },
+        {
+          "label": "Circuit Optimizer",
+          "description": "Optimización topológica",
+          "command": "synbio.optimizeCircuit"
+        },
+        {
+          "label": "Pathway Designer FBA",
+          "description": "Flux Balance Analysis",
+          "command": "synbio.pathwayDesigner"
+        },
+        {
+          "label": "Optimizar Codones (CAI)",
+          "description": "E. coli, yeast, human",
+          "command": "synbio.optimizeCodons"
+        },
+        {
+          "label": "Copiloto Científico",
+          "description": "Sugerencias con citas",
+          "command": "synbio.showCopilotAnalysis"
+        },
+        {
+          "label": "Auto-Corrector de Diseño",
+          "description": "6 categorías de análisis",
+          "command": "synbio.showAutoCorrectorReport"
+        }
+      ]
+    },
+    {
+      "label": "Análisis de Secuencia",
+      "description": "",
+      "children": [
+        {
+          "label": "Análisis Completo Secuencia",
+          "description": "GC%, ORFs, repeats",
+          "command": "synbio.sequenceAnalysis"
+        },
+        {
+          "label": "Termodinámica ΔG/Tm/ΔH",
+          "description": "SantaLucia NN model 1998",
+          "command": "synbio.thermodynamicCalc"
+        },
+        {
+          "label": "Fuerza de RBS (Salis)",
+          "description": "Salis et al. 2009",
+          "command": "synbio.rbsStrength"
+        },
+        {
+          "label": "Mapa de Restricción",
+          "description": "NEB/REBASE 500+ enzimas",
+          "command": "synbio.restrictionMap"
+        },
+        {
+          "label": "BioBrick RFC[10] Check",
+          "description": "EcoRI/XbaI/SpeI/PstI",
+          "command": "synbio.biobrickCheck"
+        }
+      ]
+    },
+    {
+      "label": "Análisis de Proteína",
+      "description": "",
+      "children": [
+        {
+          "label": "ProtParam ExPASy (MW, pI)",
+          "description": "MW, pI, GRAVY, ε280",
+          "command": "synbio.proteinProperties"
+        },
+        {
+          "label": "Visor Molecular 3D NGL",
+          "description": "PDB/mmCIF viewer",
+          "command": "synbio.showMoleculeViewer"
+        },
+        {
+          "label": "Predictor AlphaFold",
+          "description": "Estructura 3D predicha",
+          "command": "synbio.analyzeProtein"
+        }
+      ]
+    },
+    {
+      "label": "Simulación & Modelado",
+      "description": "",
+      "children": [
+        {
+          "label": "Simulación Gillespie SSA",
+          "description": "Ctrl+Shift+S estocástico",
+          "command": "synbio.simulate"
+        },
+        {
+          "label": "Flux Balance Analysis (FBA)",
+          "description": "Simplex LP, E. coli core",
+          "command": "synbio.runFBA"
+        },
+        {
+          "label": "Debug Step-Through",
+          "description": "F5 genetic debugger",
+          "command": "synbio.debugCircuit"
+        },
+        {
+          "label": "Test Suite de Circuito",
+          "description": "Assert, expect, mock",
+          "command": "synbio.runTests"
+        },
+        {
+          "label": "Validación Wet-Lab",
+          "description": "5 casos publicados",
+          "command": "synbio.runWetLabValidation"
+        },
+        {
+          "label": "Aprendizaje Bayesiano",
+          "description": "12 priors de literatura",
+          "command": "synbio.showLearningDashboard"
+        }
+      ]
+    },
+    {
+      "label": "Exportación & Formato",
+      "description": "",
+      "children": [
+        {
+          "label": "Exportar SBOL/FASTA/GenBank",
+          "description": "3 formatos estándar",
+          "command": "synbio.export"
+        },
+        {
+          "label": "Exportar SBOL3 (JSON-LD)",
+          "description": "Linked Data semántico",
+          "command": "synbio.exportSBOL3"
+        },
+        {
+          "label": "Documentación Automática",
+          "description": "Markdown, PDF, HTML",
+          "command": "synbio.autoDocumentation"
+        },
+        {
+          "label": "Version Control Genético",
+          "description": "Diff, branch, merge",
+          "command": "synbio.versionControl"
+        },
+        {
+          "label": "Dashboard del Proyecto",
+          "description": "Métricas completas",
+          "command": "synbio.dashboard"
+        }
+      ]
+    },
+    {
+      "label": "Seguridad & Compliance",
+      "description": "",
+      "children": [
+        {
+          "label": "Escaneo Bioseguridad",
+          "description": "NIH/EU/WHO/BMBL6",
+          "command": "synbio.biosecurity"
+        },
+        {
+          "label": "Clasificación BSL (1→4)",
+          "description": "BMBL 6th Edition",
+          "command": "synbio.biosafetyClassify"
+        },
+        {
+          "label": "Design Rule Checker (DRC)",
+          "description": "Reglas en tiempo real",
+          "command": "synbio.toggleDRC"
+        },
+        {
+          "label": "Audit Trail (SHA-256)",
+          "description": "Cadena inmutable",
+          "command": "synbio.showAuditTrail"
+        },
+        {
+          "label": "Verificar Audit Chain",
+          "description": "Integridad SHA-256",
+          "command": "synbio.verifyAuditChain"
+        },
+        {
+          "label": "Reporte de Compliance",
+          "description": "NIH, EU GMO Directive",
+          "command": "synbio.complianceReport"
+        },
+        {
+          "label": "Exportar Audit Trail",
+          "description": "JSONL formato",
+          "command": "synbio.exportAuditTrail"
+        },
+        {
+          "label": "Verificar Data Moat",
+          "description": "SHA-256 entries",
+          "command": "synbio.verifyDataIntegrity"
+        }
+      ]
+    },
+    {
+      "label": "Laboratorio & Protocolos",
+      "description": "",
+      "children": [
+        {
+          "label": "Protocolo de Laboratorio",
+          "description": "Gibson/GG/BioBrick",
+          "command": "synbio.generateProtocol"
+        },
+        {
+          "label": "Biblioteca de Partes iGEM",
+          "description": "20,000+ partes",
+          "command": "synbio.partsLibrary"
+        },
+        {
+          "label": "Dashboard Lab (ELN/LIMS)",
+          "description": "Conexiones, inventario",
+          "command": "synbio.showLabDashboard"
+        },
+        {
+          "label": "Inventario de Partes",
+          "description": "Freezer, location",
+          "command": "synbio.showLabInventory"
+        },
+        {
+          "label": "Sugerir Protocolos",
+          "description": "Auto según diseño",
+          "command": "synbio.suggestProtocols"
+        },
+        {
+          "label": "Registrar Observación",
+          "description": "Para aprendizaje Bayes",
+          "command": "synbio.recordObservation"
+        },
+        {
+          "label": "Compilar Circuito",
+          "description": "Ctrl+Shift+B",
+          "command": "synbio.compile"
+        }
+      ]
+    },
+    {
+      "label": "IA & Automatización",
+      "description": "",
+      "children": [
+        {
+          "label": "BioScript Command Center",
+          "description": "Comandos, tareas y terminal conectados",
+          "command": "synbio.commandCenter"
+        },
+        {
+          "label": "Copiloto Científico",
+          "description": "Sugerencias + citas",
+          "command": "synbio.showCopilotAnalysis"
+        },
+        {
+          "label": "Auto-Corrector Inteligente",
+          "description": "P0-P3 fixes",
+          "command": "synbio.showAutoCorrectorReport"
+        },
+        {
+          "label": "Data Moat (Base Científica)",
+          "description": "Datos propietarios",
+          "command": "synbio.showDataMoat"
+        },
+        {
+          "label": "Telemetría (GDPR)",
+          "description": "Opt-in, anónimo",
+          "command": "synbio.toggleTelemetry"
+        },
+        {
+          "label": "Onboarding / Tour",
+          "description": "Tutorial interactivo",
+          "command": "synbio.showOnboarding"
+        }
+      ]
+    }
+  ],
+  "PartsLibraryProvider": [
+    {
+      "label": "Recomendadas ahora",
+      "description": "",
+      "children": [
+        {
+          "label": "J23110",
+          "description": "Recomendada · 476 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0034",
+          "description": "Recomendada · 1.0 au",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0015",
+          "description": "Recomendada · 0.984",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pLac",
+          "description": "Recomendada · BBa_R0010",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pLux",
+          "description": "Recomendada · BBa_R0062",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "sfGFP",
+          "description": "Recomendada · sfGFP",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "mCherry",
+          "description": "Recomendada · BBa_J06504",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "BCD2",
+          "description": "Recomendada · BCD2",
+          "command": "synbio.insertPart"
+        }
+      ]
+    },
+    {
+      "label": "Por host activo",
+      "description": "",
+      "children": [
+        {
+          "label": "J23110",
+          "description": "Host activo · 476 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pLac",
+          "description": "Host activo · BBa_R0010",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pLux",
+          "description": "Host activo · BBa_R0062",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0034",
+          "description": "Host activo · 1.0 au",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "BCD2",
+          "description": "Host activo · BCD2",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0015",
+          "description": "Host activo · 0.984",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "sfGFP",
+          "description": "Host activo · sfGFP",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "mCherry",
+          "description": "Host activo · BBa_J06504",
+          "command": "synbio.insertPart"
+        }
+      ]
+    },
+    {
+      "label": "Por objetivo experimental",
+      "description": "",
+      "children": [
+        {
+          "label": "J23110",
+          "description": "Objetivo actual · 476 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pLac",
+          "description": "Objetivo actual · BBa_R0010",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pLux",
+          "description": "Objetivo actual · BBa_R0062",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0034",
+          "description": "Objetivo actual · 1.0 au",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0015",
+          "description": "Objetivo actual · 0.984",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "sfGFP",
+          "description": "Objetivo actual · sfGFP",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "mCherry",
+          "description": "Objetivo actual · BBa_J06504",
+          "command": "synbio.insertPart"
+        }
+      ]
+    },
+    {
+      "label": "Para resolver alertas",
+      "description": "",
+      "children": [
+        {
+          "label": "Sin sugerencias contextuales todavia",
+          "description": "La libreria inteligente se activa al detectar host, objetivos o alertas concretas",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Promotores Constitutivos (Anderson)",
+      "description": "",
+      "children": [
+        {
+          "label": "J23100",
+          "description": "2547 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23101",
+          "description": "1000 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23102",
+          "description": "862 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23103",
+          "description": "90 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23104",
+          "description": "750 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23105",
+          "description": "128 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23106",
+          "description": "1185 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23107",
+          "description": "510 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23108",
+          "description": "350 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23109",
+          "description": "134 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23110",
+          "description": "476 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23111",
+          "description": "162 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23112",
+          "description": "48 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23113",
+          "description": "100 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23114",
+          "description": "256 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23115",
+          "description": "152 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23116",
+          "description": "290 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23117",
+          "description": "30 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23118",
+          "description": "138 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "J23119",
+          "description": "2750 RPU",
+          "command": "synbio.insertPart"
+        }
+      ]
+    },
+    {
+      "label": "Promotores Inducibles",
+      "description": "",
+      "children": [
+        {
+          "label": "pLac (R0010)",
+          "description": "BBa_R0010",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pLac-strong (R0011)",
+          "description": "BBa_R0011",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pTet (R0040)",
+          "description": "BBa_R0040",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pBAD (I0500)",
+          "description": "BBa_I0500",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pT7",
+          "description": "~5000 RPU",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pT7lac",
+          "description": "pT7lac",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pLux (R0062)",
+          "description": "BBa_R0062",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pLas (R0079)",
+          "description": "BBa_R0079",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pSal (R0073)",
+          "description": "BBa_R0073",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pRha",
+          "description": "pRhaBAD",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pCuO",
+          "description": "pCuO",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pArsR",
+          "description": "pArsR",
+          "command": "synbio.insertPart"
+        }
+      ]
+    },
+    {
+      "label": "Promotores de Levadura",
+      "description": "",
+      "children": [
+        {
+          "label": "pGAL1",
+          "description": "pGAL1",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pGAL10",
+          "description": "pGAL10",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pTDH3 (GPD)",
+          "description": "pTDH3",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pTEF1",
+          "description": "pTEF1",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pADH1",
+          "description": "pADH1",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pCYC1",
+          "description": "pCYC1",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pPGK1",
+          "description": "pPGK1",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "pMET25",
+          "description": "pMET25",
+          "command": "synbio.insertPart"
+        }
+      ]
+    },
+    {
+      "label": "RBS (Ribosome Binding Sites)",
+      "description": "",
+      "children": [
+        {
+          "label": "B0030",
+          "description": "0.07 au",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0031",
+          "description": "0.07 au",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0032",
+          "description": "0.3 au",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0033",
+          "description": "0.01 au",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0034",
+          "description": "1.0 au",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0035",
+          "description": "0.5 au",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "BCD2",
+          "description": "BCD2",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "BCD12",
+          "description": "BCD12",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "BCD22",
+          "description": "BCD22",
+          "command": "synbio.insertPart"
+        }
+      ]
+    },
+    {
+      "label": "Reporteros Fluorescentes",
+      "description": "",
+      "children": [
+        {
+          "label": "GFPmut3b",
+          "description": "BBa_E0040",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "sfGFP",
+          "description": "sfGFP",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "eGFP",
+          "description": "eGFP",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "mCherry",
+          "description": "BBa_J06504",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "mRFP1",
+          "description": "BBa_E1010",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "YFP (Venus)",
+          "description": "BBa_E0030",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "CFP (eCFP)",
+          "description": "BBa_E0020",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "BFP",
+          "description": "BBa_K592100",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "mNeonGreen",
+          "description": "mNeonGreen",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "mScarlet",
+          "description": "mScarlet",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "iRFP720",
+          "description": "iRFP720",
+          "command": "synbio.insertPart"
+        }
+      ]
+    },
+    {
+      "label": "Reporteros Enzimáticos",
+      "description": "",
+      "children": [
+        {
+          "label": "LacZ (β-gal)",
+          "description": "BBa_I732005",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "Firefly Luciferase",
+          "description": "BBa_J52008",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "NanoLuc",
+          "description": "NanoLuc",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "Lux operon",
+          "description": "BBa_K325909",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "CAT",
+          "description": "BBa_J31005",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "GUS (uidA)",
+          "description": "GUS",
+          "command": "synbio.insertPart"
+        }
+      ]
+    },
+    {
+      "label": "Terminadores",
+      "description": "",
+      "children": [
+        {
+          "label": "B0015",
+          "description": "0.984",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0010",
+          "description": "0.97",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "B0012",
+          "description": "0.96",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "L3S2P21",
+          "description": "0.99",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "L3S2P11",
+          "description": "0.98",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "L3S3P31",
+          "description": "0.95",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "ECK120029600",
+          "description": "0.94",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "tCYC1",
+          "description": "tCYC1",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "tADH1",
+          "description": "tADH1",
+          "command": "synbio.insertPart"
+        }
+      ]
+    },
+    {
+      "label": "Represores",
+      "description": "",
+      "children": [
+        {
+          "label": "LacI",
+          "description": "BBa_C0012",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "TetR",
+          "description": "BBa_C0040",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "cI (λ)",
+          "description": "BBa_C0051",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "cI ts",
+          "description": "BBa_C0062ts",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "AraC",
+          "description": "BBa_C0080",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "CI434",
+          "description": "BBa_C0084",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "PhlF",
+          "description": "PhlF",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "BM3R1",
+          "description": "BM3R1",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "SrpR",
+          "description": "SrpR",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "AmtR",
+          "description": "AmtR",
+          "command": "synbio.insertPart"
+        },
+        {
+          "label": "IcaRA",
+          "description": "IcaRA",
+          "command": "synbio.insertPart"
+        }
+      ]
+    }
+  ],
+  "OrganismsProvider": [
+    {
+      "label": "Escherichia coli (Lab strains)",
+      "description": "",
+      "children": [
+        {
+          "label": "DH5α",
+          "description": "BSL-1 | GRAS",
+          "command": ""
+        },
+        {
+          "label": "DH10B",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "TOP10",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "BL21(DE3)",
+          "description": "BSL-1 | T7 RNAP",
+          "command": ""
+        },
+        {
+          "label": "BL21(DE3) pLysS",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "Rosetta(DE3)",
+          "description": "BSL-1 | Rare codons",
+          "command": ""
+        },
+        {
+          "label": "C41(DE3)",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "MG1655",
+          "description": "BSL-1 | Reference",
+          "command": ""
+        },
+        {
+          "label": "W3110",
+          "description": "BSL-1 | Industrial",
+          "command": ""
+        },
+        {
+          "label": "Nissle 1917",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "BW25113",
+          "description": "BSL-1",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Bacillus subtilis",
+      "description": "",
+      "children": [
+        {
+          "label": "168",
+          "description": "BSL-1 | GRAS",
+          "command": ""
+        },
+        {
+          "label": "PY79",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "WB800N",
+          "description": "BSL-1",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Saccharomyces cerevisiae",
+      "description": "",
+      "children": [
+        {
+          "label": "BY4741",
+          "description": "BSL-1 | GRAS",
+          "command": ""
+        },
+        {
+          "label": "BY4742",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "CEN.PK2-1C",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "W303",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "S288C",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "Pichia pastoris",
+          "description": "BSL-1",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Pseudomonas putida",
+      "description": "",
+      "children": [
+        {
+          "label": "KT2440",
+          "description": "BSL-1 | GRAS",
+          "command": ""
+        },
+        {
+          "label": "EM42",
+          "description": "BSL-1",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Corynebacterium glutamicum",
+      "description": "",
+      "children": [
+        {
+          "label": "ATCC 13032",
+          "description": "BSL-1 | GRAS",
+          "command": ""
+        },
+        {
+          "label": "MB001",
+          "description": "BSL-1",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Mammalian cells",
+      "description": "",
+      "children": [
+        {
+          "label": "HEK293T",
+          "description": "BSL-2",
+          "command": ""
+        },
+        {
+          "label": "CHO-K1",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "HeLa",
+          "description": "BSL-2",
+          "command": ""
+        },
+        {
+          "label": "Jurkat",
+          "description": "BSL-2",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Cell-Free Systems",
+      "description": "",
+      "children": [
+        {
+          "label": "PURE System",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "E. coli S30 Extract",
+          "description": "BSL-1",
+          "command": ""
+        },
+        {
+          "label": "Wheat Germ Extract",
+          "description": "BSL-1",
+          "command": ""
+        }
+      ]
+    }
+  ],
+  "SafetyStatusProvider": [
+    {
+      "label": "⚡ Sin escaneo aún",
+      "description": "Ejecuta un escaneo para ver el estado",
+      "children": []
+    },
+    {
+      "label": "📋 Estado de compliance",
+      "description": "",
+      "children": [
+        {
+          "label": "Lab configurado: BSL-1",
+          "description": "✅ OK",
+          "command": ""
+        },
+        {
+          "label": "Auto-scan: ✅ Activo",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "🔗 Verificar cadena de auditoría",
+          "description": "",
+          "command": "synbio.verifyAuditChain"
+        },
+        {
+          "label": "📊 Ver Audit Trail",
+          "description": "",
+          "command": "synbio.showAuditTrail"
+        }
+      ]
+    },
+    {
+      "label": "⚙ Acciones",
+      "description": "",
+      "children": [
+        {
+          "label": "🔍 Ejecutar escaneo",
+          "description": "⌘ acción principal",
+          "command": "synbio.biosecurity"
+        },
+        {
+          "label": "📋 Reporte de compliance",
+          "description": "",
+          "command": "synbio.complianceReport"
+        },
+        {
+          "label": "📤 Exportar Audit Trail",
+          "description": "",
+          "command": "synbio.exportAuditTrail"
+        },
+        {
+          "label": "🔐 Verificar integridad de datos",
+          "description": "",
+          "command": "synbio.verifyDataIntegrity"
+        }
+      ]
+    }
+  ],
+  "LiteratureProvider": [
+    {
+      "label": "Foundational Papers",
+      "description": "",
+      "children": [
+        {
+          "label": "Gardner et al. 2000",
+          "description": "Nature 403:339",
+          "command": ""
+        },
+        {
+          "label": "Elowitz & Leibler 2000",
+          "description": "Nature 403:335",
+          "command": ""
+        },
+        {
+          "label": "Endy 2005",
+          "description": "Nature 438:449",
+          "command": ""
+        },
+        {
+          "label": "Andrianantoandro et al. 2006",
+          "description": "Mol Syst Biol 2:2006.0028",
+          "command": ""
+        },
+        {
+          "label": "Khalil & Collins 2010",
+          "description": "Nat Rev Genet 11:367",
+          "command": ""
+        },
+        {
+          "label": "Cameron et al. 2014",
+          "description": "Nat Rev Microbiol 12:381",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Parts Characterization",
+      "description": "",
+      "children": [
+        {
+          "label": "Kelly et al. 2009",
+          "description": "J Biol Eng 3:4",
+          "command": ""
+        },
+        {
+          "label": "Mutalik et al. 2013",
+          "description": "Nat Methods 10:354",
+          "command": ""
+        },
+        {
+          "label": "Chen et al. 2013",
+          "description": "Nat Methods 10:659",
+          "command": ""
+        },
+        {
+          "label": "Salis et al. 2009",
+          "description": "Nat Biotechnol 27:946",
+          "command": ""
+        },
+        {
+          "label": "Andersen et al. 1998",
+          "description": "AEM 64:2240",
+          "command": ""
+        },
+        {
+          "label": "Canton et al. 2008",
+          "description": "Nat Biotechnol 26:787",
+          "command": ""
+        },
+        {
+          "label": "Ceroni et al. 2015",
+          "description": "Nat Methods 12:415",
+          "command": ""
+        },
+        {
+          "label": "Shaner et al. 2004",
+          "description": "Nat Methods 1:275",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Design Automation (CAD)",
+      "description": "",
+      "children": [
+        {
+          "label": "Nielsen et al. 2016",
+          "description": "Science 352:aac7341",
+          "command": ""
+        },
+        {
+          "label": "Beal et al. 2020",
+          "description": "ACS Synth Biol 9:1481",
+          "command": ""
+        },
+        {
+          "label": "Hossain et al. 2020",
+          "description": "Nat Biotechnol 38:1466",
+          "command": ""
+        },
+        {
+          "label": "Appleton et al. 2017",
+          "description": "CSHP Biol 9:a023978",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Genetic Circuits",
+      "description": "",
+      "children": [
+        {
+          "label": "Stanton et al. 2014",
+          "description": "Nat Chem Biol 10:99",
+          "command": ""
+        },
+        {
+          "label": "Bonnet et al. 2013",
+          "description": "Science 340:599",
+          "command": ""
+        },
+        {
+          "label": "Friedland et al. 2009",
+          "description": "Science 324:1199",
+          "command": ""
+        },
+        {
+          "label": "Stricker et al. 2008",
+          "description": "Nature 456:516",
+          "command": ""
+        },
+        {
+          "label": "Moon et al. 2012",
+          "description": "Nature 491:249",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Metabolic Engineering",
+      "description": "",
+      "children": [
+        {
+          "label": "Martin et al. 2003",
+          "description": "Nat Biotechnol 21:796",
+          "command": ""
+        },
+        {
+          "label": "Ro et al. 2006",
+          "description": "Nature 440:940",
+          "command": ""
+        },
+        {
+          "label": "Paddon et al. 2013",
+          "description": "Nature 496:528",
+          "command": ""
+        },
+        {
+          "label": "Galanie et al. 2015",
+          "description": "Science 349:1095",
+          "command": ""
+        },
+        {
+          "label": "Orth et al. 2010",
+          "description": "Mol Syst Biol 6:390",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "CRISPR & Genome Editing",
+      "description": "",
+      "children": [
+        {
+          "label": "Jinek et al. 2012",
+          "description": "Science 337:816",
+          "command": ""
+        },
+        {
+          "label": "Qi et al. 2013",
+          "description": "Cell 152:1173",
+          "command": ""
+        },
+        {
+          "label": "Zetsche et al. 2015",
+          "description": "Cell 163:759",
+          "command": ""
+        },
+        {
+          "label": "Komor et al. 2016",
+          "description": "Nature 533:420",
+          "command": ""
+        },
+        {
+          "label": "Anzalone et al. 2019",
+          "description": "Nature 576:149",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Biosafety & Biosecurity",
+      "description": "",
+      "children": [
+        {
+          "label": "Wright et al. 2015",
+          "description": "ACS Synth Biol 4:307",
+          "command": ""
+        },
+        {
+          "label": "Mandell et al. 2015",
+          "description": "Nature 518:55",
+          "command": ""
+        },
+        {
+          "label": "Rovner et al. 2015",
+          "description": "Nature 518:89",
+          "command": ""
+        },
+        {
+          "label": "Lee et al. 2018",
+          "description": "Nat Chem Biol 14:530",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "Standards & Measurement",
+      "description": "",
+      "children": [
+        {
+          "label": "Galdzicki et al. 2014",
+          "description": "Nat Biotechnol 32:545",
+          "command": ""
+        },
+        {
+          "label": "Hillson et al. 2019",
+          "description": "Nat Commun 10:2040",
+          "command": ""
+        }
+      ]
+    }
+  ],
+  "QuickStatsProvider": [
+    {
+      "label": "Readiness 25/100",
+      "description": "Sin diseno",
+      "children": [
+        {
+          "label": "Readiness 25/100",
+          "description": "Sin diseno",
+          "command": ""
+        },
+        {
+          "label": "0 archivos .bio",
+          "description": "indice listo",
+          "command": ""
+        },
+        {
+          "label": "0 lineas BioScript",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 genes definidos",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 partes regulatorias",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 transcription units",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 bases de secuencia",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 comandos SynBio",
+          "description": "actualizando",
+          "command": ""
+        },
+        {
+          "label": "metricas externas pendientes",
+          "description": "",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "0 archivos .bio",
+      "description": "indice listo",
+      "children": [
+        {
+          "label": "Readiness 25/100",
+          "description": "Sin diseno",
+          "command": ""
+        },
+        {
+          "label": "0 archivos .bio",
+          "description": "indice listo",
+          "command": ""
+        },
+        {
+          "label": "0 lineas BioScript",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 genes definidos",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 partes regulatorias",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 transcription units",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 bases de secuencia",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 comandos SynBio",
+          "description": "cacheado",
+          "command": ""
+        },
+        {
+          "label": "0 tests definidos",
+          "description": "",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "0 lineas BioScript",
+      "description": "",
+      "children": [
+        {
+          "label": "Readiness 25/100",
+          "description": "Sin diseno",
+          "command": ""
+        },
+        {
+          "label": "0 archivos .bio",
+          "description": "indice listo",
+          "command": ""
+        },
+        {
+          "label": "0 lineas BioScript",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 genes definidos",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 partes regulatorias",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 transcription units",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 bases de secuencia",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 comandos SynBio",
+          "description": "cacheado",
+          "command": ""
+        },
+        {
+          "label": "0 tests definidos",
+          "description": "",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "0 genes definidos",
+      "description": "",
+      "children": [
+        {
+          "label": "Readiness 25/100",
+          "description": "Sin diseno",
+          "command": ""
+        },
+        {
+          "label": "0 archivos .bio",
+          "description": "indice listo",
+          "command": ""
+        },
+        {
+          "label": "0 lineas BioScript",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 genes definidos",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 partes regulatorias",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 transcription units",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 bases de secuencia",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 comandos SynBio",
+          "description": "cacheado",
+          "command": ""
+        },
+        {
+          "label": "0 tests definidos",
+          "description": "",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "0 partes regulatorias",
+      "description": "",
+      "children": [
+        {
+          "label": "Readiness 25/100",
+          "description": "Sin diseno",
+          "command": ""
+        },
+        {
+          "label": "0 archivos .bio",
+          "description": "indice listo",
+          "command": ""
+        },
+        {
+          "label": "0 lineas BioScript",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 genes definidos",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 partes regulatorias",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 transcription units",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 bases de secuencia",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 comandos SynBio",
+          "description": "cacheado",
+          "command": ""
+        },
+        {
+          "label": "0 tests definidos",
+          "description": "",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "0 transcription units",
+      "description": "",
+      "children": [
+        {
+          "label": "Readiness 25/100",
+          "description": "Sin diseno",
+          "command": ""
+        },
+        {
+          "label": "0 archivos .bio",
+          "description": "indice listo",
+          "command": ""
+        },
+        {
+          "label": "0 lineas BioScript",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 genes definidos",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 partes regulatorias",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 transcription units",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 bases de secuencia",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 comandos SynBio",
+          "description": "cacheado",
+          "command": ""
+        },
+        {
+          "label": "0 tests definidos",
+          "description": "",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "0 bases de secuencia",
+      "description": "",
+      "children": [
+        {
+          "label": "Readiness 25/100",
+          "description": "Sin diseno",
+          "command": ""
+        },
+        {
+          "label": "0 archivos .bio",
+          "description": "indice listo",
+          "command": ""
+        },
+        {
+          "label": "0 lineas BioScript",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 genes definidos",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 partes regulatorias",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 transcription units",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 bases de secuencia",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 comandos SynBio",
+          "description": "cacheado",
+          "command": ""
+        },
+        {
+          "label": "0 tests definidos",
+          "description": "",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "0 comandos SynBio",
+      "description": "actualizando",
+      "children": [
+        {
+          "label": "Readiness 25/100",
+          "description": "Sin diseno",
+          "command": ""
+        },
+        {
+          "label": "0 archivos .bio",
+          "description": "indice listo",
+          "command": ""
+        },
+        {
+          "label": "0 lineas BioScript",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 genes definidos",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 partes regulatorias",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 transcription units",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 bases de secuencia",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 comandos SynBio",
+          "description": "cacheado",
+          "command": ""
+        },
+        {
+          "label": "0 tests definidos",
+          "description": "",
+          "command": ""
+        }
+      ]
+    },
+    {
+      "label": "metricas externas pendientes",
+      "description": "",
+      "children": [
+        {
+          "label": "Readiness 25/100",
+          "description": "Sin diseno",
+          "command": ""
+        },
+        {
+          "label": "0 archivos .bio",
+          "description": "indice listo",
+          "command": ""
+        },
+        {
+          "label": "0 lineas BioScript",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 genes definidos",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 partes regulatorias",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 transcription units",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 bases de secuencia",
+          "description": "",
+          "command": ""
+        },
+        {
+          "label": "0 comandos SynBio",
+          "description": "cacheado",
+          "command": ""
+        },
+        {
+          "label": "0 tests definidos",
+          "description": "",
+          "command": ""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es"><head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiobiosecurity-bioseguridad";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiobiosecurity-bioseguridad", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiobiosecurity-bioseguridad") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; }
+    .header { margin-bottom: 20px; }
+    .header h1 { font-size: 22px; color: #94e2d5; display: flex; align-items: center; gap: 8px; }
+    .toolbar { display: flex; gap: 10px; margin: 12px 0 16px; }
+    .toolbar button { background: #181825; color: #cdd6f4; border: 1px solid #45475a; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 12px; }
+    .toolbar button:hover { border-color: #89b4fa; }
+    .file-badge { font-size: 12px; color: #6c7086; background: #313244; padding: 4px 10px; border-radius: 8px; margin-left: 8px; }
+    .risk-banner { background: #313244; border-radius: 12px; padding: 20px; margin: 16px 0; display: flex; align-items: center; gap: 20px; border: 1px solid #fab38740; }
+    .risk-circle { width: 80px; height: 80px; border-radius: 50%; border: 4px solid #fab387; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .risk-circle .score { font-size: 22px; font-weight: 700; color: #fab387; }
+    .risk-circle .label { font-size: 8px; color: #6c7086; text-transform: uppercase; }
+    .risk-info h2 { color: #fab387; font-size: 18px; }
+    .risk-info p { color: #a6adc8; font-size: 13px; margin-top: 4px; }
+    .stats-row { display: flex; gap: 10px; margin-top: 10px; }
+    .stat { padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+    .stat.critical { background: #f38ba820; color: #f38ba8; }
+    .stat.high { background: #fab38720; color: #fab387; }
+    .stat.medium { background: #f9e2af20; color: #f9e2af; }
+    .stat.low { background: #a6e3a120; color: #a6e3a1; }
+    .findings { display: flex; flex-direction: column; gap: 10px; }
+    .finding { background: #313244; border-radius: 10px; padding: 14px; }
+    .finding-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .threat-icon { font-size: 16px; }
+    .finding-title { font-weight: 600; font-size: 14px; flex: 1; }
+    .threat-badge { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .category-badge { background: #45475a; color: #a6adc8; padding: 2px 8px; border-radius: 10px; font-size: 10px; }
+    .finding-desc { font-size: 13px; color: #a6adc8; margin-bottom: 8px; line-height: 1.5; }
+    .match-context { background: #1e1e2e; padding: 6px 10px; border-radius: 6px; margin-bottom: 8px; }
+    .match-context code { font-family: 'Cascadia Code', monospace; font-size: 11px; color: #f38ba8; }
+    .finding-meta { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #a6adc8; }
+    .finding-meta strong { color: #cdd6f4; }
+    .section-title { font-size: 16px; color: #94e2d5; margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
+</style>
+</head><body>
+    <div class="header">
+        <h1>🛡️ Análisis de Bioseguridad <span class="file-badge">inverter.bio</span></h1>
+    </div>
+
+    <div class="toolbar">
+        <button onclick="rescan()">Reanalizar archivo actual</button>
+        <button onclick="exportReport()">Exportar reporte</button>
+    </div>
+
+    <div class="risk-banner">
+        <div class="risk-circle">
+            <span class="score">70</span>
+            <span class="label">puntos</span>
+        </div>
+        <div class="risk-info">
+            <h2>Nivel de Riesgo: ALTO</h2>
+            <p>3 hallazgo(s) detectado(s) en el análisis</p>
+            <div class="stats-row">
+                
+                <span class="stat high">🟠 1 Alto</span>
+                <span class="stat medium">🟡 2 Medio</span>
+                
+            </div>
+        </div>
+    </div>
+
+    <h3 class="section-title">📋 Hallazgos Detallados</h3>
+    <div class="findings">
+                <div class="finding" style="border-left: 3px solid #f9e2af;">
+                    <div class="finding-header">
+                        <span class="threat-icon">🟡</span>
+                        <span class="finding-title">Resistencia a Cloranfenicol (CmR)</span>
+                        <span class="threat-badge" style="background:#f9e2af20; color:#f9e2af;">MEDIUM</span>
+                        <span class="category-badge">Antibiotic Resistance</span>
+                    </div>
+                    <p class="finding-desc">Gen de cloranfenicol acetiltransferasa. Cloranfenicol es WHO Essential Medicine.</p>
+                    <div class="match-context"><code>...AAGTAAAGTGATTAACAGCGCATTAGAGCTGCTTAATGAGGTC...</code></div>
+                    <div class="finding-meta">
+                        <div><strong>📍 Ubicación:</strong> inverter.bio:5</div>
+                        <div><strong>📋 Recomendación:</strong> Uso aceptable en laboratorio. Evitar en aplicaciones de liberación al ambiente.</div>
+                        <div><strong>📜 Regulación:</strong> NIH Guidelines Appendix C-VI (Apr 2024); EU Dir 2001/18/EC Art.4(2); WHO Essential Medicines List 2023</div>
+                    </div>
+                </div>
+            
+                <div class="finding" style="border-left: 3px solid #fab387;">
+                    <div class="finding-header">
+                        <span class="threat-icon">🟠</span>
+                        <span class="finding-title">Genes de Invasina</span>
+                        <span class="threat-badge" style="background:#fab38720; color:#fab387;">HIGH</span>
+                        <span class="category-badge">Virulence Factor</span>
+                    </div>
+                    <p class="finding-desc">Genes de invasina permiten penetración de células eucariotas. invA de Yersinia pseudotuberculosis. Usado en terapia con bacterias.</p>
+                    <div class="match-context"><code>...circuit inverter {
+    promoter...</code></div>
+                    <div class="finding-meta">
+                        <div><strong>📍 Ubicación:</strong> inverter.bio:1</div>
+                        <div><strong>📋 Recomendación:</strong> Requiere aprobación IBC y contención BSL-2.</div>
+                        <div><strong>📜 Regulación:</strong> NIH Guidelines Section III-D-1 (Apr 2024); IBC Review per Section IV-B-7; EU Dir 2009/41/EC (contained use of GMMs)</div>
+                    </div>
+                </div>
+            
+                <div class="finding" style="border-left: 3px solid #f9e2af;">
+                    <div class="finding-header">
+                        <span class="threat-icon">🟡</span>
+                        <span class="finding-title">Kill Switch No Detectado</span>
+                        <span class="threat-badge" style="background:#f9e2af20; color:#f9e2af;">MEDIUM</span>
+                        <span class="category-badge">Safety Mechanism</span>
+                    </div>
+                    <p class="finding-desc">No se detectó un mecanismo de kill switch en el circuito.</p>
+                    
+                    <div class="finding-meta">
+                        <div><strong>📍 Ubicación:</strong> inverter.bio</div>
+                        <div><strong>📋 Recomendación:</strong> Implementar un sistema de apagado de emergencia (toxin-antitoxin, essentialase knockout, etc.)</div>
+                        <div><strong>📜 Regulación:</strong> iGEM Safety, NIH Best Practices</div>
+                    </div>
+                </div>
+            </div>
+
+<script>
+const vscode = acquireVsCodeApi();
+function rescan() { vscode.postMessage({ type: 'rescan' }); }
+function exportReport() { vscode.postMessage({ type: 'exportReport' }); }
+</script>
+</body></html>

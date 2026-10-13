@@ -17,11 +17,12 @@ import {
 export type Activity =
   | 'explorer' | 'map' | 'workflows' | 'search' | 'parts' | 'sim' | 'design'
   | 'lab' | 'results' | 'atlas' | 'chassis' | 'safety' | 'tutorials' | 'diff'
-  | 'bookmarks' | 'outline' | 'git' | 'settings';
+  | 'bookmarks' | 'outline' | 'git' | 'settings' | 'panels';
 
 export type Center =
   | 'welcome' | 'editor' | 'design' | 'construct' | 'research' | 'atlas' | 'chassis'
-  | 'sim' | 'map' | 'lab' | 'results' | 'safety' | 'tutorials' | 'diff' | 'workflows' | 'settings';
+  | 'sim' | 'map' | 'lab' | 'results' | 'safety' | 'tutorials' | 'diff' | 'workflows' | 'settings' | 'webview'
+  | 'programa' | 'hub' | 'graph' | 'entorno';
 
 export type BottomTab =
   | 'output' | 'problems' | 'terminal' | 'ports' | 'llvm' | 'sbol' | 'opentrons' | 'cost' | 'protocol' | 'analysis';
@@ -65,7 +66,9 @@ interface StudioValue {
   cut: boolean;
   explode: number;
   zoom: number;
-  organism: 'ecoli' | 'pichia';
+  organism: 'ecoli' | 'pichia' | 'bl21' | 's288c';
+  jobsRunning: boolean;
+  enabledScripts: Record<string, boolean>;
   isolate: string | null;
   researchTab: string;
   hypotheses: HypNode[];
@@ -90,8 +93,10 @@ interface StudioValue {
   compareFile: string;
   workflow: string;
   plateWell: string;
+  webviewId: string;
   setActivity: (activity: Activity) => void;
   setCenter: (center: Center) => void;
+  openWebview: (id: string) => void;
   setBottom: (tab: BottomTab) => void;
   setBottomOpen: (open: boolean) => void;
   setActiveFile: (name: string) => void;
@@ -106,7 +111,10 @@ interface StudioValue {
   setCut: (value: boolean) => void;
   setExplode: (value: number) => void;
   setZoom: (value: number) => void;
-  setOrganism: (value: 'ecoli' | 'pichia') => void;
+  setOrganism: (value: 'ecoli' | 'pichia' | 'bl21' | 's288c') => void;
+  setJobsRunning: (value: boolean) => void;
+  toggleScript: (name: string) => void;
+  clearLogs: () => void;
   setIsolate: (value: string | null) => void;
   setResearchTab: (value: string) => void;
   setQuery: (value: string) => void;
@@ -183,6 +191,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [activeFile, setActiveFileState] = useState('inverter.bio');
   const [activity, setActivity] = useState<Activity>('explorer');
   const [center, setCenter] = useState<Center>('welcome');
+  const [webviewId, setWebviewId] = useState('sbolvisual-sbol-visual-diagram');
   const [bottom, setBottom] = useState<BottomTab>('output');
   const [bottomOpen, setBottomOpen] = useState(true);
   const [logs, setLogs] = useState<string[]>(['CENTRO DE CONTROL INFERIOR listo. Compilador BioScript en proceso.']);
@@ -200,7 +209,14 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [cut, setCut] = useState(false);
   const [explode, setExplode] = useState(0);
   const [zoom, setZoom] = useState(1);
-  const [organism, setOrganism] = useState<'ecoli' | 'pichia'>('ecoli');
+  const [organism, setOrganism] = useState<'ecoli' | 'pichia' | 'bl21' | 's288c'>('ecoli');
+  const [jobsRunning, setJobsRunning] = useState(true);
+  const [enabledScripts, setEnabledScripts] = useState<Record<string, boolean>>({
+    'inverter.bio': true,
+    'tu1.bio': true,
+    'constructo.bio': true,
+    'hello-biology.bio': false,
+  });
   const [isolate, setIsolate] = useState<string | null>(null);
   const [researchTab, setResearchTab] = useState('Overview');
   const [hypotheses, setHypotheses] = useState<HypNode[]>(() => initialHypotheses());
@@ -245,8 +261,19 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const fasta = circuit ? exportFASTA(circuit) : '';
   const genbank = circuit ? exportGenBank(circuit) : '';
 
+  const openWebview = useCallback((id: string) => {
+    setWebviewId(id);
+    setCenter('webview');
+    setActivity('panels');
+  }, []);
+
   const log = useCallback((line: string) => {
     setLogs(prev => [...prev.slice(-200), line]);
+  }, []);
+
+  const clearLogs = useCallback(() => setLogs(['Log limpiado.']), []);
+  const toggleScript = useCallback((name: string) => {
+    setEnabledScripts(prev => ({ ...prev, [name]: !prev[name] }));
   }, []);
 
   const setSource = useCallback((value: string) => {
@@ -663,10 +690,11 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     logs, terminal, sim, simRunning, focusLine, selectedPart, cad3d, labelFilter, separation, showLabels,
     group, rotation, cut, explode, zoom, organism, isolate, researchTab, hypotheses, selectedHyp, query,
     toolText, eln, equipment, csvSummary, fcsText, bookmarks, branch, revisions, staged, stash, saved,
-    bslPref, telemetry, secretsNote, audit, notebook, compareFile, workflow, plateWell,
-    setActivity, setCenter, setBottom, setBottomOpen, setActiveFile, setSource, setSelectedPart, setCad3d,
+    bslPref, telemetry, secretsNote, audit, notebook, compareFile, workflow, plateWell, webviewId,
+    jobsRunning, enabledScripts,
+    setActivity, setCenter, openWebview, setBottom, setBottomOpen, setActiveFile, setSource, setSelectedPart, setCad3d,
     setLabelFilter, setSeparation, setShowLabels, setGroup, setRotation, setCut, setExplode, setZoom,
-    setOrganism, setIsolate, setResearchTab, setQuery, setToolText, setEln, setEquipment, setNotebook, setBslPref,
+    setOrganism, setJobsRunning, toggleScript, clearLogs, setIsolate, setResearchTab, setQuery, setToolText, setEln, setEquipment, setNotebook, setBslPref,
     setTelemetry, setSecretsNote, setCompareFile, setSelectedHyp, log, openProject, newBioScript,
     openExample, importTextFile, importFcs, saveProject, compileNow, simulateNow, validateNow, runCommand,
     runNamedTool, oracle, locate, downloadText, insertNamedPart, mutateSource, addChildNode, deleteBranch,

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es"><head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiosequenceanalysis-sequence-analysis";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiosequenceanalysis-sequence-analysis", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiosequenceanalysis-sequence-analysis") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<style>
+:root { --bg: #1e1e2e; --surface: #181825; --text: #cdd6f4; --accent: #89b4fa; --border: #313244; --green: #a6e3a1; --red: #f38ba8; --yellow: #f9e2af; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 16px; overflow: auto; }
+h1 { font-size: 18px; color: var(--accent); margin-bottom: 4px; }
+.subtitle { font-size: 12px; color: #a6adc8; margin-bottom: 12px; }
+button { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; cursor: pointer; margin: 4px; font-size: 13px; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--bg); font-weight: 600; }
+textarea { width: 100%; height: 80px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-family: 'Cascadia Code', monospace; font-size: 12px; resize: vertical; }
+.btn-row { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: 12px 0; }
+.stat-card { background: var(--surface); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+.stat-card .val { font-size: 22px; font-weight: bold; color: var(--accent); }
+.stat-card .lbl { font-size: 10px; color: #a6adc8; margin-top: 2px; }
+.section { background: var(--surface); padding: 14px; border-radius: 8px; margin: 10px 0; border-left: 4px solid var(--accent); }
+.section h3 { font-size: 14px; margin-bottom: 8px; color: var(--accent); }
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+th { background: var(--bg); padding: 6px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+td { padding: 4px 6px; border-bottom: 1px solid var(--border); }
+tr:hover { background: rgba(137,180,250,0.05); }
+.bar { height: 16px; border-radius: 3px; display: inline-block; min-width: 2px; }
+.bar-a { background: #a6e3a1; } .bar-t { background: #f38ba8; } .bar-g { background: #f9e2af; } .bar-c { background: #89b4fa; }
+.comp-bar { display: flex; height: 24px; border-radius: 6px; overflow: hidden; margin: 8px 0; }
+.tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 12px; }
+.tab { padding: 8px 16px; cursor: pointer; font-size: 12px; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.mono { font-family: 'Cascadia Code', monospace; font-size: 11px; }
+.result-container { max-height: calc(100vh - 200px); overflow-y: auto; }
+.gc-indicator { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; margin: 0 auto; }
+</style></head><body>
+<h1>🧬 Sequence Analysis Panel</h1>
+<p class="subtitle">GC% · ORF Finder · Repeats · Restriction Sites · Codon Usage · CpG Islands · Linguistic Complexity</p>
+
+<textarea id="seqInput" placeholder="Pegar secuencia de ADN (5'→3')..."></textarea>
+<div class="btn-row">
+    <button class="primary" onclick="analyzeText()">🔬 Analizar</button>
+    <button onclick="analyzeFromEditor()">📄 Desde Editor</button>
+    <button onclick="loadExample()">📋 Ejemplo lacZ</button>
+</div>
+
+<div class="result-container" id="resultContainer"></div>
+
+<script>
+const vscode = acquireVsCodeApi();
+
+function analyzeText() {
+    const seq = document.getElementById('seqInput').value.replace(/[^ACGTacgt]/g, '');
+    if (seq.length < 10) { document.getElementById('resultContainer').innerHTML = '<p style="color:var(--red)">Secuencia muy corta</p>'; return; }
+    vscode.postMessage({ type: 'analyzeText', sequence: seq });
+}
+function analyzeFromEditor() { vscode.postMessage({ type: 'analyzeFromEditor' }); }
+function loadExample() {
+    document.getElementById('seqInput').value = 'ATGACCATGATTACGCCAAGCTTTCCCTGTAGCAGCATGACTGTTACTCAAGTCACTGACTACCGGGTTCAACCGTTCAGCGGATGATTTACGGTTCAATCAGCAAATATCAGCGATCTCAGCAGCAGCCAACAGGTTGATGATTATGCCAGCAGCTTCCAGACGTTCACCGCATGGTTCGATTTCGCTAACCTCACCAATTCCACTAACCTGCCTCCCTGCTTCTGATTGAAATCAGCAATCAGCTGCTTTAGCGTTAACGATCCGGCGAACTTGCGCTAACACTCACTCCTCTCAATGATGATGAATGGCAGCCAATCCTCCTGCGGCGATCGGCTTGTTCGAG';
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === tabId));
+}
+
+window.addEventListener('message', (event) => {
+    const msg = event.data;
+    if (msg.type === 'analysisResult') renderResult(msg.stats, msg.sequence);
+});
+
+function renderResult(s, seq) {
+    const gcColor = s.gcContent >= 40 && s.gcContent <= 65 ? 'var(--green)' : s.gcContent < 30 || s.gcContent > 75 ? 'var(--red)' : 'var(--yellow)';
+
+    let html = '<div class="stats-grid">';
+    html += statCard(s.length + ' bp', 'Longitud');
+    html += statCard(s.gcContent.toFixed(1) + '%', 'GC Content', gcColor);
+    html += statCard(s.meltingTm.toFixed(1) + '°C', 'Tm (básico)');
+    html += statCard((s.molecularWeight/1000).toFixed(1) + ' kDa', 'MW (dsDNA)');
+    html += statCard(s.orfs.length, 'ORFs (≥30 cod)');
+    html += statCard(s.restrictionSites.length, 'Enzimas detectadas');
+    html += statCard(s.codonUsage.cai.toFixed(2), 'CAI');
+    html += statCard(s.complexityScore.toFixed(2), 'Complejidad');
+    html += '</div>';
+
+    // Composition bar
+    html += '<div class="section"><h3>Composición de Nucleótidos</h3>';
+    html += '<div class="comp-bar">';
+    html += '<div style="width:' + s.compositionPercent.A.toFixed(1) + '%;background:#a6e3a1" title="A: ' + s.compositionPercent.A.toFixed(1) + '%"></div>';
+    html += '<div style="width:' + s.compositionPercent.T.toFixed(1) + '%;background:#f38ba8" title="T: ' + s.compositionPercent.T.toFixed(1) + '%"></div>';
+    html += '<div style="width:' + s.compositionPercent.G.toFixed(1) + '%;background:#f9e2af" title="G: ' + s.compositionPercent.G.toFixed(1) + '%"></div>';
+    html += '<div style="width:' + s.compositionPercent.C.toFixed(1) + '%;background:#89b4fa" title="C: ' + s.compositionPercent.C.toFixed(1) + '%"></div>';
+    html += '</div>';
+    html += '<div style="display:flex;justify-content:space-between;font-size:11px">';
+    html += '<span style="color:#a6e3a1">A: ' + s.composition.A + ' (' + s.compositionPercent.A.toFixed(1) + '%)</span>';
+    html += '<span style="color:#f38ba8">T: ' + s.composition.T + ' (' + s.compositionPercent.T.toFixed(1) + '%)</span>';
+    html += '<span style="color:#f9e2af">G: ' + s.composition.G + ' (' + s.compositionPercent.G.toFixed(1) + '%)</span>';
+    html += '<span style="color:#89b4fa">C: ' + s.composition.C + ' (' + s.compositionPercent.C.toFixed(1) + '%)</span>';
+    html += '</div></div>';
+
+    // Tabs
+    html += '<div class="tabs">';
+    html += '<div class="tab active" data-tab="tabOrfs" onclick="switchTab(\'tabOrfs\')">ORFs (' + s.orfs.length + ')</div>';
+    html += '<div class="tab" data-tab="tabRestriction" onclick="switchTab(\'tabRestriction\')">Restricción (' + s.restrictionSites.length + ')</div>';
+    html += '<div class="tab" data-tab="tabRepeats" onclick="switchTab(\'tabRepeats\')">Repeats (' + s.repeats.length + ')</div>';
+    html += '<div class="tab" data-tab="tabCodons" onclick="switchTab(\'tabCodons\')">Codones</div>';
+    html += '<div class="tab" data-tab="tabCpg" onclick="switchTab(\'tabCpg\')">CpG (' + s.cpgIslands.length + ')</div>';
+    html += '</div>';
+
+    // ORFs tab
+    html += '<div class="tab-content active" id="tabOrfs">';
+    if (s.orfs.length > 0) {
+        html += '<table><thead><tr><th>#</th><th>Start</th><th>End</th><th>Codons</th><th>Strand</th><th>Frame</th><th>Start Codon</th><th>Protein (first 30 aa)</th></tr></thead><tbody>';
+        s.orfs.forEach((o, i) => {
+            html += '<tr><td>' + (i+1) + '</td><td>' + o.start + '</td><td>' + o.end + '</td><td>' + o.length + '</td><td>' + o.strand + '</td><td>' + o.frame + '</td><td class="mono">' + o.startCodon + '</td><td class="mono" style="font-size:10px;max-width:200px;overflow:hidden">' + o.protein + '</td></tr>';
+        });
+        html += '</tbody></table>';
+    } else {
+        html += '<p style="color:#6c7086">No se encontraron ORFs ≥ 30 codones</p>';
+    }
+    html += '</div>';
+
+    // Restriction tab
+    html += '<div class="tab-content" id="tabRestriction">';
+    if (s.restrictionSites.length > 0) {
+        html += '<table><thead><tr><th>Enzima</th><th>Sitio</th><th>Corte</th><th>Hits</th><th>Posiciones</th></tr></thead><tbody>';
+        s.restrictionSites.forEach(r => {
+            html += '<tr><td><strong>' + r.enzyme + '</strong></td><td class="mono">' + r.site + '</td><td class="mono">' + r.cutPattern + '</td><td>' + r.positions.length + '</td><td class="mono">' + r.positions.slice(0, 8).join(', ') + (r.positions.length > 8 ? '...' : '') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+    }
+    html += '</div>';
+
+    // Repeats tab
+    html += '<div class="tab-content" id="tabRepeats">';
+    if (s.repeats.length > 0) {
+        html += '<table><thead><tr><th>Tipo</th><th>Secuencia</th><th>Count</th><th>Posiciones</th></tr></thead><tbody>';
+        s.repeats.slice(0, 20).forEach(r => {
+            const typeColor = r.type === 'inverted' ? 'var(--red)' : r.type === 'tandem' ? 'var(--yellow)' : 'var(--green)';
+            html += '<tr><td style="color:' + typeColor + '">' + r.type + '</td><td class="mono" style="max-width:200px;overflow:hidden">' + r.sequence + '</td><td>' + r.count + '</td><td class="mono">' + r.positions.slice(0, 5).join(', ') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+    }
+    html += '</div>';
+
+    // Codon usage tab
+    html += '<div class="tab-content" id="tabCodons">';
+    html += '<div style="display:flex;gap:16px;margin-bottom:8px;font-size:12px"><span>Total codones: ' + s.codonUsage.totalCodons + '</span><span>Codones raros (E. coli): ' + s.codonUsage.rareCodonCount + '</span><span>CAI: ' + s.codonUsage.cai.toFixed(3) + '</span></div>';
+    const aas = ['F','L','I','M','V','S','P','T','A','Y','*','H','Q','N','K','D','E','C','W','R','G'];
+    html += '<table><thead><tr><th>AA</th><th>Codon</th><th>Count</th><th>Freq</th><th></th></tr></thead><tbody>';
+    for (const [codon, data] of Object.entries(s.codonUsage.table)) {
+        if (data.count > 0) {
+            const barW = Math.round(data.freq * 100);
+            html += '<tr><td>' + data.aa + '</td><td class="mono">' + codon + '</td><td>' + data.count + '</td><td>' + (data.freq * 100).toFixed(1) + '%</td><td><div class="bar bar-c" style="width:' + barW + 'px"></div></td></tr>';
+        }
+    }
+    html += '</tbody></table></div>';
+
+    // CpG tab
+    html += '<div class="tab-content" id="tabCpg">';
+    if (s.cpgIslands.length > 0) {
+        html += '<table><thead><tr><th>Start</th><th>End</th><th>GC%</th><th>Obs/Exp CpG</th></tr></thead><tbody>';
+        s.cpgIslands.forEach(c => {
+            html += '<tr><td>' + c.start + '</td><td>' + c.end + '</td><td>' + c.gcPercent.toFixed(1) + '%</td><td>' + c.obsExpCpG.toFixed(2) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+    } else {
+        html += '<p style="color:#6c7086">No se encontraron CpG islands (Gardiner-Garden & Frommer 1987: GC≥50%, Obs/Exp≥0.6)</p>';
+    }
+    html += '</div>';
+
+    document.getElementById('resultContainer').innerHTML = html;
+}
+
+function statCard(val, lbl, color) {
+    return '<div class="stat-card"><div class="val" style="color:' + (color || 'var(--accent)') + '">' + val + '</div><div class="lbl">' + lbl + '</div></div>';
+}
+</script></body></html>

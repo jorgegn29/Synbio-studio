@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es"><head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiotests-bioscript-tests";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiotests-bioscript-tests", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiotests-bioscript-tests") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; }
+    h1 { font-size: 22px; color: #94e2d5; margin-bottom: 4px; }
+    .sub { color: #6c7086; font-size: 12px; margin-bottom: 16px; }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tb-btn { padding: 8px 16px; border: 1px solid #45475a; background: #313244; color: #cdd6f4; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .tb-btn:hover { background: #45475a; }
+    .tb-btn.run { background: #a6e3a1; color: #1e1e2e; border-color: #a6e3a1; }
+    .summary { display: flex; gap: 12px; margin-bottom: 16px; }
+    .sum-card { flex: 1; background: #313244; border-radius: 10px; padding: 14px; text-align: center; }
+    .sum-card .num { font-size: 28px; font-weight: 700; }
+    .sum-card .lbl { font-size: 10px; color: #6c7086; text-transform: uppercase; margin-top: 2px; }
+    .sum-card.pass .num { color: #a6e3a1; }
+    .sum-card.fail .num { color: #f38ba8; }
+    .sum-card.skip .num { color: #f9e2af; }
+    .sum-card.time .num { color: #89b4fa; }
+    .cat-header { background: #313244; padding: 8px 14px; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: 600; color: #cba6f7; margin-top: 12px; cursor: pointer; display: flex; justify-content: space-between; }
+    .test-list { border: 1px solid #45475a; border-top: none; border-radius: 0 0 8px 8px; margin-bottom: 4px; }
+    .test-item { padding: 10px 14px; border-bottom: 1px solid #45475a30; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+    .test-item:last-child { border-bottom: none; }
+    .test-icon { font-size: 16px; flex-shrink: 0; }
+    .test-info { flex: 1; }
+    .test-name { font-weight: 500; }
+    .test-assert { font-size: 10px; color: #6c7086; font-family: 'Cascadia Code', monospace; }
+    .test-detail { font-size: 11px; color: #a6adc8; margin-top: 2px; }
+    .test-dur { font-size: 10px; color: #6c7086; }
+    .test-status { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+    .test-status.pass { background: #a6e3a120; color: #a6e3a1; }
+    .test-status.fail { background: #f38ba820; color: #f38ba8; }
+    .test-status.skip { background: #f9e2af20; color: #f9e2af; }
+    .placeholder { text-align: center; padding: 60px 20px; color: #6c7086; }
+    .placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+    .progress-bar { width: 100%; height: 6px; background: #45475a; border-radius: 3px; margin-bottom: 16px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+</style>
+</head><body>
+    <h1>🧪 Framework de Testing - BioScript</h1>
+    <p class="sub">Verifica que tu circuito genético cumple con reglas de estructura, bioseguridad, diseño y simulación</p>
+
+    <div class="toolbar">
+        <button class="tb-btn run" onclick="runAll()">▶ Ejecutar Todos los Tests</button>
+        <button class="tb-btn" onclick="runCat('Estructura')">📐 Estructura</button>
+        <button class="tb-btn" onclick="runCat('Bioseguridad')">🛡️ Bioseguridad</button>
+        <button class="tb-btn" onclick="runCat('Diseño')">📏 Diseño</button>
+        <button class="tb-btn" onclick="runCat('Simulación')">📊 Simulación</button>
+        <button class="tb-btn" onclick="genFile()">📝 Generar .biotest</button>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0; background:#94e2d5;"></div></div>
+
+    <div class="summary" id="summary" style="display:none;">
+        <div class="sum-card pass"><div class="num" id="passCount">0</div><div class="lbl">Passed</div></div>
+        <div class="sum-card fail"><div class="num" id="failCount">0</div><div class="lbl">Failed</div></div>
+        <div class="sum-card skip"><div class="num" id="skipCount">0</div><div class="lbl">Skipped</div></div>
+        <div class="sum-card time"><div class="num" id="timeVal">0</div><div class="lbl">ms</div></div>
+    </div>
+
+    <div id="results">
+        <div class="placeholder">
+            <div class="icon">🧪</div>
+            <p>Presiona "Ejecutar Todos los Tests" para verificar tu circuito</p>
+        </div>
+    </div>
+
+    <script>
+    const vscode = acquireVsCodeApi();
+    const icons = { pass: '✅', fail: '❌', skip: '⏭', running: '⏳', pending: '⏸' };
+
+    function runAll() {
+        document.getElementById('progress').style.width = '30%';
+        vscode.postMessage({ command: 'runAll' });
+    }
+    function runCat(cat) {
+        document.getElementById('progress').style.width = '30%';
+        vscode.postMessage({ command: 'runCategory', category: cat });
+    }
+    function genFile() { vscode.postMessage({ command: 'generateTestFile' }); }
+
+    window.addEventListener('message', event => {
+        if (event.data.command === 'results') {
+            const suite = event.data.suite;
+            document.getElementById('progress').style.width = '100%';
+            document.getElementById('progress').style.background = suite.failed > 0 ? '#f38ba8' : '#a6e3a1';
+
+            document.getElementById('summary').style.display = 'flex';
+            document.getElementById('passCount').textContent = suite.passed;
+            document.getElementById('failCount').textContent = suite.failed;
+            document.getElementById('skipCount').textContent = suite.skipped;
+            document.getElementById('timeVal').textContent = suite.totalTime;
+
+            // Group by category
+            const cats = {};
+            for (const t of suite.tests) {
+                if (!cats[t.category]) cats[t.category] = [];
+                cats[t.category].push(t);
+            }
+
+            let html = '';
+            for (const [cat, tests] of Object.entries(cats)) {
+                const catTests = tests;
+                const p = catTests.filter(t => t.status === 'pass').length;
+                const f = catTests.filter(t => t.status === 'fail').length;
+                html += '<div class="cat-header">' + cat + ' <span>' + p + '/' + catTests.length + ' passed</span></div>';
+                html += '<div class="test-list">';
+                for (const t of catTests) {
+                    html += '<div class="test-item">';
+                    html += '<span class="test-icon">' + (icons[t.status] || '?') + '</span>';
+                    html += '<div class="test-info"><div class="test-name">' + t.name + '</div>';
+                    if (t.assertion) html += '<div class="test-assert">' + t.assertion + '</div>';
+                    if (t.details && t.details !== 'Passed') html += '<div class="test-detail">' + t.details + '</div>';
+                    html += '</div>';
+                    html += '<span class="test-status ' + t.status + '">' + t.status.toUpperCase() + '</span>';
+                    html += '<span class="test-dur">' + t.duration.toFixed(0) + 'ms</span>';
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+
+            document.getElementById('results').innerHTML = html;
+        }
+    });
+    </script>
+</body></html>

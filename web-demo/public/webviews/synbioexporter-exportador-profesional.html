@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbioexporter-exportador-profesional";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbioexporter-exportador-profesional", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbioexporter-exportador-profesional") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exportador Profesional</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; }
+        .header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .header h1 { font-size: 22px; color: #fab387; }
+        .badge { background: #313244; color: #a6adc8; padding: 4px 10px; border-radius: 12px; font-size: 11px; }
+        .card { background: #313244; border-radius: 12px; padding: 18px; margin-bottom: 14px; border: 1px solid #45475a; }
+        .card h3 { color: #fab387; margin-bottom: 10px; font-size: 15px; }
+        .circuit-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
+        .summary-item { background: #1e1e2e; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #45475a; }
+        .summary-value { font-size: 22px; font-weight: 700; color: #a6e3a1; }
+        .summary-label { font-size: 10px; color: #a6adc8; margin-top: 2px; text-transform: uppercase; }
+        .parts-list { max-height: 200px; overflow-y: auto; }
+        .part-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid #45475a; font-size: 13px; }
+        .part-item:last-child { border-bottom: none; }
+        .part-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+        .part-icon.promoter { background: rgba(250, 179, 135, 0.2); }
+        .part-icon.rbs { background: rgba(166, 227, 161, 0.2); }
+        .part-icon.gene, .part-icon.cds { background: rgba(137, 180, 250, 0.2); }
+        .part-icon.terminator { background: rgba(243, 139, 168, 0.2); }
+        .part-name { flex: 1; font-weight: 500; }
+        .part-len { color: #6c7086; font-size: 11px; }
+        .part-registry { color: #89b4fa; font-size: 11px; font-family: monospace; }
+        .format-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+        .format-tab { padding: 10px 18px; background: #45475a; color: #a6adc8; border: 1px solid #585b70; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+        .format-tab:hover { background: #585b70; }
+        .format-tab.active { background: #fab387; color: #1e1e2e; border-color: #fab387; font-weight: 600; }
+        .preview-area { background: #1e1e2e; border-radius: 8px; padding: 14px; border: 1px solid #45475a; max-height: 400px; overflow: auto; }
+        .preview-area pre { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; color: #cdd6f4; }
+        .preview-area .xml-tag { color: #89b4fa; }
+        .preview-area .xml-attr { color: #a6e3a1; }
+        .preview-area .xml-val { color: #f9e2af; }
+        .preview-area .fasta-header { color: #a6e3a1; font-weight: 600; }
+        .preview-area .gb-keyword { color: #cba6f7; font-weight: 600; }
+        .btn-row { display: flex; gap: 10px; margin-top: 14px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #fab387, #f9e2af); color: #1e1e2e; }
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-secondary { background: #45475a; color: #cdd6f4; }
+        .btn-secondary:hover { background: #585b70; }
+        .no-circuit { text-align: center; padding: 40px; color: #6c7086; }
+        .no-circuit .icon { font-size: 48px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📦 Exportador Profesional</h1>
+        <span class="badge">SBOL 3.0 · FASTA · GenBank · CSV</span>
+    </div>
+
+    <div id="noCircuit" class="card no-circuit">
+        <div class="icon">📄</div>
+        <p>Abre un archivo .bio para parsear automáticamente</p>
+        <button class="btn btn-secondary" style="margin-top: 12px;" onclick="parseEditor()">🔄 Parsear Editor Activo</button>
+    </div>
+
+    <div id="circuitView" style="display:none;">
+        <div class="card">
+            <h3>🧬 Circuito Detectado</h3>
+            <div class="circuit-summary" id="summary"></div>
+            <div class="parts-list" id="partsList"></div>
+            <button class="btn btn-secondary" style="margin-top: 10px; font-size: 12px;" onclick="parseEditor()">🔄 Re-parsear</button>
+        </div>
+
+        <div class="card">
+            <h3>📤 Formato de Exportación</h3>
+            <div class="format-tabs">
+                <button class="format-tab active" data-format="sbol" onclick="selectFormat('sbol')">📋 SBOL 3.0</button>
+                <button class="format-tab" data-format="fasta" onclick="selectFormat('fasta')">🧬 FASTA</button>
+                <button class="format-tab" data-format="genbank" onclick="selectFormat('genbank')">📑 GenBank</button>
+                <button class="format-tab" data-format="csv" onclick="selectFormat('csv')">📊 CSV</button>
+            </div>
+            <div class="preview-area" id="previewArea">
+                <pre id="previewContent">Selecciona un formato para previsualizar...</pre>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" id="exportBtn" onclick="exportFile()">💾 Exportar Archivo</button>
+                <button class="btn btn-secondary" onclick="copyContent()">📋 Copiar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        let currentCircuit = null;
+        let currentFormat = 'sbol';
+        let currentContent = '';
+
+        function parseEditor() { vscode.postMessage({ command: 'parseEditor' }); }
+
+        function selectFormat(format) {
+            currentFormat = format;
+            document.querySelectorAll('.format-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('[data-format="'+format+'"]').classList.add('active');
+            if (currentCircuit) {
+                vscode.postMessage({ command: 'preview', format, circuit: currentCircuit });
+            }
+        }
+
+        function exportFile() {
+            if (!currentContent || !currentCircuit) return;
+            const exts = { sbol: '.sbol', fasta: '.fasta', genbank: '.gb', csv: '.csv' };
+            vscode.postMessage({ command: 'export', format: currentFormat, content: currentContent, filename: currentCircuit.name + exts[currentFormat] });
+        }
+
+        function copyContent() {
+            if (currentContent) { vscode.postMessage({ command: 'copyToClipboard', content: currentContent }); }
+        }
+
+        function renderCircuit(circuit) {
+            currentCircuit = circuit;
+            document.getElementById('noCircuit').style.display = 'none';
+            document.getElementById('circuitView').style.display = 'block';
+
+            const totalBp = circuit.parts.reduce((s, p) => s + p.sequence.length, 0);
+            const gcCount = circuit.parts.reduce((s, p) => s + (p.sequence.match(/[GC]/gi) || []).length, 0);
+            const gcPct = totalBp > 0 ? (gcCount / totalBp * 100).toFixed(1) : '0';
+
+            document.getElementById('summary').innerHTML =
+                '<div class="summary-item"><div class="summary-value">' + circuit.name + '</div><div class="summary-label">Circuito</div></div>' +
+                '<div class="summary-item"><div class="summary-value">' + circuit.parts.length + '</div><div class="summary-label">Partes</div></div>' +
+                '<div class="summary-item"><div class="summary-value">' + totalBp + '</div><div class="summary-label">Pares de bases</div></div>' +
+                '<div class="summary-item"><div class="summary-value">' + gcPct + '%</div><div class="summary-label">GC Content</div></div>' +
+                '<div class="summary-item"><div class="summary-value">' + circuit.connections.length + '</div><div class="summary-label">Conexiones</div></div>';
+
+            const icons = { promoter: '→', rbs: '◆', gene: '▣', cds: '▣', terminator: '⊣' };
+            let partsHtml = '';
+            for (const p of circuit.parts) {
+                partsHtml += '<div class="part-item"><div class="part-icon ' + p.type + '">' + (icons[p.type]||'?') + '</div><span class="part-name">' + p.name + '</span><span class="part-len">' + p.sequence.length + ' bp</span>' + (p.registryId ? '<span class="part-registry">' + p.registryId + '</span>' : '') + '</div>';
+            }
+            document.getElementById('partsList').innerHTML = partsHtml;
+
+            selectFormat(currentFormat);
+        }
+
+        function highlightContent(format, content) {
+            if (format === 'sbol') {
+                return content
+                    .replace(/(&lt;\/?[\w:]+)/g, '<span class="xml-tag">$1</span>')
+                    .replace(/(\w+)=/g, '<span class="xml-attr">$1</span>=')
+                    .replace(/"([^"]*)"/g, '"<span class="xml-val">$1</span>"');
+            } else if (format === 'fasta') {
+                return content.replace(/^(&gt;.*)$/gm, '<span class="fasta-header">$1</span>');
+            } else if (format === 'genbank') {
+                return content.replace(/^(LOCUS|DEFINITION|ACCESSION|VERSION|KEYWORDS|SOURCE|REFERENCE|COMMENT|FEATURES|ORIGIN|[/]{2})/gm, '<span class="gb-keyword">$1</span>');
+            }
+            return content;
+        }
+
+        window.addEventListener('message', event => {
+            const msg = event.data;
+            switch(msg.command) {
+                case 'parsed':
+                    if (msg.circuit) { renderCircuit(msg.circuit); }
+                    else if (msg.error) { document.getElementById('noCircuit').querySelector('p').textContent = msg.error; }
+                    break;
+                case 'previewResult':
+                    currentContent = msg.content;
+                    const escaped = msg.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    document.getElementById('previewContent').innerHTML = highlightContent(msg.format, escaped);
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

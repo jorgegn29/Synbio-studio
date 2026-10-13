@@ -1,0 +1,59 @@
+<!DOCTYPE html><html><head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"experimentplanner-experiment-planner-lab-notebook";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"experimentplanner-experiment-planner-lab-notebook", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "experimentplanner-experiment-planner-lab-notebook") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script><meta charset="UTF-8">
+<style>
+body{background:#1a1a2e;color:#cdd6f4;font-family:'Segoe UI',sans-serif;margin:0;padding:16px}
+h1{color:#89b4fa;font-size:20px;margin:0 0 4px 0}
+button:hover{opacity:0.8}
+.btn-main{padding:8px 16px;background:#89b4fa;color:#1a1a2e;border:none;border-radius:6px;cursor:pointer;font-weight:bold;font-size:12px}
+</style></head><body>
+<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #313244;padding-bottom:8px">
+    <h1>🧪 Experiment Planner & Lab Notebook</h1>
+    <div style="display:flex;gap:8px">
+        <button class="btn-main" onclick="newExperiment()">+ New Experiment</button>
+        <button class="btn-main" style="background:#a6e3a1" onclick="addEntry()">📝 Add Entry</button>
+    </div>
+</div>
+
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0">
+                <div style="background:#181825;padding:10px;border-radius:6px;text-align:center">
+                    <div style="font-size:22px;font-weight:bold;color:#89b4fa">0</div>
+                    <div style="font-size:10px;color:#6c7086">Experimentos</div>
+                </div>
+                <div style="background:#181825;padding:10px;border-radius:6px;text-align:center">
+                    <div style="font-size:22px;font-weight:bold;color:#f9e2af">0</div>
+                    <div style="font-size:10px;color:#6c7086">En Progreso</div>
+                </div>
+                <div style="background:#181825;padding:10px;border-radius:6px;text-align:center">
+                    <div style="font-size:22px;font-weight:bold;color:#a6e3a1">0</div>
+                    <div style="font-size:10px;color:#6c7086">Completados</div>
+                </div>
+                <div style="background:#181825;padding:10px;border-radius:6px;text-align:center">
+                    <div style="font-size:22px;font-weight:bold;color:#cba6f7">0</div>
+                    <div style="font-size:10px;color:#6c7086">Cepas</div>
+                </div>
+                <div style="background:#181825;padding:10px;border-radius:6px;text-align:center">
+                    <div style="font-size:22px;font-weight:bold;color:#f38ba8">0</div>
+                    <div style="font-size:10px;color:#6c7086">Reactivos</div>
+                </div>
+            </div>
+<div style="text-align:center;padding:40px;color:#6c7086"><p>No experiments yet. Click "New Experiment" to start.</p></div>
+<script>
+const vscode = acquireVsCodeApi();
+function updateStatus(id, status) { vscode.postMessage({command:'updateStatus', data:{id, status}}); }
+function newExperiment() { vscode.postMessage({command:'newExperiment'}); }
+function addEntry() { vscode.postMessage({command:'addEntry'}); }
+</script>
+</body></html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiopathway-pathway-designer";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiopathway-pathway-designer", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiopathway-pathway-designer") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Pathway Designer</title>
+<style>
+    :root { --bg:#1e1e2e; --surface:#2a2a3e; --primary:#7c3aed; --accent:#22d3ee;
+            --success:#10b981; --warning:#f59e0b; --error:#ef4444; --text:#e2e8f0;
+            --text2:#94a3b8; --border:#334155; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);padding:16px}
+    h1{font-size:1.4em;margin-bottom:4px}
+    h2{font-size:1.05em;color:var(--accent);margin:14px 0 8px}
+    .subtitle{color:var(--text2);font-size:0.85em;margin-bottom:14px}
+    .btn{padding:7px 14px;border:none;border-radius:6px;cursor:pointer;font-size:0.82em;font-weight:600;transition:all .2s}
+    .btn-primary{background:var(--primary);color:white}
+    .btn-primary:hover{background:#6d28d9}
+    .btn-accent{background:var(--accent);color:#000}
+    .btn-success{background:var(--success);color:white}
+    .btn-warning{background:var(--warning);color:#000}
+    .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+    .btn-sm{padding:4px 10px;font-size:0.78em}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px}
+    .template-card{cursor:pointer;transition:all .2s}
+    .template-card:hover{border-color:var(--primary);transform:translateY(-1px)}
+    .template-name{font-weight:700;font-size:1em}
+    .template-desc{color:var(--text2);font-size:0.85em;margin:4px 0}
+    .template-stats{font-size:0.78em;color:var(--accent)}
+    canvas{background:#111827;border-radius:8px;border:1px solid var(--border);display:block;margin:10px 0}
+    .table{width:100%;border-collapse:collapse;font-size:0.82em}
+    .table th{background:var(--surface);text-align:left;padding:8px;border:1px solid var(--border);font-weight:600}
+    .table td{padding:8px;border:1px solid var(--border)}
+    .flux-bar{width:80px;height:8px;background:var(--border);border-radius:4px;display:inline-block;vertical-align:middle}
+    .flux-fill{height:100%;border-radius:4px}
+    .bottleneck{color:var(--error);font-weight:700}
+    .tabs{display:flex;gap:4px;margin:10px 0}
+    .tab{padding:6px 14px;border:1px solid var(--border);background:var(--surface);color:var(--text2);border-radius:6px;cursor:pointer;font-size:0.82em}
+    .tab.active{background:var(--primary);color:white;border-color:var(--primary)}
+    .panel{display:none}
+    .panel.active{display:block}
+    .suggestion{padding:8px 12px;background:var(--surface);border-radius:6px;margin:4px 0;font-size:0.85em;border-left:3px solid var(--accent)}
+    .fba-result{font-size:0.9em}
+    .fba-yield{font-size:1.2em;font-weight:700;color:var(--success)}
+    #templateSelect{display:block}
+    #pathwayView{display:none}
+</style>
+</head>
+<body>
+    <h1>🔬 Metabolic Pathway Designer</h1>
+    <p class="subtitle">Diseño visual de rutas metabólicas con análisis de flujo</p>
+
+    <!-- Selección de template -->
+    <div id="templateSelect">
+        <h2>Seleccionar Ruta Metabólica</h2>
+        <div id="templates">
+            
+                <div class="card template-card" onclick="loadTemplate('glycolysis')">
+                    <div class="template-name">🧪 Glucólisis</div>
+                    <div class="template-desc">Ruta de degradación de glucosa a piruvato (10 reacciones)</div>
+                    <div class="template-stats">🦠 E. coli · 10 reacciones · 11 metabolitos</div>
+                </div>
+            
+                <div class="card template-card" onclick="loadTemplate('mevalonate')">
+                    <div class="template-name">🧪 Ruta del Mevalonato</div>
+                    <div class="template-desc">Producción de isopentenil difosfato (IPP) para terpenoides</div>
+                    <div class="template-stats">🦠 E. coli (heteróloga) · 7 reacciones · 8 metabolitos</div>
+                </div>
+            
+                <div class="card template-card" onclick="loadTemplate('shikimate')">
+                    <div class="template-name">🧪 Ruta del Shikimato</div>
+                    <div class="template-desc">Producción de aminoácidos aromáticos (Phe, Tyr, Trp)</div>
+                    <div class="template-stats">🦠 E. coli · 7 reacciones · 9 metabolitos</div>
+                </div>
+            
+        </div>
+        <p style="color:var(--text2);font-size:0.82em;margin-top:12px">O cree una ruta personalizada desde cero.</p>
+        <button class="btn btn-outline" onclick="createEmpty()">+ Nueva ruta vacía</button>
+    </div>
+
+    <!-- Vista de ruta -->
+    <div id="pathwayView">
+        <div class="row" style="justify-content:space-between;align-items:center">
+            <div>
+                <span style="font-weight:700;font-size:1.1em" id="pwName"></span>
+                <span style="color:var(--text2);font-size:0.85em;margin-left:8px" id="pwOrg"></span>
+            </div>
+            <button class="btn btn-sm btn-outline" onclick="backToTemplates()">← Volver</button>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('diagram')">📊 Diagrama</div>
+            <div class="tab" onclick="switchTab('reactions')">⚗️ Reacciones</div>
+            <div class="tab" onclick="switchTab('fba')">📈 Análisis FBA</div>
+            <div class="tab" onclick="switchTab('export')">📤 Exportar</div>
+        </div>
+
+        <div id="tab-diagram" class="panel active">
+            <canvas id="pathwayCanvas" width="700" height="500"></canvas>
+        </div>
+
+        <div id="tab-reactions" class="panel">
+            <div id="reactionsTable"></div>
+        </div>
+
+        <div id="tab-fba" class="panel">
+            <div class="row">
+                <button class="btn btn-primary" onclick="runFBA()">📈 Ejecutar Análisis de Flujo</button>
+            </div>
+            <div id="fbaResults">
+                <div style="text-align:center;padding:30px;color:var(--text2)">
+                    Pulse "Ejecutar" para analizar flujos metabólicos.
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-export" class="panel">
+            <h2>Exportar Ruta</h2>
+            <div class="row">
+                <button class="btn btn-primary" onclick="exportSBML()">📦 Exportar SBML</button>
+                <button class="btn btn-accent" onclick="exportBioScript()">🧬 Convertir a BioScript</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const vscode = acquireVsCodeApi();
+    let pathway = null;
+
+    function loadTemplate(id) { vscode.postMessage({command:'loadTemplate',templateId:id}); }
+    function createEmpty() {
+        pathway = { name:'Nueva Ruta',description:'',organism:'E. coli',metabolites:[],reactions:[] };
+        showPathway(pathway);
+    }
+    function backToTemplates() {
+        document.getElementById('templateSelect').style.display='block';
+        document.getElementById('pathwayView').style.display='none';
+    }
+    function switchTab(name) {
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('tab-'+name).classList.add('active');
+        if(name==='diagram') drawPathway();
+    }
+    function runFBA() { vscode.postMessage({command:'runFBA'}); }
+    function exportSBML() { vscode.postMessage({command:'exportSBML'}); }
+    function exportBioScript() { vscode.postMessage({command:'exportBioScript'}); }
+    function optimizeFlux(id) { vscode.postMessage({command:'optimizeFlux',targetReaction:id}); }
+
+    function showPathway(pw) {
+        pathway = pw;
+        document.getElementById('templateSelect').style.display='none';
+        document.getElementById('pathwayView').style.display='block';
+        document.getElementById('pwName').textContent=pw.name;
+        document.getElementById('pwOrg').textContent=pw.organism;
+        renderReactionsTable(pw);
+        setTimeout(()=>drawPathway(),100);
+    }
+
+    function drawPathway() {
+        if(!pathway) return;
+        const canvas = document.getElementById('pathwayCanvas');
+        const ctx = canvas.getContext('2d');
+        const pw = pathway;
+
+        // Auto-layout
+        const padding = 60;
+        const metaboliteRadius = 22;
+        const cols = Math.ceil(Math.sqrt(pw.metabolites.length));
+        const spacing = 100;
+        pw.metabolites.forEach((m, i) => {
+            if (m.x <= 50 && m.y <= 50) {
+                m.x = padding + (i % cols) * spacing;
+                m.y = padding + Math.floor(i / cols) * spacing;
+            }
+        });
+
+        canvas.width = Math.max(700, (cols+1) * spacing + padding);
+        canvas.height = Math.max(500, (Math.ceil(pw.metabolites.length / cols) + 1) * spacing + padding);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Dibujar reacciones (flechas)
+        for (const rxn of pw.reactions) {
+            for (const sid of rxn.substrates) {
+                for (const pid of rxn.products) {
+                    const s = pw.metabolites.find(m=>m.id===sid);
+                    const p = pw.metabolites.find(m=>m.id===pid);
+                    if(!s||!p) continue;
+
+                    ctx.beginPath();
+                    ctx.strokeStyle = rxn.flux > 1.5 ? '#22d3ee' : '#64748b';
+                    ctx.lineWidth = Math.max(1, rxn.flux);
+                    ctx.moveTo(s.x, s.y);
+                    ctx.lineTo(p.x, p.y);
+                    ctx.stroke();
+
+                    // Flecha
+                    const angle = Math.atan2(p.y - s.y, p.x - s.x);
+                    const arrowX = (s.x + p.x) / 2;
+                    const arrowY = (s.y + p.y) / 2;
+                    ctx.beginPath();
+                    ctx.fillStyle = rxn.flux > 1.5 ? '#22d3ee' : '#64748b';
+                    ctx.moveTo(arrowX + 8*Math.cos(angle), arrowY + 8*Math.sin(angle));
+                    ctx.lineTo(arrowX + 8*Math.cos(angle+2.5), arrowY + 8*Math.sin(angle+2.5));
+                    ctx.lineTo(arrowX + 8*Math.cos(angle-2.5), arrowY + 8*Math.sin(angle-2.5));
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Nombre enzima
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = '10px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(rxn.enzyme, arrowX + 15*Math.cos(angle+Math.PI/2), arrowY + 15*Math.sin(angle+Math.PI/2));
+
+                    if (rxn.reversible) {
+                        ctx.setLineDash([3,3]);
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y + 3);
+                        ctx.lineTo(s.x, s.y + 3);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                }
+            }
+        }
+
+        // Dibujar metabolitos
+        for (const m of pw.metabolites) {
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, metaboliteRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#2a2a3e';
+            ctx.fill();
+            ctx.strokeStyle = '#7c3aed';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = 'bold 10px Segoe UI';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(m.name.length > 8 ? m.id : m.name, m.x, m.y);
+
+            if (m.formula) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '8px Segoe UI';
+                ctx.fillText(m.formula, m.x, m.y + metaboliteRadius + 10);
+            }
+        }
+    }
+
+    function renderReactionsTable(pw) {
+        const el = document.getElementById('reactionsTable');
+        el.innerHTML = '<table class="table"><tr><th>ID</th><th>Reacción</th><th>Enzima</th><th>Gen</th>' +
+            '<th>EC</th><th>Sustratos → Productos</th><th>Flujo</th><th>Acción</th></tr>' +
+            pw.reactions.map(r => {
+                const maxFlux = Math.max(...pw.reactions.map(x=>x.flux));
+                const pct = (r.flux/maxFlux*100);
+                return '<tr><td>'+r.id+'</td><td>'+r.name+'</td><td><strong>'+r.enzyme+'</strong></td>' +
+                    '<td>'+(r.gene||'-')+'</td><td>'+(r.ecNumber||'-')+'</td>' +
+                    '<td>'+r.substrates.join(', ')+' → '+r.products.join(', ')+'</td>' +
+                    '<td><span class="flux-bar"><span class="flux-fill" style="width:'+pct+'%;background:'+(pct<30?'var(--error)':pct<70?'var(--warning)':'var(--success)')+'"></span></span> '+r.flux.toFixed(1)+'</td>' +
+                    '<td><button class="btn btn-sm btn-outline" onclick="optimizeFlux(\''+r.id+'\')">⚡</button></td></tr>';
+            }).join('') + '</table>';
+    }
+
+    window.addEventListener('message', event => {
+        const msg = event.data;
+        switch(msg.command) {
+            case 'pathwayLoaded':
+                showPathway(msg.pathway);
+                break;
+            case 'fbaResult':
+                renderFBA(msg);
+                break;
+            case 'optimizationSuggestions':
+                renderOptSuggestions(msg);
+                break;
+        }
+    });
+
+    function renderFBA(data) {
+        const el = document.getElementById('fbaResults');
+        let html = '<div class="card fba-result">';
+        html += '<div class="row" style="justify-content:space-between"><div>';
+        html += '<h3>Rendimiento teórico</h3><div class="fba-yield">' + data.yield + '%</div>';
+        html += '</div><div><h3>Cuello de botella</h3><div class="bottleneck">' + data.bottleneck + '</div></div></div>';
+        html += '</div>';
+
+        html += '<table class="table"><tr><th>Reacción</th><th>Flujo calculado</th><th>Estado</th></tr>';
+        for (const r of data.results) {
+            const maxF = Math.max(...data.results.map(x=>x.flux));
+            const pct = maxF > 0 ? (r.flux/maxF*100) : 0;
+            html += '<tr><td>' + r.name + '</td>';
+            html += '<td><span class="flux-bar"><span class="flux-fill" style="width:'+pct+'%;background:'+(r.bottleneck?'var(--error)':'var(--success)')+'"></span></span> ' + r.flux + '</td>';
+            html += '<td>' + (r.bottleneck ? '<span class="bottleneck">⚠️ Cuello de botella</span>' : '✅ OK') + '</td></tr>';
+        }
+        html += '</table>';
+        el.innerHTML = html;
+    }
+
+    function renderOptSuggestions(data) {
+        let html = '<div class="card"><h3>⚡ Optimización: ' + data.reaction + '</h3>';
+        html += data.suggestions.map(s => '<div class="suggestion">' + s + '</div>').join('');
+        html += '</div>';
+        document.getElementById('fbaResults').innerHTML += html;
+    }
+</script>
+</body>
+</html>

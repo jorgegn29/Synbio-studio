@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"rnaprediction-rna-structure-28-nt";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"rnaprediction-rna-structure-28-nt", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "rnaprediction-rna-structure-28-nt") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0d1117; color:#e6edf3; font-family:'Segoe UI',sans-serif; padding:20px; }
+  h1 { font-size:20px; color:#3fb950; margin-bottom:4px; }
+  h2 { font-size:15px; color:#8b949e; font-weight:400; margin-bottom:16px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:20px; }
+  .stat { background:#161b22; border:1px solid #30363d; border-radius:8px; padding:12px; text-align:center; }
+  .stat-val { font-size:22px; font-weight:700; }
+  .stat-lbl { font-size:11px; color:#8b949e; margin-top:2px; letter-spacing:1px; }
+  .arc-container { background:#161b22; border:1px solid #30363d; border-radius:8px; padding:16px; margin-bottom:16px; overflow-x:auto; }
+  .seq-display { background:#0d1117; border:1px solid #30363d; border-radius:6px; padding:12px; font-family:'JetBrains Mono',monospace; font-size:12px; word-break:break-all; line-height:1.6; margin-bottom:16px; letter-spacing:1px; }
+  .table-container { margin-bottom:16px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { background:#161b22; padding:8px 12px; color:#8b949e; text-align:left; font-size:11px; letter-spacing:1px; }
+  td { padding:8px 12px; border-bottom:1px solid #21262d; }
+  .e-neg { color:#3fb950; } .e-pos { color:#f85149; }
+  .loop-hairpin { color:#58a6ff; } .loop-internal { color:#d29922; } .loop-multi { color:#bc8cff; }
+  .legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; font-size:12px; }
+  .legend span { display:flex; align-items:center; gap:4px; }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+</style>
+</head>
+<body>
+<h1>🧬 RNA Secondary Structure</h1>
+<h2>Nussinov + Turner 2004 (simplified)</h2>
+
+<div class="stats">
+  <div class="stat"><div class="stat-val" style="color:#3fb950;">28</div><div class="stat-lbl">NUCLEÓTIDOS</div></div>
+  <div class="stat"><div class="stat-val" style="color:#58a6ff;">8</div><div class="stat-lbl">PARES DE BASES</div></div>
+  <div class="stat"><div class="stat-val e-neg">-1.4</div><div class="stat-lbl">ΔG (kcal/mol)</div></div>
+  <div class="stat"><div class="stat-val" style="color:#d29922;">57.14%</div><div class="stat-lbl">GC CONTENT</div></div>
+  <div class="stat"><div class="stat-val" style="color:#bc8cff;">2</div><div class="stat-lbl">STEMS</div></div>
+  <div class="stat"><div class="stat-val" style="color:#f0883e;">2</div><div class="stat-lbl">LOOPS</div></div>
+</div>
+
+<div class="legend">
+  <span><span class="dot" style="background:#3fb950;"></span> A — Adenina</span>
+  <span><span class="dot" style="background:#f85149;"></span> U — Uracilo</span>
+  <span><span class="dot" style="background:#58a6ff;"></span> C — Citosina</span>
+  <span><span class="dot" style="background:#d29922;"></span> G — Guanina</span>
+</div>
+
+<div class="arc-container">
+  <svg width="600" height="300" xmlns="http://www.w3.org/2000/svg">
+    <path d="M 100 260 A 110 110 0 0 1 320 260" fill="none" stroke="#3fb950" stroke-width="1.5" opacity="0.7"/><path d="M 120 260 A 90 90 0 0 1 300 260" fill="none" stroke="#3fb950" stroke-width="1.5" opacity="0.7"/><path d="M 140 260 A 70 70 0 0 1 280 260" fill="none" stroke="#3fb950" stroke-width="1.5" opacity="0.7"/><path d="M 160 260 A 50 50 0 0 1 260 260" fill="none" stroke="#3fb950" stroke-width="1.5" opacity="0.7"/><path d="M 340 260 A 110 110 0 0 1 560 260" fill="none" stroke="#3fb950" stroke-width="1.5" opacity="0.7"/><path d="M 360 260 A 90 90 0 0 1 540 260" fill="none" stroke="#3fb950" stroke-width="1.5" opacity="0.7"/><path d="M 380 260 A 70 70 0 0 1 520 260" fill="none" stroke="#3fb950" stroke-width="1.5" opacity="0.7"/><path d="M 400 260 A 50 50 0 0 1 500 260" fill="none" stroke="#3fb950" stroke-width="1.5" opacity="0.7"/>
+    <text x="20" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#d29922" font-weight="normal">G</text><text x="40" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#d29922" font-weight="normal">G</text><text x="60" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#d29922" font-weight="normal">G</text><text x="80" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#d29922" font-weight="normal">G</text><text x="100" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#3fb950" font-weight="bold">A</text><text x="120" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#3fb950" font-weight="bold">A</text><text x="140" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#3fb950" font-weight="bold">A</text><text x="160" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#3fb950" font-weight="bold">A</text><text x="180" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#58a6ff" font-weight="normal">C</text><text x="200" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#58a6ff" font-weight="normal">C</text><text x="220" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#58a6ff" font-weight="normal">C</text><text x="240" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#58a6ff" font-weight="normal">C</text><text x="260" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#f85149" font-weight="bold">U</text><text x="280" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#f85149" font-weight="bold">U</text><text x="300" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#f85149" font-weight="bold">U</text><text x="320" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#f85149" font-weight="bold">U</text><text x="340" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#d29922" font-weight="bold">G</text><text x="360" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#d29922" font-weight="bold">G</text><text x="380" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#d29922" font-weight="bold">G</text><text x="400" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#d29922" font-weight="bold">G</text><text x="420" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#3fb950" font-weight="normal">A</text><text x="440" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#3fb950" font-weight="normal">A</text><text x="460" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#3fb950" font-weight="normal">A</text><text x="480" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#3fb950" font-weight="normal">A</text><text x="500" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#58a6ff" font-weight="bold">C</text><text x="520" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#58a6ff" font-weight="bold">C</text><text x="540" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#58a6ff" font-weight="bold">C</text><text x="560" y="276" text-anchor="middle" font-family="monospace" font-size="10" fill="#58a6ff" font-weight="bold">C</text>
+    <text x="20" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="40" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="60" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="80" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="100" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#bc8cff">(</text><text x="120" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#bc8cff">(</text><text x="140" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#bc8cff">(</text><text x="160" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#bc8cff">(</text><text x="180" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="200" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="220" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="240" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="260" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#f0883e">)</text><text x="280" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#f0883e">)</text><text x="300" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#f0883e">)</text><text x="320" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#f0883e">)</text><text x="340" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#bc8cff">(</text><text x="360" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#bc8cff">(</text><text x="380" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#bc8cff">(</text><text x="400" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#bc8cff">(</text><text x="420" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="440" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="460" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="480" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#484f58">.</text><text x="500" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#f0883e">)</text><text x="520" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#f0883e">)</text><text x="540" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#f0883e">)</text><text x="560" y="290" text-anchor="middle" font-family="monospace" font-size="9" fill="#f0883e">)</text>
+  </svg>
+</div>
+
+<div class="seq-display">
+  <strong style="color:#8b949e;font-size:11px;">Secuencia:</strong><br>
+  <span style="color:#d29922">G</span><span style="color:#d29922">G</span><span style="color:#d29922">G</span><span style="color:#d29922">G</span><span style="color:#3fb950">A</span><span style="color:#3fb950">A</span><span style="color:#3fb950">A</span><span style="color:#3fb950">A</span><span style="color:#58a6ff">C</span><span style="color:#58a6ff">C</span><span style="color:#58a6ff">C</span><span style="color:#58a6ff">C</span><span style="color:#f85149">U</span><span style="color:#f85149">U</span><span style="color:#f85149">U</span><span style="color:#f85149">U</span><span style="color:#d29922">G</span><span style="color:#d29922">G</span><span style="color:#d29922">G</span><span style="color:#d29922">G</span><span style="color:#3fb950">A</span><span style="color:#3fb950">A</span><span style="color:#3fb950">A</span><span style="color:#3fb950">A</span><span style="color:#58a6ff">C</span><span style="color:#58a6ff">C</span><span style="color:#58a6ff">C</span><span style="color:#58a6ff">C</span>
+  <br><br>
+  <strong style="color:#8b949e;font-size:11px;">Dot-Bracket:</strong><br>
+  <span style="color:#484f58">.</span><span style="color:#484f58">.</span><span style="color:#484f58">.</span><span style="color:#484f58">.</span><span style="color:#bc8cff">(</span><span style="color:#bc8cff">(</span><span style="color:#bc8cff">(</span><span style="color:#bc8cff">(</span><span style="color:#484f58">.</span><span style="color:#484f58">.</span><span style="color:#484f58">.</span><span style="color:#484f58">.</span><span style="color:#f0883e">)</span><span style="color:#f0883e">)</span><span style="color:#f0883e">)</span><span style="color:#f0883e">)</span><span style="color:#bc8cff">(</span><span style="color:#bc8cff">(</span><span style="color:#bc8cff">(</span><span style="color:#bc8cff">(</span><span style="color:#484f58">.</span><span style="color:#484f58">.</span><span style="color:#484f58">.</span><span style="color:#484f58">.</span><span style="color:#f0883e">)</span><span style="color:#f0883e">)</span><span style="color:#f0883e">)</span><span style="color:#f0883e">)</span>
+</div>
+
+
+<div class="table-container">
+  <table>
+    <tr><th>STEM</th><th>5' POS</th><th>3' POS</th><th>LONG.</th><th>ΔG (kcal/mol)</th></tr>
+    <tr>
+      <td>Stem 1</td>
+      <td>5</td>
+      <td>16</td>
+      <td>4 bp</td>
+      <td class="e-neg">-2.7</td>
+    </tr><tr>
+      <td>Stem 2</td>
+      <td>17</td>
+      <td>28</td>
+      <td>4 bp</td>
+      <td class="e-neg">-9.9</td>
+    </tr>
+  </table>
+</div>
+
+
+<div class="table-container">
+  <table>
+    <tr><th>LOOP</th><th>TIPO</th><th>POSICIÓN</th><th>TAMAÑO</th></tr>
+    <tr>
+      <td>Loop 1</td>
+      <td class="loop-hairpin">hairpin</td>
+      <td>9–12</td>
+      <td>4 nt</td>
+    </tr><tr>
+      <td>Loop 2</td>
+      <td class="loop-hairpin">hairpin</td>
+      <td>21–24</td>
+      <td>4 nt</td>
+    </tr>
+  </table>
+</div>
+
+<div style="margin-top:20px;padding:12px;background:#161b22;border:1px solid #30363d;border-radius:8px;">
+  <div style="font-size:11px;color:#8b949e;letter-spacing:1px;margin-bottom:6px;">ℹ️ PARES DE BASES</div>
+  <div style="font-size:13px;line-height:1.8;">
+    <span style="color:#3fb950;">A5</span>–<span style="color:#f0883e;">U16</span> &nbsp;·&nbsp; <span style="color:#3fb950;">A6</span>–<span style="color:#f0883e;">U15</span> &nbsp;·&nbsp; <span style="color:#3fb950;">A7</span>–<span style="color:#f0883e;">U14</span> &nbsp;·&nbsp; <span style="color:#3fb950;">A8</span>–<span style="color:#f0883e;">U13</span> &nbsp;·&nbsp; <span style="color:#3fb950;">G17</span>–<span style="color:#f0883e;">C28</span> &nbsp;·&nbsp; <span style="color:#3fb950;">G18</span>–<span style="color:#f0883e;">C27</span> &nbsp;·&nbsp; <span style="color:#3fb950;">G19</span>–<span style="color:#f0883e;">C26</span> &nbsp;·&nbsp; <span style="color:#3fb950;">G20</span>–<span style="color:#f0883e;">C25</span>
+  </div>
+</div>
+
+</body></html>

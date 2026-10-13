@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiosplitview-vista-circuito";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiosplitview-vista-circuito", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiosplitview-vista-circuito") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista Circuito Genético</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .toolbar {
+            background: #161b22;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        button {
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #30363d;
+            border-color: #8b949e;
+        }
+        
+        button.primary {
+            background: #238636;
+            border-color: #238636;
+        }
+        
+        button.primary:hover {
+            background: #2ea043;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #circuitCanvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(22, 27, 34, 0.95);
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 15px;
+            min-width: 200px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .info-panel h4 {
+            color: #58a6ff;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+        
+        .info-row .label {
+            color: #8b949e;
+        }
+        
+        .info-row .value {
+            color: #c9d1d9;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(22, 27, 34, 0.95);
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 11px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0;
+        }
+        
+        .legend-icon {
+            width: 20px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        
+        .selected-node {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(22, 27, 34, 0.95);
+            border: 1px solid #58a6ff;
+            border-radius: 8px;
+            padding: 15px;
+            min-width: 250px;
+            display: none;
+        }
+        
+        .selected-node.visible {
+            display: block;
+        }
+        
+        .selected-node h4 {
+            color: #58a6ff;
+            margin-bottom: 10px;
+        }
+        
+        .sequence-box {
+            background: #0d1117;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 10px;
+            word-break: break-all;
+            max-height: 60px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <span style="font-size: 20px;">🧬</span>
+            <span style="font-weight: 600;">Vista de Circuito Genético</span>
+            <div style="flex: 1;"></div>
+            <button onclick="zoomIn()">🔍+ Zoom</button>
+            <button onclick="zoomOut()">🔍- Zoom</button>
+            <button onclick="resetView()">↺ Reset</button>
+            <button class="primary" onclick="runSimulation()">▶️ Simular</button>
+            <button onclick="showStructure()">🔬 3D</button>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="circuitCanvas"></canvas>
+            
+            <div class="info-panel">
+                <h4>📊 Circuito</h4>
+                <div class="info-row">
+                    <span class="label">Genes:</span>
+                    <span class="value" id="geneCount">0</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Proteínas:</span>
+                    <span class="value" id="proteinCount">0</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Conexiones:</span>
+                    <span class="value" id="connectionCount">0</span>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: #3fb950;"></div>
+                    <span>Gen</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: #f0883e;"></div>
+                    <span>Promotor</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: #58a6ff;"></div>
+                    <span>Proteína</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: linear-gradient(90deg, #3fb950, #3fb950); height: 3px;"></div>
+                    <span>Activación</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: linear-gradient(90deg, #f85149, #f85149); height: 3px;"></div>
+                    <span>Represión</span>
+                </div>
+            </div>
+            
+            <div class="selected-node" id="selectedNode">
+                <h4 id="nodeName">Gen seleccionado</h4>
+                <div class="info-row">
+                    <span class="label">Tipo:</span>
+                    <span class="value" id="nodeType">-</span>
+                </div>
+                <div class="sequence-box" id="nodeSequence" style="display: none;"></div>
+                <button onclick="goToSource()" style="margin-top: 10px; width: 100%;">
+                    📝 Ir al código
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        
+        const genes = [{"id":"tetR","name":"tetR","type":"gene","position":{"x":100,"y":50},"active":true,"sequence":"ATGTCTAGATTAGATAAAAGTAAAGTGATTAACAGCGCATTAGAGCTGCTTAATGAGGTCGGAATCGAAGGTTTAACAACC"}];
+        const connections = [{"from":"tetR","to":"protein_tetR","type":"production","strength":1}];
+        const proteins = [{"id":"protein_tetR","name":"tetR","concentration":0,"position":{"x":250,"y":50}}];
+        
+        const canvas = document.getElementById('circuitCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let lastX = 0;
+        let lastY = 0;
+        let selectedNode = null;
+        
+        // Actualizar contadores
+        document.getElementById('geneCount').textContent = genes.filter(g => g.type === 'gene').length;
+        document.getElementById('proteinCount').textContent = proteins.length;
+        document.getElementById('connectionCount').textContent = connections.length;
+        
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            draw();
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(scale, scale);
+            
+            // Dibujar conexiones
+            for (const conn of connections) {
+                drawConnection(conn);
+            }
+            
+            // Dibujar nodos
+            for (const gene of genes) {
+                drawGene(gene);
+            }
+            
+            for (const protein of proteins) {
+                drawProtein(protein);
+            }
+            
+            ctx.restore();
+        }
+        
+        function drawGene(gene) {
+            const x = gene.position.x;
+            const y = gene.position.y;
+            
+            ctx.beginPath();
+            
+            if (gene.type === 'promoter') {
+                // Promotor: flecha
+                ctx.fillStyle = '#f0883e';
+                ctx.moveTo(x, y - 15);
+                ctx.lineTo(x + 30, y);
+                ctx.lineTo(x, y + 15);
+                ctx.closePath();
+                ctx.fill();
+            } else if (gene.type === 'terminator') {
+                // Terminador: T
+                ctx.fillStyle = '#f85149';
+                ctx.fillRect(x, y - 20, 5, 40);
+                ctx.fillRect(x - 10, y - 20, 25, 5);
+            } else {
+                // Gen: rectángulo redondeado
+                ctx.fillStyle = selectedNode === gene.id ? '#2ea043' : '#3fb950';
+                roundRect(ctx, x, y - 20, 80, 40, 5);
+                ctx.fill();
+                
+                // Texto
+                ctx.fillStyle = '#0d1117';
+                ctx.font = 'bold 12px Consolas';
+                ctx.textAlign = 'center';
+                ctx.fillText(gene.name, x + 40, y + 5);
+            }
+        }
+        
+        function drawProtein(protein) {
+            const x = protein.position.x;
+            const y = protein.position.y;
+            
+            // Círculo
+            ctx.beginPath();
+            ctx.fillStyle = selectedNode === protein.id ? '#79c0ff' : '#58a6ff';
+            ctx.arc(x, y, 25, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Texto
+            ctx.fillStyle = '#0d1117';
+            ctx.font = 'bold 10px Consolas';
+            ctx.textAlign = 'center';
+            ctx.fillText(protein.name.replace('protein_', ''), x, y + 4);
+        }
+        
+        function drawConnection(conn) {
+            const fromNode = [...genes, ...proteins].find(n => n.id === conn.from);
+            const toNode = [...genes, ...proteins].find(n => n.id === conn.to);
+            
+            if (!fromNode || !toNode) return;
+            
+            const fromX = fromNode.position.x + (fromNode.type ? 40 : 0);
+            const fromY = fromNode.position.y;
+            const toX = toNode.position.x + (toNode.type ? 0 : 0);
+            const toY = toNode.position.y;
+            
+            ctx.beginPath();
+            ctx.strokeStyle = conn.type === 'repression' ? '#f85149' : 
+                              conn.type === 'activation' ? '#3fb950' : '#8b949e';
+            ctx.lineWidth = 2;
+            
+            // Curva bezier
+            const midX = (fromX + toX) / 2;
+            const midY = (fromY + toY) / 2 - 30;
+            
+            ctx.moveTo(fromX, fromY);
+            ctx.quadraticCurveTo(midX, midY, toX, toY);
+            ctx.stroke();
+            
+            // Flecha o barra
+            if (conn.type === 'repression') {
+                // Barra (represión)
+                ctx.beginPath();
+                ctx.strokeStyle = '#f85149';
+                ctx.lineWidth = 3;
+                ctx.moveTo(toX - 5, toY - 8);
+                ctx.lineTo(toX + 5, toY + 8);
+                ctx.stroke();
+            } else {
+                // Flecha
+                drawArrowhead(ctx, toX, toY, Math.atan2(toY - midY, toX - midX));
+            }
+        }
+        
+        function drawArrowhead(ctx, x, y, angle) {
+            const size = 10;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-size, -size/2);
+            ctx.lineTo(-size, size/2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        function roundRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+        
+        // Interacción
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            
+            // Check click on node
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left - offsetX) / scale;
+            const y = (e.clientY - rect.top - offsetY) / scale;
+            
+            for (const gene of genes) {
+                if (gene.type === 'gene' &&
+                    x >= gene.position.x && x <= gene.position.x + 80 &&
+                    y >= gene.position.y - 20 && y <= gene.position.y + 20) {
+                    selectNode(gene);
+                    return;
+                }
+            }
+            
+            for (const protein of proteins) {
+                const dx = x - protein.position.x;
+                const dy = y - protein.position.y;
+                if (dx*dx + dy*dy <= 625) { // 25^2
+                    selectNode(protein);
+                    return;
+                }
+            }
+            
+            deselectNode();
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                offsetX += e.clientX - lastX;
+                offsetY += e.clientY - lastY;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                draw();
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('mouseleave', () => isDragging = false);
+        
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            scale *= delta;
+            scale = Math.max(0.1, Math.min(5, scale));
+            draw();
+        });
+        
+        function selectNode(node) {
+            selectedNode = node.id;
+            const panel = document.getElementById('selectedNode');
+            panel.classList.add('visible');
+            document.getElementById('nodeName').textContent = node.name;
+            document.getElementById('nodeType').textContent = node.type || 'protein';
+            
+            const seqBox = document.getElementById('nodeSequence');
+            if (node.sequence) {
+                seqBox.style.display = 'block';
+                seqBox.textContent = node.sequence;
+            } else {
+                seqBox.style.display = 'none';
+            }
+            
+            draw();
+        }
+        
+        function deselectNode() {
+            selectedNode = null;
+            document.getElementById('selectedNode').classList.remove('visible');
+            draw();
+        }
+        
+        function goToSource() {
+            if (selectedNode) {
+                vscode.postMessage({ command: 'selectGene', geneId: selectedNode.replace('protein_', '') });
+            }
+        }
+        
+        function zoomIn() {
+            scale *= 1.2;
+            draw();
+        }
+        
+        function zoomOut() {
+            scale *= 0.8;
+            draw();
+        }
+        
+        function resetView() {
+            scale = 1;
+            offsetX = 0;
+            offsetY = 0;
+            draw();
+        }
+        
+        function runSimulation() {
+            vscode.postMessage({ command: 'simulate' });
+        }
+        
+        function showStructure() {
+            vscode.postMessage({ 
+                command: 'showStructure', 
+                data: { type: 'circuit', name: 'Current Circuit' }
+            });
+        }
+        
+        draw();
+    </script>
+</body>
+</html>

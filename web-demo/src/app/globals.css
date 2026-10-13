@@ -50,6 +50,36 @@ body {
 .studio .card.green { background: #12261a; }
 .studio .card.blue { background: #122033; }
 .studio .tool-scroll { max-height: 180px; overflow: auto; }
+.studio .webview-frame { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.studio .webview-tabs { display: flex; gap: 4px; overflow: auto; padding: 4px 6px; background: #161b22; border-bottom: 1px solid #30363d; }
+.studio .webview-tabs button { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px 6px 0 0; padding: 4px 8px; font-size: 11px; white-space: nowrap; cursor: pointer; }
+.studio .webview-tabs button.on { border-color: #3fb950; color: #3fb950; }
+.studio .webview-frame iframe { flex: 1; width: 100%; border: 0; background: #1e1e1e; min-height: 280px; }
+.studio .three-host { height: 420px; min-height: 320px; background: #0d1117; border-radius: 8px; overflow: hidden; }
+.studio details summary { cursor: pointer; color: #8b949e; font-size: 12px; margin: 4px 0; }
+.tour-card { background: #1A2235; border: 1px solid #334155; border-radius: 8px; padding: 8px; margin: 6px 0; }
+.tour h2, .kicker { letter-spacing: .02em; }
+.kicker { color: #22C55E; font-size: 12px; }
+.bar { height: 6px; background: #0f172a; border-radius: 99px; overflow: hidden; margin-top: 4px; }
+.bar > i { display: block; height: 100%; background: #22C55E; }
+.badge { border: 1px solid #334155; border-radius: 99px; padding: 2px 8px; font-size: 11px; }
+.dot { width: 8px; height: 8px; border-radius: 99px; display: inline-block; background: #64748b; }
+.dot.on { background: #22C55E; }
+.tour .danger, .studio .danger { color: #f85149; }
+.lab-layout { display: grid; grid-template-columns: 220px 1fr; gap: 8px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.modal { position: sticky; bottom: 8px; background: #0f172a; border: 1px solid #22C55E; padding: 10px; border-radius: 8px; }
+.node-editor { display: grid; grid-template-columns: 1.4fr .8fr; gap: 8px; }
+.dotgrid { background-image: radial-gradient(#334155 1px, transparent 1px); background-size: 14px 14px; background-color: #0B101E; border-radius: 8px; }
+.seq { font-size: 11px; word-break: break-all; white-space: pre-wrap; }
+.grid { width: 100%; border-collapse: collapse; font-size: 12px; }
+.grid td, .grid th { border-bottom: 1px solid #334155; text-align: left; padding: 3px 4px; }
+.check { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+.gauge-live { display: flex; flex-direction: column; width: 140px; }
+.bars { display: flex; gap: 12px; align-items: end; height: 80px; }
+.bars i { display: block; width: 18px; background: #22C55E; }
+.three-host.short { height: 240px; min-height: 200px; }
+.tour-bottom { border-top: 1px solid #334155; margin-top: 8px; padding-top: 8px; }
 .studio input, .studio select, .studio textarea { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 4px 6px; margin: 4px 0; }
 .studio textarea { min-height: 70px; }
 .welcome { height: 100%; }
