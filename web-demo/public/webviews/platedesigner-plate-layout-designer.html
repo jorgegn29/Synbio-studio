@@ -1,0 +1,154 @@
+<!DOCTYPE html><html><head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"platedesigner-plate-layout-designer";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"platedesigner-plate-layout-designer", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "platedesigner-plate-layout-designer") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script><meta charset="UTF-8">
+<style>
+body{background:#1a1a2e;color:#cdd6f4;font-family:'Segoe UI',sans-serif;margin:0;padding:12px}
+h1{color:#89b4fa;font-size:18px;margin:0 0 8px 0}
+.well:hover{transform:scale(1.15);box-shadow:0 0 6px rgba(137,180,250,0.5)}
+.well.selected{box-shadow:0 0 0 2px #cdd6f4}
+.btn{padding:6px 12px;border:1px solid #45475a;background:#181825;color:#cdd6f4;border-radius:4px;cursor:pointer;font-size:11px}
+.btn:hover{background:#313244}
+.btn-primary{background:#89b4fa;color:#1a1a2e;border:none;font-weight:bold}
+.tool-group{display:flex;gap:4px;margin:8px 0;flex-wrap:wrap}
+.sidebar{width:220px;background:#181825;border-radius:6px;padding:10px;height:fit-content}
+</style></head><body>
+<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #313244;padding-bottom:8px">
+    <h1>🧫 Plate Layout Designer </h1>
+    <div style="display:flex;gap:8px">
+        <button class="btn" onclick="vscode.postMessage({command:'newPlate',data:{format:96}})">New 96-well</button>
+        <button class="btn" onclick="vscode.postMessage({command:'newPlate',data:{format:384}})">New 384-well</button>
+        <button class="btn" onclick="vscode.postMessage({command:'loadTemplate'})">📋 Template</button>
+        <button class="btn" onclick="vscode.postMessage({command:'clearAll'})">🗑️ Clear</button>
+    </div>
+</div>
+
+<div style="display:flex;gap:16px;margin-top:8px">
+    <div style="flex:1">
+        <div style="text-align:center;padding:60px;color:#6c7086">Crea una placa nueva o carga una plantilla.</div>
+
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:12px">
+            <div style="background:#181825;padding:8px;border-radius:4px;text-align:center">
+                <div style="font-size:18px;font-weight:bold;color:#a6e3a1">0</div>
+                <div style="font-size:9px;color:#6c7086">Samples</div>
+            </div>
+            <div style="background:#181825;padding:8px;border-radius:4px;text-align:center">
+                <div style="font-size:18px;font-weight:bold;color:#f9e2af">0</div>
+                <div style="font-size:9px;color:#6c7086">Controls</div>
+            </div>
+            <div style="background:#181825;padding:8px;border-radius:4px;text-align:center">
+                <div style="font-size:18px;font-weight:bold;color:#6c7086">0</div>
+                <div style="font-size:9px;color:#6c7086">Blanks</div>
+            </div>
+            <div style="background:#181825;padding:8px;border-radius:4px;text-align:center">
+                <div style="font-size:18px;font-weight:bold;color:#89b4fa">0</div>
+                <div style="font-size:9px;color:#6c7086">Standards</div>
+            </div>
+            <div style="background:#181825;padding:8px;border-radius:4px;text-align:center">
+                <div style="font-size:18px;font-weight:bold;color:#313244">96</div>
+                <div style="font-size:9px;color:#6c7086">Empty</div>
+            </div>
+            <div style="background:#181825;padding:8px;border-radius:4px;text-align:center">
+                <div style="font-size:18px;font-weight:bold;color:#cba6f7">96</div>
+                <div style="font-size:9px;color:#6c7086">Total</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <h3 style="color:#89dceb;font-size:13px;margin:0 0 8px 0">🎨 Well Assignment</h3>
+        <div style="font-size:10px;color:#6c7086;margin-bottom:8px">Click wells or drag to select, then assign:</div>
+        <div class="tool-group">
+            
+                <button class="btn" onclick="setSelectedType('sample','#a6e3a1')" style="border-color:#a6e3a1;font-size:10px">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#a6e3a1;margin-right:4px"></span>sample
+                </button>
+            
+                <button class="btn" onclick="setSelectedType('positive-control','#f9e2af')" style="border-color:#f9e2af;font-size:10px">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f9e2af;margin-right:4px"></span>positive control
+                </button>
+            
+                <button class="btn" onclick="setSelectedType('negative-control','#f38ba8')" style="border-color:#f38ba8;font-size:10px">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f38ba8;margin-right:4px"></span>negative control
+                </button>
+            
+                <button class="btn" onclick="setSelectedType('blank','#6c7086')" style="border-color:#6c7086;font-size:10px">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6c7086;margin-right:4px"></span>blank
+                </button>
+            
+                <button class="btn" onclick="setSelectedType('standard','#89b4fa')" style="border-color:#89b4fa;font-size:10px">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#89b4fa;margin-right:4px"></span>standard
+                </button>
+            
+                <button class="btn" onclick="setSelectedType('empty','#313244')" style="border-color:#313244;font-size:10px">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#313244;margin-right:4px"></span>empty
+                </button>
+            
+        </div>
+        <div style="margin-top:8px">
+            <label style="font-size:10px;color:#6c7086">Sample Name</label>
+            <input id="sampleName" type="text" value="" style="width:100%;background:#313244;border:1px solid #45475a;color:#cdd6f4;padding:4px;border-radius:4px;margin-top:2px;font-size:11px" placeholder="e.g. GFP-1">
+        </div>
+        <div style="margin-top:6px">
+            <label style="font-size:10px;color:#6c7086">Concentration</label>
+            <input id="concInput" type="text" value="" style="width:100%;background:#313244;border:1px solid #45475a;color:#cdd6f4;padding:4px;border-radius:4px;margin-top:2px;font-size:11px" placeholder="e.g. 1 mM">
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="assignSelected()">Assign to Selected Wells</button>
+
+        <h3 style="color:#89dceb;font-size:13px;margin:14px 0 6px 0">📁 Saved Plates</h3>
+        <div style="font-size:10px;color:#6c7086">No plates saved</div>
+    </div>
+</div>
+
+<script>
+const vscode = acquireVsCodeApi();
+let selectedWells = new Set();
+let currentType = 'sample';
+let currentColor = '#a6e3a1';
+let isDragging = false;
+
+function selectWell(wellId) {
+    const el = document.querySelector('[data-well="'+wellId+'"]');
+    if (selectedWells.has(wellId)) {
+        selectedWells.delete(wellId);
+        el.classList.remove('selected');
+    } else {
+        selectedWells.add(wellId);
+        el.classList.add('selected');
+    }
+}
+
+function hoverWell(wellId, enter) {
+    if (isDragging && enter) { selectWell(wellId); }
+}
+
+document.addEventListener('mousedown', () => { isDragging = true; });
+document.addEventListener('mouseup', () => { isDragging = false; });
+
+function setSelectedType(type, color) {
+    currentType = type;
+    currentColor = color;
+}
+
+function assignSelected() {
+    if (selectedWells.size === 0) return;
+    const sample = document.getElementById('sampleName').value || currentType;
+    vscode.postMessage({
+        command: 'setWells',
+        data: { wells: Array.from(selectedWells), type: currentType, sample, color: currentColor }
+    });
+    selectedWells.clear();
+}
+</script>
+</body></html>

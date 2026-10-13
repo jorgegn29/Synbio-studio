@@ -5,8 +5,8 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: 'SynBio-LLVM — Genetic Circuit IDE',
-  description: 'Design, compile and simulate genetic circuits in the browser. BioScript compiler with real-time diagnostics, SBOL visualization, and Gillespie stochastic simulation.',
+  title: 'SynBio Studio',
+  description: 'In-browser SynBio Studio: BioScript editor, compiler outputs, Gillespie/ODE/FBA, and the workbenches that can run without the desktop backends.',
   keywords: ['synthetic biology', 'genetic circuits', 'BioScript', 'compiler', 'SBOL', 'iGEM', 'bioinformatics'],
   authors: [{ name: 'SynBio-LLVM Team' }],
   openGraph: {

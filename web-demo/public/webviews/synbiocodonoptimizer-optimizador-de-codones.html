@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiocodonoptimizer-optimizador-de-codones";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiocodonoptimizer-optimizador-de-codones", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiocodonoptimizer-optimizador-de-codones") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizador de Codones</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; }
+        
+        .header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+        .header h1 { font-size: 22px; color: #89b4fa; }
+        .header .badge { background: #313244; color: #a6adc8; padding: 4px 10px; border-radius: 12px; font-size: 11px; }
+
+        .card { background: #313244; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #45475a; }
+        .card h3 { color: #89b4fa; margin-bottom: 12px; font-size: 15px; }
+
+        label { display: block; color: #a6adc8; font-size: 13px; margin-bottom: 6px; }
+        textarea { width: 100%; background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a; border-radius: 8px; padding: 12px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; resize: vertical; min-height: 80px; }
+        textarea:focus { border-color: #89b4fa; outline: none; }
+
+        select { width: 100%; background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a; border-radius: 8px; padding: 10px 12px; font-size: 13px; cursor: pointer; }
+        select:focus { border-color: #89b4fa; outline: none; }
+
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; }
+        .checkbox-group label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #cdd6f4; font-size: 13px; }
+        input[type="checkbox"] { accent-color: #89b4fa; width: 16px; height: 16px; }
+
+        .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #89b4fa, #74c7ec); color: #1e1e2e; }
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-secondary { background: #45475a; color: #cdd6f4; }
+        .btn-secondary:hover { background: #585b70; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .results { display: none; }
+        .results.visible { display: block; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .stat-card { background: #1e1e2e; border-radius: 8px; padding: 14px; text-align: center; border: 1px solid #45475a; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #a6e3a1; }
+        .stat-value.warn { color: #f9e2af; }
+        .stat-value.bad { color: #f38ba8; }
+        .stat-label { font-size: 11px; color: #a6adc8; margin-top: 4px; }
+        .stat-delta { font-size: 12px; color: #a6e3a1; margin-top: 2px; }
+        .stat-delta.negative { color: #f38ba8; }
+
+        .sequence-display { background: #1e1e2e; border-radius: 8px; padding: 14px; margin-top: 12px; border: 1px solid #45475a; overflow-x: auto; }
+        .sequence-display code { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; word-break: break-all; line-height: 1.6; }
+        .codon { display: inline; }
+        .codon.changed { background: rgba(166, 227, 161, 0.15); color: #a6e3a1; border-radius: 2px; }
+        .codon.original { color: #6c7086; }
+
+        .improvements-list { list-style: none; }
+        .improvements-list li { padding: 6px 0; border-bottom: 1px solid #45475a; font-size: 13px; }
+        .improvements-list li:last-child { border-bottom: none; }
+        .improvements-list li::before { content: '✓ '; color: #a6e3a1; font-weight: bold; }
+
+        .changes-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+        .changes-table th { background: #1e1e2e; padding: 8px; text-align: left; color: #89b4fa; border-bottom: 2px solid #45475a; }
+        .changes-table td { padding: 6px 8px; border-bottom: 1px solid #45475a; }
+        .changes-table tr:hover { background: rgba(137, 180, 250, 0.05); }
+
+        .gc-bar { height: 20px; background: #1e1e2e; border-radius: 10px; overflow: hidden; margin-top: 8px; position: relative; }
+        .gc-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+        .gc-marker { position: absolute; top: -4px; width: 2px; height: 28px; background: #f9e2af; }
+        .gc-range { position: absolute; top: 0; height: 100%; background: rgba(166, 227, 161, 0.15); border-left: 1px dashed #a6e3a1; border-right: 1px dashed #a6e3a1; }
+
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #45475a; border-top-color: #89b4fa; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error-msg { background: rgba(243, 139, 168, 0.1); border: 1px solid #f38ba8; border-radius: 8px; padding: 12px; color: #f38ba8; margin-top: 8px; display: none; }
+        .error-msg.show { display: block; }
+
+        .tabs { display: flex; gap: 2px; margin-bottom: 16px; }
+        .tab { padding: 8px 16px; background: #45475a; color: #a6adc8; border: none; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .tab:first-child { border-radius: 8px 0 0 8px; }
+        .tab:last-child { border-radius: 0 8px 8px 0; }
+        .tab.active { background: #89b4fa; color: #1e1e2e; font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧬 Optimizador de Codones</h1>
+        <span class="badge">SynBio-LLVM v0.1</span>
+    </div>
+
+    <div class="card">
+        <h3>📥 Secuencia de Proteína</h3>
+        <label>Ingresa la secuencia de aminoácidos (código de 1 letra):</label>
+        <textarea id="proteinInput" placeholder="MVKVYAPASSANMSVGFDVLGAAVTPVDGALLGDVVTVEAAETFSLNNLGRPVQ..." rows="3"></textarea>
+        <div class="btn-row">
+            <button class="btn btn-secondary" onclick="loadFromEditor()">📂 Cargar desde editor</button>
+            <button class="btn btn-secondary" onclick="loadExample()">🧪 Ejemplo: GFP</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>🦠 Organismo Huésped</h3>
+        <select id="hostSelect">
+            <option value="ecoli_dh5alpha">E. coli DH5α — Cepa de clonación</option>
+            <option value="ecoli_bl21">E. coli BL21(DE3) — Expresión con T7</option>
+            <option value="yeast_s288c">S. cerevisiae S288C — Eucariótico</option>
+            <option value="bacillus_subtilis">B. subtilis 168 — Gram-positivo</option>
+        </select>
+    </div>
+
+    <div class="card">
+        <h3>⚙️ Opciones de Optimización</h3>
+        <div class="checkbox-group">
+            <label><input type="checkbox" id="optRestriction" checked> Evitar sitios de restricción</label>
+            <label><input type="checkbox" id="optGC" checked> Balancear contenido GC</label>
+            <label><input type="checkbox" id="optHomopolymers" checked> Evitar homopolímeros</label>
+        </div>
+    </div>
+
+    <div class="btn-row" style="margin-bottom: 24px;">
+        <button class="btn btn-primary" id="optimizeBtn" onclick="runOptimization()">🚀 Optimizar Codones</button>
+    </div>
+
+    <div id="errorMsg" class="error-msg"></div>
+
+    <div class="results" id="results">
+        <div class="card">
+            <h3>📊 Resultados de Optimización</h3>
+            <div class="stats-grid" id="statsGrid"></div>
+
+            <h3 style="margin-top: 16px;">📈 GC Content</h3>
+            <div class="gc-bar" id="gcBar">
+                <div class="gc-fill" id="gcFill"></div>
+                <div class="gc-range" id="gcRange"></div>
+            </div>
+            <div style="display:flex; justify-content: space-between; font-size:11px; color:#6c7086; margin-top:4px;">
+                <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('sequence')">Secuencia</button>
+                <button class="tab" onclick="switchTab('changes')">Cambios</button>
+                <button class="tab" onclick="switchTab('improvements')">Mejoras</button>
+            </div>
+
+            <div class="tab-content active" id="tab-sequence">
+                <h3>🧬 Secuencia Optimizada</h3>
+                <div class="sequence-display" id="seqDisplay"></div>
+                <div class="btn-row" style="margin-top: 12px;">
+                    <button class="btn btn-secondary" onclick="copySequence()">📋 Copiar</button>
+                    <button class="btn btn-secondary" onclick="exportFasta()">💾 Exportar FASTA</button>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-changes">
+                <h3>🔄 Codones Modificados</h3>
+                <div id="changesContent"></div>
+            </div>
+
+            <div class="tab-content" id="tab-improvements">
+                <h3>✅ Mejoras Aplicadas</h3>
+                <ul class="improvements-list" id="improvementsList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        let currentResult = null;
+
+        function runOptimization() {
+            const sequence = document.getElementById('proteinInput').value.trim();
+            if (!sequence) { showError('Ingresa una secuencia de aminoácidos'); return; }
+            
+            const btn = document.getElementById('optimizeBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Optimizando...';
+            hideError();
+
+            vscode.postMessage({
+                command: 'optimize',
+                sequence: sequence,
+                host: document.getElementById('hostSelect').value,
+                options: {
+                    avoidRestriction: document.getElementById('optRestriction').checked,
+                    balanceGC: document.getElementById('optGC').checked,
+                    avoidHomopolymers: document.getElementById('optHomopolymers').checked,
+                }
+            });
+        }
+
+        function loadFromEditor() {
+            vscode.postMessage({ command: 'loadFromEditor' });
+        }
+
+        function loadExample() {
+            // GFP (superfold) protein sequence
+            document.getElementById('proteinInput').value = 'MSKGEELFTGVVPILVELDGDVNGHKFSVRGEGEGDATNGKLTLKFICTTGKLPVPWPTLVTTLTYGVQCFSRYPDHMKRHDFFKSAMPEGYVQERTISFKDDGTYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNFNSHNVYITADKQKNGIKANFKIRHNVEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSTQSVLSKDPNEKRDHMVLLEFVTAAGITHGMDELYK';
+        }
+
+        function copySequence() {
+            if (currentResult) {
+                vscode.postMessage({ command: 'copySequence', sequence: currentResult.optimizedSequence });
+            }
+        }
+
+        function exportFasta() {
+            if (currentResult) {
+                vscode.postMessage({ command: 'exportFasta', name: 'codon_optimized', sequence: currentResult.optimizedSequence });
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('errorMsg').classList.remove('show');
+        }
+
+        function renderResults(result) {
+            currentResult = result;
+            const stats = result.stats;
+
+            // Stats grid
+            const caiClass = stats.caiAfter > 0.7 ? '' : stats.caiAfter > 0.5 ? 'warn' : 'bad';
+            const gcClass = stats.gcAfter >= 40 && stats.gcAfter <= 60 ? '' : 'warn';
+
+            document.getElementById('statsGrid').innerHTML = 
+                '<div class="stat-card"><div class="stat-value ' + caiClass + '">' + (stats.caiAfter * 100).toFixed(1) + '%</div><div class="stat-label">CAI Score</div><div class="stat-delta">' + (stats.caiAfter > stats.caiBefore ? '↑' : '') + ' de ' + (stats.caiBefore * 100).toFixed(1) + '%</div></div>' +
+                '<div class="stat-card"><div class="stat-value ' + gcClass + '">' + stats.gcAfter.toFixed(1) + '%</div><div class="stat-label">GC Content</div><div class="stat-delta">' + (Math.abs(stats.gcAfter-50) < Math.abs(stats.gcBefore-50) ? '↑ más equilibrado' : '') + '</div></div>' +
+                '<div class="stat-card"><div class="stat-value">' + stats.changedCodons + '</div><div class="stat-label">Codones Modificados</div><div class="stat-delta">de ' + stats.totalCodons + ' totales</div></div>' +
+                '<div class="stat-card"><div class="stat-value">' + stats.restrictionSitesRemoved + '</div><div class="stat-label">Sitios Eliminados</div><div class="stat-delta">sitios de restricción</div></div>';
+
+            // GC bar
+            const gcFill = document.getElementById('gcFill');
+            gcFill.style.width = stats.gcAfter + '%';
+            gcFill.style.background = (stats.gcAfter >= 40 && stats.gcAfter <= 60) ? 'linear-gradient(90deg, #a6e3a1, #94e2d5)' : 'linear-gradient(90deg, #f9e2af, #f38ba8)';
+            document.getElementById('gcRange').style.left = '40%';
+            document.getElementById('gcRange').style.width = '20%';
+
+            // Sequence with highlights
+            let seqHtml = '<code>';
+            const naiveCodons = [];
+            const optCodons = [];
+            for (let i = 0; i + 3 <= result.originalSequence.length; i += 3) {
+                naiveCodons.push(result.originalSequence.substring(i, i + 3));
+                optCodons.push(result.optimizedSequence.substring(i, i + 3));
+            }
+            for (let i = 0; i < optCodons.length; i++) {
+                const changed = naiveCodons[i] !== optCodons[i];
+                seqHtml += '<span class="codon' + (changed ? ' changed' : '') + '">' + optCodons[i] + '</span>';
+                if ((i + 1) % 20 === 0) seqHtml += '<br>';
+                else if ((i + 1) % 10 === 0) seqHtml += '  ';
+                else seqHtml += ' ';
+            }
+            seqHtml += '</code>';
+            document.getElementById('seqDisplay').innerHTML = seqHtml;
+
+            // Changes table
+            if (result.codonChanges.length > 0) {
+                let tableHtml = '<table class="changes-table"><thead><tr><th>Pos</th><th>AA</th><th>Original</th><th>Optimizado</th></tr></thead><tbody>';
+                const maxShow = Math.min(result.codonChanges.length, 50);
+                for (let i = 0; i < maxShow; i++) {
+                    const c = result.codonChanges[i];
+                    tableHtml += '<tr><td>' + c.position + '</td><td>' + c.aminoAcid + '</td><td style="color:#6c7086">' + c.originalCodon + '</td><td style="color:#a6e3a1">' + c.optimizedCodon + '</td></tr>';
+                }
+                if (result.codonChanges.length > 50) {
+                    tableHtml += '<tr><td colspan="4" style="color:#a6adc8; text-align:center">... y ' + (result.codonChanges.length - 50) + ' cambios más</td></tr>';
+                }
+                tableHtml += '</tbody></table>';
+                document.getElementById('changesContent').innerHTML = tableHtml;
+            } else {
+                document.getElementById('changesContent').innerHTML = '<p style="color:#a6adc8; padding: 12px;">Sin cambios necesarios — la secuencia ya está optimizada.</p>';
+            }
+
+            // Improvements list
+            const list = document.getElementById('improvementsList');
+            list.innerHTML = '';
+            for (const imp of result.improvements) {
+                const li = document.createElement('li');
+                li.textContent = imp;
+                list.appendChild(li);
+            }
+            for (const avoided of result.avoidedStructures) {
+                const li = document.createElement('li');
+                li.textContent = avoided;
+                list.appendChild(li);
+            }
+
+            document.getElementById('results').classList.add('visible');
+        }
+
+        window.addEventListener('message', event => {
+            const msg = event.data;
+            switch (msg.command) {
+                case 'optimizationResult':
+                    document.getElementById('optimizeBtn').disabled = false;
+                    document.getElementById('optimizeBtn').innerHTML = '🚀 Optimizar Codones';
+                    renderResults(msg.result);
+                    break;
+                case 'loadedSequence':
+                    document.getElementById('proteinInput').value = msg.sequence;
+                    break;
+                case 'error':
+                    document.getElementById('optimizeBtn').disabled = false;
+                    document.getElementById('optimizeBtn').innerHTML = '🚀 Optimizar Codones';
+                    showError(msg.message);
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

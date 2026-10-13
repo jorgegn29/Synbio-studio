@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es"><head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiocrispr-crispr-grna-designer";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiocrispr-crispr-grna-designer", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiocrispr-crispr-grna-designer") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<style>
+:root { --bg: #1e1e2e; --surface: #181825; --text: #cdd6f4; --accent: #89b4fa; --border: #313244; --green: #a6e3a1; --red: #f38ba8; --yellow: #f9e2af; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 16px; }
+h1 { font-size: 18px; color: var(--accent); margin-bottom: 12px; }
+.input-group { margin-bottom: 12px; }
+label { font-size: 12px; color: #a6adc8; margin-bottom: 4px; display: block; }
+select, textarea, button, input { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 13px; width: 100%; }
+textarea { height: 100px; font-family: 'Cascadia Code', 'Courier New', monospace; resize: vertical; }
+button { cursor: pointer; width: auto; padding: 8px 20px; margin: 4px; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--bg); font-weight: 600; }
+.btn-row { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+.stats-bar { display: flex; gap: 16px; background: var(--surface); padding: 10px 16px; border-radius: 8px; margin: 12px 0; flex-wrap: wrap; }
+.stat { text-align: center; }
+.stat .val { font-size: 20px; font-weight: bold; color: var(--accent); }
+.stat .lbl { font-size: 10px; color: #a6adc8; }
+table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+th { background: var(--surface); padding: 8px; text-align: left; border-bottom: 2px solid var(--border); position: sticky; top: 0; }
+td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:hover { background: rgba(137,180,250,0.05); }
+.score { display: inline-block; min-width: 36px; text-align: center; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 11px; }
+.score-high { background: rgba(166,227,161,0.2); color: var(--green); }
+.score-mid { background: rgba(249,226,175,0.2); color: var(--yellow); }
+.score-low { background: rgba(243,139,168,0.2); color: var(--red); }
+.spacer-seq { font-family: 'Cascadia Code', monospace; font-size: 11px; letter-spacing: 1px; }
+.pam-highlight { color: var(--red); font-weight: bold; }
+.warnings { font-size: 10px; color: var(--yellow); }
+.nuclease-info { background: var(--surface); padding: 12px; border-radius: 8px; margin: 8px 0; font-size: 12px; border-left: 3px solid var(--accent); }
+.insert-btn { background: transparent; border: 1px solid var(--green); color: var(--green); padding: 2px 8px; font-size: 10px; width: auto; cursor: pointer; border-radius: 4px; }
+.insert-btn:hover { background: var(--green); color: var(--bg); }
+.result-container { max-height: 500px; overflow-y: auto; }
+</style></head><body>
+<h1>🔬 CRISPR Guide RNA Designer</h1>
+<p style="font-size:12px;color:#a6adc8;margin-bottom:12px">Diseño de sgRNA con scoring basado en Doench et al. 2016 Nat Biotechnol & Hsu et al. 2013</p>
+
+<div class="input-group">
+    <label>Nucleasa Cas</label>
+    <select id="nucleaseSelect"><option value="SpCas9">SpCas9 (Streptococcus pyogenes) — PAM: NGG</option>
+<option value="SpCas9_NAG">SpCas9 (NAG PAM) — PAM: NAG</option>
+<option value="SpCas9_VQR">SpCas9-VQR (NGA PAM) — PAM: NGA</option>
+<option value="SaCas9">SaCas9 (Staphylococcus aureus) — PAM: NNGRRT</option>
+<option value="Cas12a">Cas12a/Cpf1 (Lachnospiraceae) — PAM: TTTV</option>
+<option value="CjCas9">CjCas9 (Campylobacter jejuni) — PAM: NNNNACAC</option></select>
+</div>
+
+<div id="nucleaseInfo" class="nuclease-info"></div>
+
+<div class="input-group">
+    <label>Secuencia de ADN target (pegar secuencia 5'→3')</label>
+    <textarea id="seqInput" placeholder="ATGCGATCGATCGATCG..."></textarea>
+</div>
+
+<div class="btn-row">
+    <button class="primary" onclick="designGuides()">🧬 Diseñar gRNAs</button>
+    <button onclick="useFromEditor()">📄 Desde Editor</button>
+    <button onclick="loadExample()">📋 Ejemplo: lacZ</button>
+</div>
+
+<div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat"><div class="val" id="statTotal">0</div><div class="lbl">gRNAs encontrados</div></div>
+    <div class="stat"><div class="val" id="statTop">0</div><div class="lbl">Score > 70</div></div>
+    <div class="stat"><div class="val" id="statSeqLen">0</div><div class="lbl">Secuencia (bp)</div></div>
+    <div class="stat"><div class="val" id="statNuclease">—</div><div class="lbl">Nucleasa</div></div>
+</div>
+
+<div class="result-container" id="resultContainer"></div>
+
+<script>
+const vscode = acquireVsCodeApi();
+
+document.getElementById('nucleaseSelect').addEventListener('change', updateNucleaseInfo);
+updateNucleaseInfo();
+
+function updateNucleaseInfo() {
+    const nucleases = {"SpCas9":{"name":"SpCas9 (Streptococcus pyogenes)","pam":"NGG","pamSide":"3prime","spacerLength":20,"cutOffset":-3,"description":"Nucleasa Cas9 más usada. PAM: 5'-NGG-3'. Corta 3 nt upstream del PAM.","organism":"S. pyogenes SF370"},"SpCas9_NAG":{"name":"SpCas9 (NAG PAM)","pam":"NAG","pamSide":"3prime","spacerLength":20,"cutOffset":-3,"description":"PAM alternativo de SpCas9. Menor eficiencia (5-10x menos que NGG).","organism":"S. pyogenes SF370"},"SpCas9_VQR":{"name":"SpCas9-VQR (NGA PAM)","pam":"NGA","pamSide":"3prime","spacerLength":20,"cutOffset":-3,"description":"Variante ingenierizada SpCas9 D1135V/R1335Q/T1337R. Kleinstiver et al. 2015 Nature.","organism":"Engineered"},"SaCas9":{"name":"SaCas9 (Staphylococcus aureus)","pam":"NNGRRT","pamSide":"3prime","spacerLength":21,"cutOffset":-3,"description":"Cas9 más pequeña, cabe en AAV. Ran et al. 2015 Nature 520:186.","organism":"S. aureus"},"Cas12a":{"name":"Cas12a/Cpf1 (Lachnospiraceae)","pam":"TTTV","pamSide":"5prime","spacerLength":23,"cutOffset":18,"description":"PAM 5'-TTTV. Corta escalonado. Zetsche et al. 2015 Cell 163:759.","organism":"Lachnospiraceae bacterium"},"CjCas9":{"name":"CjCas9 (Campylobacter jejuni)","pam":"NNNNACAC","pamSide":"3prime","spacerLength":22,"cutOffset":-3,"description":"La más pequeña (984 aa). Kim et al. 2017 Nat Commun 8:14500.","organism":"C. jejuni"}};
+    const id = document.getElementById('nucleaseSelect').value;
+    const n = nucleases[id];
+    if (n) {
+        document.getElementById('nucleaseInfo').innerHTML =
+            '<strong>' + n.name + '</strong><br>' +
+            'PAM: <code style="color:#f38ba8">' + n.pam + '</code> (' + n.pamSide + ') · ' +
+            'Spacer: ' + n.spacerLength + ' nt · Cut offset: ' + n.cutOffset + '<br>' +
+            '<span style="color:#a6adc8">' + n.description + '</span>';
+    }
+}
+
+function designGuides() {
+    const seq = document.getElementById('seqInput').value.replace(/[^ACGTacgt]/g, '');
+    const nuclease = document.getElementById('nucleaseSelect').value;
+    if (seq.length < 23) {
+        document.getElementById('resultContainer').innerHTML = '<p style="color:var(--red)">Secuencia muy corta (mínimo 23 nt)</p>';
+        return;
+    }
+    vscode.postMessage({ type: 'designGuides', sequence: seq, nuclease });
+    document.getElementById('resultContainer').innerHTML = '<p>Analizando secuencia de ' + seq.length + ' bp...</p>';
+}
+
+function useFromEditor() {
+    vscode.postMessage({ type: 'useFromEditor' });
+}
+
+function insertGuide(spacer) {
+    const nuclease = document.getElementById('nucleaseSelect').value;
+    vscode.postMessage({ type: 'insertGuide', spacer, nuclease });
+}
+
+function loadExample() {
+    // lacZ gene first 500bp (E. coli K-12 MG1655)
+    document.getElementById('seqInput').value =
+        'ATGACCATGATTACGCCAAGCTTTCCCTGTAGCAGCATGACTGTTACTCAAGTCACTGACTACCGGGTTCAACCGT' +
+        'TCAGCGGATGATTTACGGTTCAATCAGCAAATATCAGCGATCTCAGCAGCAGCCAACAGGTTGATGATTATGCCAGC' +
+        'AGCTTCCAGACGTTCACCGCATGGTTCGATTTCGCTAACCTCACCAATTCCACTAACCTGCCTCCCTGCTTCTGATT' +
+        'GAAATCAGCAATCAGCTGCTTTAGCGTTAACGATCCGGCGAACTTGCGCTAACACTCACTCCTCTCAATGATGATGA' +
+        'ATGGCAGCCAATCCTCCTGCGGCGATCGGCTTGTTCGAGACTTCGGCGGCCGCAAGCCAGGTTGCCAGCCGCAGAG' +
+        'CCATTTCCGATGCGGCTTCACTCAATCCAGAAAACAGGTCAGCCGCTTCAATCATCATCGATTTCAACAAACGCTCG' +
+        'ATTTCAGGTGGCACTTTTCGGGGAAATGTGCGCGGAACCCCTAT';
+}
+
+function scoreClass(s) {
+    if (s >= 70) return 'score-high';
+    if (s >= 40) return 'score-mid';
+    return 'score-low';
+}
+
+window.addEventListener('message', (event) => {
+    const msg = event.data;
+    if (msg.type === 'guidesResult') {
+        const guides = msg.guides;
+        const n = msg.nuclease;
+
+        document.getElementById('statsBar').style.display = 'flex';
+        document.getElementById('statTotal').textContent = msg.total;
+        document.getElementById('statTop').textContent = guides.filter(g => g.overallScore >= 70).length;
+        document.getElementById('statSeqLen').textContent = document.getElementById('seqInput').value.replace(/[^ACGTacgt]/g, '').length;
+        document.getElementById('statNuclease').textContent = n.pam;
+
+        if (guides.length === 0) {
+            document.getElementById('resultContainer').innerHTML = '<p style="color:var(--yellow)">No se encontraron sitios PAM (' + n.pam + ') en la secuencia.</p>';
+            return;
+        }
+
+        let html = '<table><thead><tr>' +
+            "<th>#</th><th>Spacer (5'→3')</th><th>PAM</th><th>Pos</th><th>Strand</th>" +
+            '<th>GC%</th><th>On-Target</th><th>Off-Target</th><th>Self-Comp</th><th>Overall</th><th>⚠️</th><th></th>' +
+            '</tr></thead><tbody>';
+
+        guides.forEach((g, i) => {
+            html += '<tr>' +
+                '<td>' + (i + 1) + '</td>' +
+                '<td class="spacer-seq">' + g.spacer + '</td>' +
+                '<td class="pam-highlight">' + g.pam + '</td>' +
+                '<td>' + g.position + '</td>' +
+                '<td>' + g.strand + '</td>' +
+                '<td>' + g.gcContent.toFixed(0) + '%</td>' +
+                '<td><span class="score ' + scoreClass(g.onTargetScore) + '">' + g.onTargetScore + '</span></td>' +
+                '<td><span class="score ' + scoreClass(g.offTargetScore) + '">' + g.offTargetScore + '</span></td>' +
+                '<td><span class="score ' + scoreClass(g.selfCompScore) + '">' + g.selfCompScore + '</span></td>' +
+                '<td><span class="score ' + scoreClass(g.overallScore) + '">' + g.overallScore + '</span></td>' +
+                '<td class="warnings">' + (g.warnings.length ? g.warnings.join('<br>') : '✅') + '</td>' +
+                '<td><button class="insert-btn" onclick="insertGuide(&quot;' + g.spacer + '&quot;)">Insertar</button></td>' +
+                '</tr>';
+        });
+
+        html += '</tbody></table>';
+        document.getElementById('resultContainer').innerHTML = html;
+    }
+
+    if (msg.type === 'editorSequence') {
+        document.getElementById('seqInput').value = msg.sequence;
+    }
+});
+</script></body></html>

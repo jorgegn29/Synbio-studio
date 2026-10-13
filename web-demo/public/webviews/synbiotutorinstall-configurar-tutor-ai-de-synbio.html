@@ -1,0 +1,55 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiotutorinstall-configurar-tutor-ai-de-synbio";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiotutorinstall-configurar-tutor-ai-de-synbio", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiotutorinstall-configurar-tutor-ai-de-synbio") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+            <style>
+                body {
+                    font-family: var(--vscode-font-family);
+                    padding: 20px;
+                    line-height: 1.6;
+                }
+                code {
+                    background: var(--vscode-textCodeBlock-background);
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                }
+                .step {
+                    border-left: 3px solid var(--vscode-textLink-foreground);
+                    margin: 12px 0;
+                    padding: 12px;
+                    background: var(--vscode-editor-background);
+                }
+            </style>
+        </head>
+        <body>
+            <h1>Tutor AI de SynBio</h1>
+            <div class="step">
+                <h3>Paso 1</h3>
+                <p>Abre <code>python-engine/start-server.bat</code> y arranca el Python Engine.</p>
+            </div>
+            <div class="step">
+                <h3>Paso 2</h3>
+                <p>Si quieres activar la capa Keras, instala TensorFlow en el entorno del Python Engine.</p>
+                <p><code>pip install tensorflow-cpu</code></p>
+            </div>
+            <div class="step">
+                <h3>Paso 3</h3>
+                <p>Vuelve a ejecutar el comando <code>SynBio: Tutor AI de SynBio</code>.</p>
+            </div>
+        </body>
+        </html>
+        

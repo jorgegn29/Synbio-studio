@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiodocumentation-auto-documentation";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiodocumentation-auto-documentation", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiodocumentation-auto-documentation") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Auto Documentation</title>
+<style>
+    :root { --bg:#1e1e2e; --surface:#2a2a3e; --primary:#7c3aed; --accent:#22d3ee;
+            --success:#10b981; --warning:#f59e0b; --error:#ef4444; --text:#e2e8f0;
+            --text2:#94a3b8; --border:#334155; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); padding:16px; }
+    h1 { font-size:1.4em; margin-bottom:4px; }
+    h2 { font-size:1.05em; color:var(--accent); margin:16px 0 8px; }
+    h3 { font-size:0.95em; margin:10px 0 6px; }
+    .subtitle { color:var(--text2); font-size:0.85em; margin-bottom:14px; }
+    .btn { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:0.85em;
+           font-weight:600; transition:all 0.2s; }
+    .btn-primary { background:var(--primary); color:white; }
+    .btn-primary:hover { background:#6d28d9; }
+    .btn-accent { background:var(--accent); color:#000; }
+    .btn-success { background:var(--success); color:white; }
+    .btn-outline { background:transparent; border:1px solid var(--border); color:var(--text); }
+    .btn-outline:hover { border-color:var(--primary); }
+    .btn-sm { padding:5px 12px; font-size:0.8em; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px; margin:10px 0; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
+    .gen-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px;
+                text-align:center; cursor:pointer; transition:all 0.2s; }
+    .gen-card:hover { border-color:var(--primary); transform:translateY(-2px); }
+    .gen-card .icon { font-size:2em; margin-bottom:8px; }
+    .gen-card .title { font-weight:700; font-size:0.95em; }
+    .gen-card .desc { color:var(--text2); font-size:0.8em; margin-top:4px; }
+    .doc-output { background:#111827; border-radius:8px; padding:16px; margin:12px 0;
+                  font-family:'Cascadia Code',monospace; font-size:0.85em; line-height:1.6;
+                  max-height:500px; overflow-y:auto; white-space:pre-wrap; }
+    .badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.75em; font-weight:600; }
+    .badge-low { background:var(--success); color:white; }
+    .badge-medium { background:var(--warning); color:#000; }
+    .badge-high { background:var(--error); color:white; }
+    .svg-container { background:#111827; border-radius:8px; padding:12px; margin:10px 0; overflow-x:auto; }
+    .svg-container svg { max-width:100%; height:auto; }
+    .comp-table { width:100%; border-collapse:collapse; font-size:0.85em; }
+    .comp-table th { background:var(--surface); text-align:left; padding:8px; border:1px solid var(--border); }
+    .comp-table td { padding:8px; border:1px solid var(--border); }
+    .tabs { display:flex; gap:4px; margin:12px 0; }
+    .tab { padding:6px 14px; border:1px solid var(--border); background:var(--surface); color:var(--text2);
+           border-radius:6px; cursor:pointer; font-size:0.8em; }
+    .tab.active { background:var(--primary); color:white; border-color:var(--primary); }
+    .empty { text-align:center; padding:40px; color:var(--text2); }
+    .empty .icon { font-size:2.5em; margin-bottom:10px; }
+    #docContent { display:none; }
+    .export-bar { display:flex; gap:8px; margin:12px 0; padding:10px; background:var(--surface);
+                  border-radius:8px; border:1px solid var(--border); align-items:center; }
+</style>
+</head>
+<body>
+    <h1>📄 Auto Documentation Generator</h1>
+    <p class="subtitle">Documentación automática de circuitos genéticos</p>
+
+    <div class="grid" id="genCards">
+        <div class="gen-card" onclick="generate('full')">
+            <div class="icon">📋</div>
+            <div class="title">Documentación Completa</div>
+            <div class="desc">Reporte técnico con todos los detalles del circuito</div>
+        </div>
+        <div class="gen-card" onclick="generate('notebook')">
+            <div class="icon">📓</div>
+            <div class="title">Cuaderno de Laboratorio</div>
+            <div class="desc">Entrada de lab notebook con protocolo y checklist</div>
+        </div>
+        <div class="gen-card" onclick="generate('compliance')">
+            <div class="icon">🛡️</div>
+            <div class="title">Reporte de Cumplimiento</div>
+            <div class="desc">Evaluación de bioseguridad y normativa</div>
+        </div>
+        <div class="gen-card" onclick="generate('datasheet')">
+            <div class="icon">📊</div>
+            <div class="title">Ficha Técnica</div>
+            <div class="desc">Datasheet con especificaciones de componentes</div>
+        </div>
+    </div>
+
+    <div id="docContent">
+        <div class="export-bar">
+            <span style="font-weight:600">📤 Exportar:</span>
+            <button class="btn btn-sm btn-primary" onclick="exportMD()">📝 Markdown</button>
+            <button class="btn btn-sm btn-accent" onclick="exportHTML()">🌐 HTML</button>
+            <span style="flex:1"></span>
+            <button class="btn btn-sm btn-outline" onclick="showCards()">← Volver</button>
+        </div>
+
+        <div id="svgDiagram" class="svg-container"></div>
+
+        <div class="tabs" id="docTabs"></div>
+        <div id="docBody"></div>
+    </div>
+
+<script>
+    const vscode = acquireVsCodeApi();
+    let currentDoc = null;
+    let currentMarkdown = '';
+
+    function generate(type) {
+        vscode.postMessage({ command: type === 'full' ? 'generateFull' : 
+            type === 'notebook' ? 'generateLabNotebook' : 
+            type === 'compliance' ? 'generateCompliance' : 'generateDatasheet' });
+    }
+
+    function showCards() {
+        document.getElementById('genCards').style.display = 'grid';
+        document.getElementById('docContent').style.display = 'none';
+    }
+
+    function exportMD() { vscode.postMessage({ command: 'exportMarkdown', content: currentMarkdown }); }
+    function exportHTML() { vscode.postMessage({ command: 'exportHTML', content: currentMarkdown }); }
+
+    window.addEventListener('message', event => {
+        const msg = event.data;
+        if (msg.command === 'documentationReady') {
+            currentDoc = msg.documentation;
+            document.getElementById('genCards').style.display = 'none';
+            document.getElementById('docContent').style.display = 'block';
+            renderDocumentation(msg.documentation, msg.type);
+        }
+    });
+
+    function renderDocumentation(doc, type) {
+        // SVG Diagram
+        document.getElementById('svgDiagram').innerHTML = doc.svgDiagram;
+
+        const body = document.getElementById('docBody');
+        let html = '';
+        let md = '';
+
+        if (type === 'full') {
+            md = '# ' + doc.title + '\n\n' +
+                 '**Fecha:** ' + doc.date + '\n\n' +
+                 '## Resumen\n' + doc.summary + '\n\n' +
+                 '## Componentes\n' + doc.components.map(c => '- **' + c.name + '** (' + c.type + '): ' + c.description).join('\n') + '\n\n' +
+                 '## Red Regulatoria\n' + doc.regulatoryNetwork + '\n\n' +
+                 '## Racional de Diseño\n' + doc.designRationale + '\n\n' +
+                 '## Seguridad\n' + 'Riesgo: ' + doc.safetyAssessment.riskLevel + '\n\n' +
+                 '## Referencias\n' + doc.references.map(r => '- ' + r).join('\n');
+
+            html = '<div class="card"><h2>📋 ' + doc.title + '</h2>' +
+                   '<p style="color:var(--text2)">' + doc.date + '</p></div>' +
+                   '<div class="card"><h3>Resumen</h3><p>' + doc.summary + '</p></div>' +
+                   renderComponentTable(doc.components) +
+                   '<div class="card"><h3>🔀 Red Regulatoria</h3><p style="white-space:pre-wrap">' + doc.regulatoryNetwork.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</p></div>' +
+                   '<div class="card"><h3>💡 Racional de Diseño</h3><p>' + doc.designRationale + '</p></div>' +
+                   renderSafety(doc.safetyAssessment) +
+                   '<div class="card"><h3>📚 Referencias</h3><ul>' + doc.references.map(r => '<li style="font-size:0.85em;color:var(--text2)">' + r + '</li>').join('') + '</ul></div>';
+        } else if (type === 'notebook') {
+            md = doc.labNotebookEntry;
+            html = '<div class="doc-output">' + doc.labNotebookEntry + '</div>';
+        } else if (type === 'compliance') {
+            md = doc.complianceReport;
+            html = '<div class="doc-output">' + doc.complianceReport + '</div>';
+        } else if (type === 'datasheet') {
+            md = '# Ficha Técnica: ' + doc.circuitName + '\n\n' + doc.summary;
+            html = '<div class="card"><h2>📊 Ficha Técnica: ' + doc.circuitName + '</h2></div>' +
+                   renderComponentTable(doc.components) +
+                   renderSafety(doc.safetyAssessment);
+        }
+
+        currentMarkdown = md;
+        body.innerHTML = html;
+    }
+
+    function renderComponentTable(components) {
+        return '<div class="card"><h3>🧬 Componentes</h3><table class="comp-table"><tr>' +
+               '<th>Tipo</th><th>Nombre</th><th>Descripción</th><th>iGEM</th></tr>' +
+               components.map(c => '<tr><td>' + c.type + '</td><td><strong>' + c.name + '</strong></td>' +
+                   '<td style="font-size:0.85em">' + c.description + '</td>' +
+                   '<td>' + (c.igemPart || '-') + '</td></tr>').join('') +
+               '</table></div>';
+    }
+
+    function renderSafety(s) {
+        const badgeClass = s.riskLevel === 'high' ? 'badge-high' : s.riskLevel === 'medium' ? 'badge-medium' : 'badge-low';
+        return '<div class="card"><h3>🛡️ Evaluación de Seguridad</h3>' +
+               '<p>Riesgo: <span class="badge ' + badgeClass + '">' + s.riskLevel.toUpperCase() + '</span></p>' +
+               '<p>Kill switch: ' + (s.hasKillSwitch ? '✅' : '❌') + '</p>' +
+               '<p>Contención: ' + s.containmentLevel + '</p>' +
+               (s.antibioticResistance.length > 0 ? '<p>Resistencias: ' + s.antibioticResistance.join(', ') + '</p>' : '') +
+               (s.biosecurityFlags.length > 0 ? '<p style="color:var(--warning)">⚠️ ' + s.biosecurityFlags.join(', ') + '</p>' : '') +
+               '</div>';
+    }
+</script>
+</body>
+</html>

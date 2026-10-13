@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiomoleculeviewer3d-visor-molecular-3d";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiomoleculeviewer3d-visor-molecular-3d", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiomoleculeviewer3d-visor-molecular-3d") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SynBio Visor Molecular 3D</title>
+    <script src="https://unpkg.com/ngl@2.3.1/dist/ngl.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .toolbar {
+            background: #161b22;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #30363d;
+            flex-wrap: wrap;
+        }
+        
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background: #30363d;
+            margin: 0 5px;
+        }
+        
+        button {
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #30363d;
+            border-color: #8b949e;
+        }
+        
+        button.active {
+            background: #238636;
+            border-color: #238636;
+        }
+        
+        input[type="text"] {
+            background: #0d1117;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            padding: 6px 10px;
+            border-radius: 6px;
+            width: 80px;
+            font-size: 12px;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+        
+        select {
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .viewer-container {
+            flex: 1;
+            position: relative;
+            background: #0d1117;
+        }
+        
+        #viewport {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(22, 27, 34, 0.9);
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px;
+            max-width: 250px;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .info-panel h4 {
+            color: #58a6ff;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            color: #8b949e;
+        }
+        
+        .info-row span:last-child {
+            color: #c9d1d9;
+            font-family: 'Consolas', monospace;
+        }
+        
+        .secondary-structure {
+            margin-top: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 10px;
+            word-break: break-all;
+            background: #0d1117;
+            padding: 8px;
+            border-radius: 4px;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+        
+        .ss-helix { color: #f85149; }
+        .ss-sheet { color: #58a6ff; }
+        .ss-coil { color: #8b949e; }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #30363d;
+            border-top-color: #58a6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #8b949e;
+        }
+        
+        .placeholder-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .placeholder h3 {
+            color: #c9d1d9;
+            margin-bottom: 10px;
+        }
+        
+        .color-picker {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-swatch.active {
+            border-color: #fff;
+        }
+        
+        .controls-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(22, 27, 34, 0.8);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <span style="font-size: 14px;">🧬</span>
+                <input type="text" id="pdbInput" placeholder="PDB ID" maxlength="4">
+                <button onclick="loadPDB()">Cargar PDB</button>
+            </div>
+            
+            <div class="toolbar-divider"></div>
+            
+            <div class="toolbar-group">
+                <span style="font-size: 11px; color: #8b949e;">Representación:</span>
+                <select id="repStyle" onchange="changeRepresentation()">
+                    <option value="cartoon">Cartoon</option>
+                    <option value="surface">Superficie</option>
+                    <option value="ball+stick">Bolas y Palos</option>
+                    <option value="spacefill">Esferas</option>
+                    <option value="licorice">Licorice</option>
+                    <option value="ribbon">Ribbon</option>
+                    <option value="backbone">Backbone</option>
+                </select>
+            </div>
+            
+            <div class="toolbar-group">
+                <span style="font-size: 11px; color: #8b949e;">Color:</span>
+                <select id="colorScheme" onchange="changeColor()">
+                    <option value="chainid">Por Cadena</option>
+                    <option value="residueindex">Por Residuo</option>
+                    <option value="sstruc">Estructura 2°</option>
+                    <option value="hydrophobicity">Hidrofobicidad</option>
+                    <option value="bfactor">B-Factor</option>
+                    <option value="element">Por Elemento</option>
+                </select>
+            </div>
+            
+            <div class="toolbar-divider"></div>
+            
+            <div class="toolbar-group">
+                <button onclick="toggleSpin()" id="spinBtn">⟳ Rotar</button>
+                <button onclick="resetView()">↺ Reset</button>
+                <button onclick="centerView()">⊕ Centrar</button>
+                <button onclick="screenshot()">📷 Captura</button>
+            </div>
+        </div>
+        
+        <div class="viewer-container">
+            <div id="viewport"></div>
+            
+            <div class="placeholder" id="placeholder">
+                <div class="placeholder-icon">🔬</div>
+                <h3>Visor Molecular 3D — SynBio-LLVM</h3>
+                <p>Ingresa un PDB ID o selecciona una molécula de la biblioteca:</p>
+                <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 380px;">
+                    <button onclick="loadFromRCSB('1GFL')" title="GFP - Ormö et al. 1996" style="font-size:11px;">🟢 GFP</button>
+                    <button onclick="loadFromRCSB('2H5Q')" title="mCherry - Shu et al. 2006" style="font-size:11px;">🔴 mCherry</button>
+                    <button onclick="loadFromRCSB('1LBG')" title="LacI - Lewis et al. 1996" style="font-size:11px;">🧬 LacI</button>
+                    <button onclick="loadFromRCSB('4AC0')" title="TetR - Hinrichs et al. 1994" style="font-size:11px;">🧬 TetR</button>
+                    <button onclick="loadFromRCSB('4OO8')" title="Cas9 - Nishimasu et al. 2014" style="font-size:11px;">✂️ Cas9</button>
+                    <button onclick="loadFromRCSB('3VUB')" title="CcdB - Dao-Thi et al. 2005" style="font-size:11px;">☠️ CcdB</button>
+                    <button onclick="loadFromRCSB('1BNA')" title="DNA B-form - Drew et al. 1981" style="font-size:11px;">🧬 DNA</button>
+                    <button onclick="loadFromRCSB('1ARO')" title="T7 RNAP - Sousa et al. 1993" style="font-size:11px;">⚙️ T7 RNAP</button>
+                    <button onclick="loadFromRCSB('2ARC')" title="AraC - Soisson et al. 1997" style="font-size:11px;">🔄 AraC</button>
+                    <button onclick="loadFromRCSB('5B43')" title="Cas12a - Yamano et al. 2016" style="font-size:11px;">✂️ Cas12a</button>
+                </div>
+                <p style="margin-top: 12px; font-size: 11px; color: #6e7681;">
+                    Powered by NGL Viewer · Datos de RCSB PDB
+                </p>
+            </div>
+            
+            <div class="loading" id="loading" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>Cargando estructura...</p>
+            </div>
+            
+            <div class="info-panel" id="infoPanel" style="display: none;">
+                <h4>📊 Información Molecular</h4>
+                <div class="info-row">
+                    <span>PDB ID:</span>
+                    <span id="infoName">-</span>
+                </div>
+                <div class="info-row">
+                    <span>Átomos:</span>
+                    <span id="infoAtoms">-</span>
+                </div>
+                <div class="info-row">
+                    <span>Residuos:</span>
+                    <span id="infoResidues">-</span>
+                </div>
+                <div class="info-row">
+                    <span>Cadenas:</span>
+                    <span id="infoChains">-</span>
+                </div>
+                <div id="synbioInfoContainer" style="display: none;">
+                    <div style="margin-top: 8px; border-top: 1px solid #30363d; padding-top: 8px;">
+                        <div class="info-row">
+                            <span>Organismo:</span>
+                            <span id="infoOrganism">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span>Peso mol.:</span>
+                            <span id="infoMW">-</span>
+                        </div>
+                        <div class="info-row" style="flex-direction: column; gap: 2px;">
+                            <span style="color: #58a6ff; font-size: 10px;" id="infoRef">-</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="secondaryContainer" style="display: none;">
+                    <div style="margin-top: 8px; color: #8b949e;">Estructura 2°:</div>
+                    <div class="secondary-structure" id="secondaryStructure"></div>
+                </div>
+            </div>
+            
+            <div class="controls-hint">
+                🖱️ Rotar: Arrastrar | Zoom: Scroll | Mover: Shift+Arrastrar
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        let stage = null;
+        let component = null;
+        let representation = null;
+        let isSpinning = false;
+        let spinAnimation = null;
+
+        // Inicializar NGL Stage
+        function initStage() {
+            stage = new NGL.Stage("viewport", {
+                backgroundColor: "#0d1117",
+                quality: "high",
+                impostor: true,
+                workerDefault: true
+            });
+            
+            // Responsive
+            window.addEventListener("resize", () => {
+                stage.handleResize();
+            });
+        }
+
+        // Cargar PDB desde input
+        function loadPDB() {
+            const pdbId = document.getElementById('pdbInput').value.trim().toUpperCase();
+            if (pdbId.length !== 4) {
+                alert('El PDB ID debe tener 4 caracteres');
+                return;
+            }
+            loadFromRCSB(pdbId);
+        }
+
+        // Cargar desde RCSB
+        async function loadFromRCSB(pdbId) {
+            showLoading(true);
+            showPlaceholder(false);
+            
+            try {
+                // Limpiar estructura anterior
+                if (component) {
+                    stage.removeComponent(component);
+                }
+                
+                // Cargar nueva estructura
+                component = await stage.loadFile(`rcsb://${pdbId}`, {
+                    defaultRepresentation: true
+                });
+                
+                // Aplicar representación
+                updateRepresentation();
+                
+                // Centrar vista
+                stage.autoView();
+                
+                // Mostrar info
+                updateInfo(pdbId);
+                
+                showLoading(false);
+                
+            } catch (error) {
+                showLoading(false);
+                showPlaceholder(true);
+                vscode.postMessage({ command: 'error', text: `Error cargando ${pdbId}: ${error.message}` });
+            }
+        }
+
+        // Cargar desde datos PDB directos
+        function loadFromData(pdbData, format = 'pdb') {
+            showLoading(true);
+            showPlaceholder(false);
+            
+            if (component) {
+                stage.removeComponent(component);
+            }
+            
+            const blob = new Blob([pdbData], { type: 'text/plain' });
+            
+            stage.loadFile(blob, { ext: format }).then(comp => {
+                component = comp;
+                updateRepresentation();
+                stage.autoView();
+                updateInfo('Custom');
+                showLoading(false);
+            }).catch(error => {
+                showLoading(false);
+                showPlaceholder(true);
+                vscode.postMessage({ command: 'error', text: error.message });
+            });
+        }
+
+        // Actualizar representación
+        function updateRepresentation() {
+            if (!component) return;
+            
+            // Limpiar representaciones anteriores
+            component.removeAllRepresentations();
+            
+            const style = document.getElementById('repStyle').value;
+            const color = document.getElementById('colorScheme').value;
+            
+            representation = component.addRepresentation(style, {
+                colorScheme: color,
+                quality: "high"
+            });
+        }
+
+        function changeRepresentation() {
+            updateRepresentation();
+        }
+
+        function changeColor() {
+            updateRepresentation();
+        }
+
+        // Toggle rotación automática
+        function toggleSpin() {
+            isSpinning = !isSpinning;
+            const btn = document.getElementById('spinBtn');
+            
+            if (isSpinning) {
+                btn.classList.add('active');
+                stage.setSpin(true);
+            } else {
+                btn.classList.remove('active');
+                stage.setSpin(false);
+            }
+        }
+
+        function resetView() {
+            if (stage) {
+                stage.autoView(1000);
+            }
+        }
+
+        function centerView() {
+            if (component) {
+                stage.autoView(component, 500);
+            }
+        }
+
+        function screenshot() {
+            if (stage) {
+                stage.makeImage({
+                    factor: 2,
+                    antialias: true,
+                    transparent: false,
+                    trim: false
+                }).then(blob => {
+                    NGL.download(blob, "synbio-molecule.png");
+                    vscode.postMessage({ command: 'exportImage' });
+                });
+            }
+        }
+
+        // Biblioteca SynBio en el visor para mostrar info enriquecida
+        const synbioLibrary = {
+            '1GFL': { name: 'GFP', organism: 'A. victoria', mw: '26.9 kDa', ref: 'Ormö et al. (1996) Science 273:1392' },
+            '2H5Q': { name: 'mCherry', organism: 'Discosoma sp.', mw: '26.7 kDa', ref: 'Shu et al. (2006) Biochemistry 45:9639' },
+            '1YFP': { name: 'YFP', organism: 'A. victoria', mw: '26.9 kDa', ref: 'Wachter et al. (1998) Structure 6:1267' },
+            '1BFP': { name: 'BFP', organism: 'A. victoria', mw: '26.9 kDa', ref: 'Wachter et al. (1997) Biochemistry 36:9759' },
+            '1LBG': { name: 'LacI', organism: 'E. coli', mw: '38.6 kDa', ref: 'Lewis et al. (1996) Science 271:1247' },
+            '4AC0': { name: 'TetR', organism: 'E. coli (Tn10)', mw: '23.4 kDa', ref: 'Hinrichs et al. (1994) Science 264:418' },
+            '1LMB': { name: 'CI Repressor', organism: 'Phage Lambda', mw: '26.2 kDa', ref: 'Beamer & Pabo (1992) JMB 227:177' },
+            '2ARC': { name: 'AraC', organism: 'E. coli', mw: '33.4 kDa', ref: 'Soisson et al. (1997) Science 276:421' },
+            '1L3L': { name: 'LuxR', organism: 'V. fischeri', mw: '28.8 kDa', ref: 'Zhang et al. (2002) Nature 417:971' },
+            '4OO8': { name: 'Cas9', organism: 'S. pyogenes', mw: '163 kDa', ref: 'Nishimasu et al. (2014) Cell 156:935' },
+            '5B43': { name: 'Cas12a', organism: 'Acidaminococcus', mw: '151 kDa', ref: 'Yamano et al. (2016) Cell 165:949' },
+            '3VUB': { name: 'CcdB', organism: 'E. coli (F plasmid)', mw: '11.7 kDa', ref: 'Dao-Thi et al. (2005) JMB 348:1091' },
+            '1UB4': { name: 'MazF', organism: 'E. coli', mw: '12.1 kDa', ref: 'Kamada et al. (2003) Mol Cell 11:875' },
+            '1BNA': { name: 'DNA B-form', organism: 'Synthetic', mw: '7.7 kDa', ref: 'Drew et al. (1981) PNAS 78:2179' },
+            '4OCB': { name: 'DNA Z-form', organism: 'Synthetic', mw: '~8 kDa', ref: 'Wang et al. (1979) Nature 282:680' },
+            '1ARO': { name: 'T7 RNAP', organism: 'Phage T7', mw: '99 kDa', ref: 'Sousa et al. (1993) Nature 364:593' },
+            '3OGO': { name: 'GFP-Nanobody', organism: 'Camelid', mw: '~40 kDa', ref: 'Kirchhofer et al. (2010) NSMB 17:133' },
+        };
+
+        // Actualizar panel de información
+        function updateInfo(name) {
+            document.getElementById('infoPanel').style.display = 'block';
+            document.getElementById('infoName').textContent = name;
+            
+            if (component && component.structure) {
+                const struct = component.structure;
+                document.getElementById('infoAtoms').textContent = struct.atomCount.toLocaleString();
+                document.getElementById('infoResidues').textContent = struct.residueCount.toLocaleString();
+                document.getElementById('infoChains').textContent = struct.chainCount;
+            }
+
+            // Mostrar datos de la biblioteca SynBio si es una molécula conocida
+            const pdbId = name.toUpperCase();
+            const synbioInfo = synbioLibrary[pdbId];
+            const container = document.getElementById('synbioInfoContainer');
+            if (synbioInfo) {
+                container.style.display = 'block';
+                document.getElementById('infoOrganism').textContent = synbioInfo.organism;
+                document.getElementById('infoMW').textContent = synbioInfo.mw;
+                document.getElementById('infoRef').textContent = synbioInfo.ref;
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        // Mostrar estructura secundaria
+        function showSecondaryStructure(structure) {
+            const container = document.getElementById('secondaryContainer');
+            const ssDiv = document.getElementById('secondaryStructure');
+            
+            if (structure) {
+                container.style.display = 'block';
+                // Colorear estructura secundaria
+                let html = '';
+                for (const char of structure) {
+                    if (char === 'H') {
+                        html += '<span class="ss-helix">H</span>';
+                    } else if (char === 'E') {
+                        html += '<span class="ss-sheet">E</span>';
+                    } else {
+                        html += '<span class="ss-coil">' + char + '</span>';
+                    }
+                }
+                ssDiv.innerHTML = html;
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showPlaceholder(show) {
+            document.getElementById('placeholder').style.display = show ? 'block' : 'none';
+        }
+
+        // Manejar mensajes desde VS Code
+        window.addEventListener('message', event => {
+            const message = event.data;
+            
+            switch (message.command) {
+                case 'loadStructure':
+                    loadFromData(message.data, message.format);
+                    break;
+                case 'loadPDB':
+                    loadFromRCSB(message.pdbId);
+                    break;
+                case 'updateSecondary':
+                    showSecondaryStructure(message.structure);
+                    break;
+            }
+        });
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            initStage();
+            
+            // Cargar molécula inicial si existe
+            const initialMolecule = null;
+            if (initialMolecule) {
+                if (initialMolecule.pdbId) {
+                    document.getElementById('pdbInput').value = initialMolecule.pdbId;
+                    loadFromRCSB(initialMolecule.pdbId);
+                } else if (initialMolecule.pdbData) {
+                    loadFromData(initialMolecule.pdbData);
+                }
+                
+                if (initialMolecule.secondaryStructure) {
+                    showSecondaryStructure(initialMolecule.secondaryStructure);
+                }
+            }
+        });
+
+        // Enter para cargar PDB
+        document.getElementById('pdbInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                loadPDB();
+            }
+        });
+    </script>
+</body>
+</html>

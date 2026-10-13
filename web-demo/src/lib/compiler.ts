@@ -108,6 +108,8 @@ const KNOWN_PROMOTERS: Record<string, { strength: number; ref: string }> = {
   'pTet': { strength: 0.7, ref: 'Kelly et al. 2009' },
   'pBad': { strength: 0.6, ref: 'Schleif 2000' },
   'pT7': { strength: 1.0, ref: 'Studier 1990' },
+  'pAm': { strength: 0.5, ref: 'Nombre del recorrido de escritorio; esta copia no trae secuencia' },
+  'T7ptac': { strength: 0.85, ref: 'Nombre del recorrido de escritorio; esta copia no trae secuencia' },
   'pLux': { strength: 0.5, ref: 'Schaefer et al. 1996' },
   'pConst': { strength: 0.9, ref: 'Anderson collection' },
   'arsR_promoter': { strength: 0.4, ref: 'Wu & Bhatt 2005' },
@@ -116,6 +118,10 @@ const KNOWN_PROMOTERS: Record<string, { strength: number; ref: string }> = {
   'BBa_J23101': { strength: 0.70, ref: 'Anderson collection' },
   'BBa_J23106': { strength: 0.47, ref: 'Anderson collection' },
   'BBa_J23114': { strength: 0.10, ref: 'Anderson collection' },
+  'J23100': { strength: 1.0, ref: 'Anderson collection, Kelly 2009' },
+  'J23101': { strength: 0.70, ref: 'Anderson collection' },
+  'J23106': { strength: 0.47, ref: 'Anderson collection' },
+  'J23114': { strength: 0.10, ref: 'Anderson collection' },
 };
 
 const KNOWN_RBS: Record<string, { strength: number }> = {
@@ -124,6 +130,12 @@ const KNOWN_RBS: Record<string, { strength: number }> = {
   'rbs_weak': { strength: 0.2 },
   'BBa_B0034': { strength: 1.0 },
   'BBa_B0032': { strength: 0.3 },
+  'B0034': { strength: 1.0 },
+  'B0032': { strength: 0.3 },
+  'B0030': { strength: 0.6 },
+  'B0031': { strength: 0.07 },
+  'B0033': { strength: 0.01 },
+  'B0035': { strength: 0.4 },
 };
 
 const KNOWN_REPORTERS = new Set([
@@ -132,6 +144,7 @@ const KNOWN_REPORTERS = new Set([
 
 const KNOWN_GENES = new Set([
   'LacI', 'TetR', 'AraC', 'LuxR', 'LasR', 'cI', 'CcdB', 'MazF',
+  'lacI', 'tetR', 'gfp', 'rfp',
   'GFP', 'RFP', 'BFP', 'YFP', 'mCherry', 'CFP', 'Venus', 'mCitrine',
 ]);
 
@@ -139,7 +152,50 @@ const TERMINATORS = new Set([
   'term_T1', 'term_B0010', 'term_B0012', 'term_B0015',
   'term_L3S2P21', 'term_ECK120029600',
   'BBa_B0010', 'BBa_B0012', 'BBa_B0015',
+  'B0010', 'B0012', 'B0015',
 ]);
+
+/** Registry sequences already stored in the VS Code parts catalog. */
+const PART_SEQUENCES: Record<string, string> = {
+  J23100: 'TTGACGGCTAGCTCAGTCCTAGGTACAGTGCTAGC',
+  BBa_J23100: 'TTGACGGCTAGCTCAGTCCTAGGTACAGTGCTAGC',
+  J23101: 'TTTACAGCTAGCTCAGTCCTAGGTATTATGCTAGC',
+  BBa_J23101: 'TTTACAGCTAGCTCAGTCCTAGGTATTATGCTAGC',
+  J23106: 'TTTACGGCTAGCTCAGTCCTAGGTATAGTGCTAGC',
+  BBa_J23106: 'TTTACGGCTAGCTCAGTCCTAGGTATAGTGCTAGC',
+  J23114: 'TTTATGGCTAGCTCAGTCCTAGGTACAATGCTAGC',
+  BBa_J23114: 'TTTATGGCTAGCTCAGTCCTAGGTACAATGCTAGC',
+  pLac: 'CAATACGCAAACCGCCTCTCCCCGCGCGTTGGCCGATTCATTAATGCAGCTGGCACGACAGGTTTCCCGACTGGAAAGCGGGCAGTGAGCGCAACGCAATTAATGTGAGTTAGCTCACTCATTAGGCACCCCAGGCTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGGAATTGTGAGCGGATAACAATTTCACACAGGAAACAGCTATGACCATG',
+  pTet: 'TCCCTATCAGTGATAGAGATTGACATCCCTATCAGTGATAGAGATACTGAGCAC',
+  pBad: 'ACATTGATTATTTGCACGGCGTCACACTTTGCTATGCCATAGCATTTTTATCCATAAGATTAGCGGATCCTACCTGACGCTTTTTATCGCAACTCTCTACTGTTTCTCCATACCCGTTTTTTTGGGCTAGC',
+  pT7: 'TAATACGACTCACTATAGGGAGA',
+  pConst: 'TTGACGGCTAGCTCAGTCCTAGGTACAGTGCTAGC',
+  B0034: 'AAAGAGGAGAAA',
+  BBa_B0034: 'AAAGAGGAGAAA',
+  rbs_strong: 'AAAGAGGAGAAA',
+  B0032: 'TCACACAGGAAAG',
+  BBa_B0032: 'TCACACAGGAAAG',
+  rbs_medium: 'TCACACAGGAAAG',
+  B0031: 'TCACACAGGAAAG',
+  rbs_weak: 'TCACACAGGAC',
+  B0010: 'CCAGGCATCAAATAAAACGAAAGGCTCAGTCGAAAGACTGGGCCTTTCGTTTTATCTGTTGTTTGTCGGTGAACGCTCTC',
+  BBa_B0010: 'CCAGGCATCAAATAAAACGAAAGGCTCAGTCGAAAGACTGGGCCTTTCGTTTTATCTGTTGTTTGTCGGTGAACGCTCTC',
+  B0012: 'TCACACTGGCTCACCTTCGGGTGGGCCTTTCTGCGTTTATA',
+  BBa_B0012: 'TCACACTGGCTCACCTTCGGGTGGGCCTTTCTGCGTTTATA',
+  B0015: 'CCAGGCATCAAATAAAACGAAAGGCTCAGTCGAAAGACTGGGCCTTTCGTTTTATCTGTTGTTTGTCGGTGAACGCTCTCTACTAGAGTCACACTGGCTCACCTTCGGGTGGGCCTTTCTGCGTTTATA',
+  BBa_B0015: 'CCAGGCATCAAATAAAACGAAAGGCTCAGTCGAAAGACTGGGCCTTTCGTTTTATCTGTTGTTTGTCGGTGAACGCTCTCTACTAGAGTCACACTGGCTCACCTTCGGGTGGGCCTTTCTGCGTTTATA',
+  term_B0015: 'CCAGGCATCAAATAAAACGAAAGGCTCAGTCGAAAGACTGGGCCTTTCGTTTTATCTGTTGTTTGTCGGTGAACGCTCTCTACTAGAGTCACACTGGCTCACCTTCGGGTGGGCCTTTCTGCGTTTATA',
+  TetR: 'ATGTCTAGATTAGATAAAAGTAAAGTGATTAACAGCGCATTAGAGCTGCTTAATGAGGTCGGAATCGAAGGTTTAACAACC',
+  tetR: 'ATGTCTAGATTAGATAAAAGTAAAGTGATTAACAGCGCATTAGAGCTGCTTAATGAGGTCGGAATCGAAGGTTTAACAACC',
+  LacI: 'ATGAAACCAGTAACGTTATACGATGTCGCAGAGTATGCCGGTGTCTCTTATCAGACCGTTTCCCGCGTGGTGAACCAGGCCAGCCACGTTTCTGCGAAAACGCGGGAAAAAGTGGAAGCGGCGATGGCGGAGCTGAATTACATTCCCAACCGCGTGGCACAACAACTGGCGGGCAAACAGTCGTTGCTG',
+  lacI: 'ATGAAACCAGTAACGTTATACGATGTCGCAGAGTATGCCGGTGTCTCTTATCAGACCGTTTCCCGCGTGGTGAACCAGGCCAGCCACGTTTCTGCGAAAACGCGGGAAAAAGTGGAAGCGGCGATGGCGGAGCTGAATTACATTCCCAACCGCGTGGCACAACAACTGGCGGGCAAACAGTCGTTGCTG',
+  GFP: 'ATGCGTAAAGGAGAAGAACTTTTCACTGGAGTTGTCCCAATTCTTGTTGAATTAGATGGTGATGTTAATGGGCACAAATTTTCTGTCAGTGGAGAGGGTGAAGGTGATGCAACATACGGAAAACTTACCCTTAAATTTATTTGCACTACTGGAAAACTACCTGTTCCATGGCCAACACTTGTCACTACTTTCGGTTATGGTGTTCAATGCTTTGCGAGATACCCAGATCATATGAAACAGCATGACTTTTTCAAGAGTGCCATGCCCGAAGGTTATGTACAGGAAAGAACTATATTTTTCAAAGATGACGGGAACTACAAGACACGTGCTGAAGTCAAGTTTGAAGGTGATACCCTTGTTAATAGAATCGAGTTAAAAGGTATTGATTTTAAAGAAGATGGAAACATTCTTGGACACAAATTGGAATACAACTATAACTCACACAATGTATACATCATGGCAGACAAACAAAAGAATGGAATCAAAGTTAACTTCAAAATTAGACACAACATTGAAGATGGAAGCGTTCAACTAGCAGACCATTATCAACAAAATACTCCAATTGGCGATGGCCCTGTCCTTTTACCAGACAACCATTACCTGTCCACACAATCTGCCCTTTCGAAAGATCCCAACGAAAAGAGAGACCACATGGTCCTTCTTGAGTTTGTAACAGCTGCTGGGATTACACATGGCATGGATGAACTATACAAATAATAA',
+  gfp: 'ATGCGTAAAGGAGAAGAACTTTTCACTGGAGTTGTCCCAATTCTTGTTGAATTAGATGGTGATGTTAATGGGCACAAATTTTCTGTCAGTGGAGAGGGTGAAGGTGATGCAACATACGGAAAACTTACCCTTAAATTTATTTGCACTACTGGAAAACTACCTGTTCCATGGCCAACACTTGTCACTACTTTCGGTTATGGTGTTCAATGCTTTGCGAGATACCCAGATCATATGAAACAGCATGACTTTTTCAAGAGTGCCATGCCCGAAGGTTATGTACAGGAAAGAACTATATTTTTCAAAGATGACGGGAACTACAAGACACGTGCTGAAGTCAAGTTTGAAGGTGATACCCTTGTTAATAGAATCGAGTTAAAAGGTATTGATTTTAAAGAAGATGGAAACATTCTTGGACACAAATTGGAATACAACTATAACTCACACAATGTATACATCATGGCAGACAAACAAAAGAATGGAATCAAAGTTAACTTCAAAATTAGACACAACATTGAAGATGGAAGCGTTCAACTAGCAGACCATTATCAACAAAATACTCCAATTGGCGATGGCCCTGTCCTTTTACCAGACAACCATTACCTGTCCACACAATCTGCCCTTTCGAAAGATCCCAACGAAAAGAGAGACCACATGGTCCTTCTTGAGTTTGTAACAGCTGCTGGGATTACACATGGCATGGATGAACTATACAAATAATAA',
+};
+
+export function sequenceForPart(name: string): string | undefined {
+  return PART_SEQUENCES[name];
+}
 
 // ─── Lexer ───────────────────────────────────────────────────
 
@@ -448,6 +504,8 @@ function parseAndValidate(tokens: Token[]): { circuits: Circuit[]; diagnostics: 
       }
       if (currentChain.length > 0) connectionLines.push(currentChain);
 
+      const declarative = parseDeclarativeUnits(bodyTokens);
+
       // Convert chains to TranscriptionUnits
       for (const chain of connectionLines) {
         const parts: GeneticPart[] = [];
@@ -464,6 +522,13 @@ function parseAndValidate(tokens: Token[]): { circuits: Circuit[]; diagnostics: 
             expressionLevel: calculateExpression(parts),
           });
           circuit.connections.push(conn);
+        }
+      }
+
+      if (circuit.transcriptionUnits.length === 0 && declarative.length > 0) {
+        for (const tu of declarative) {
+          circuit.transcriptionUnits.push(tu);
+          circuit.connections.push(tu.parts.map(part => part.name));
         }
       }
 
@@ -556,50 +621,110 @@ function parseAndValidate(tokens: Token[]): { circuits: Circuit[]; diagnostics: 
 
 // ─── Part Identification ─────────────────────────────────────
 
+function withSequence(part: GeneticPart, inline?: string): GeneticPart {
+  const sequence = (inline || PART_SEQUENCES[part.name] || '').toUpperCase();
+  return sequence ? { ...part, sequence } : part;
+}
+
+/**
+ * Desktop BioScript writes parts as fields:
+ *   promoter: J23101
+ *   rbs: B0034
+ *   gene tetR { sequence: "ATG..." product: TetR }
+ *   terminator: B0015
+ * Arrow chains (`pLac -> rbs_strong -> GFP`) stay the primary form.
+ */
+function parseDeclarativeUnits(bodyTokens: Token[]): TranscriptionUnit[] {
+  const cleaned: Token[] = [];
+  for (let j = 0; j < bodyTokens.length; j++) {
+    if (bodyTokens[j].value === 'kill_switch') {
+      let depth = 0;
+      let started = false;
+      while (j < bodyTokens.length) {
+        if (bodyTokens[j].value === '{') { depth++; started = true; }
+        if (bodyTokens[j].value === '}') {
+          depth--;
+          if (started && depth <= 0) break;
+        }
+        j++;
+      }
+      continue;
+    }
+    cleaned.push(bodyTokens[j]);
+  }
+
+  let promoter: string | undefined;
+  let rbs: string | undefined;
+  let gene: string | undefined;
+  let terminator: string | undefined;
+  let inlineSeq: string | undefined;
+
+  for (let j = 0; j < cleaned.length; j++) {
+    const token = cleaned[j];
+    const next = cleaned[j + 1];
+    const value = cleaned[j + 2];
+    if ((token.value === 'promoter' || token.value === 'rbs' || token.value === 'terminator') && next?.value === ':' && value) {
+      const id = value.value.replace(/"/g, '');
+      if (token.value === 'promoter') promoter = id;
+      if (token.value === 'rbs') rbs = id;
+      if (token.value === 'terminator') terminator = id;
+    }
+    if (token.value === 'gene' && next && (next.type === 'identifier' || next.type === 'keyword')) {
+      gene = next.value;
+    }
+    if (token.value === 'product' && next?.value === ':' && value) {
+      gene = value.value.replace(/"/g, '');
+    }
+    if (token.value === 'sequence' && next?.value === ':' && value?.type === 'string') {
+      const dna = value.value.replace(/"/g, '').replace(/\s+/g, '');
+      if (/^[ACGT]+$/i.test(dna)) inlineSeq = dna.toUpperCase();
+    }
+  }
+
+  const ordered = [promoter, rbs, gene, terminator].filter((name): name is string => Boolean(name));
+  if (ordered.length === 0) return [];
+
+  const parts = ordered.map(name => {
+    const part = identifyPart(name);
+    return name === gene ? withSequence(part, inlineSeq) : withSequence(part);
+  });
+  return [{ parts, expressionLevel: calculateExpression(parts) }];
+}
+
 function identifyPart(name: string): GeneticPart {
-  // Promoter
-  if (name in KNOWN_PROMOTERS || name.startsWith('p') && name.length > 1 && name[1] === name[1].toUpperCase()) {
-    return {
+  const promoterLike = name in KNOWN_PROMOTERS
+    || name.startsWith('BBa_J23')
+    || /^J23\d+$/.test(name)
+    || (name.startsWith('p') && name.length > 1 && name[1] === name[1].toUpperCase());
+  if (name.startsWith('term') || TERMINATORS.has(name) || /^B001\d+$/.test(name) || /^BBa_B001/.test(name)) {
+    return withSequence({ id: name, type: 'terminator', name, color: '#f85149' });
+  }
+  if (promoterLike) {
+    return withSequence({
       id: name, type: 'promoter', name,
       strength: KNOWN_PROMOTERS[name]?.strength ?? 0.5,
-      color: '#10b981',
-    };
+      color: '#3fb950',
+    });
   }
-  // Promoter with BBa prefix
-  if (name.startsWith('BBa_J23')) {
-    return {
-      id: name, type: 'promoter', name,
-      strength: KNOWN_PROMOTERS[name]?.strength ?? 0.5,
-      color: '#10b981',
-    };
-  }
-  // RBS
-  if (name.startsWith('rbs') || name === 'BBa_B0034' || name === 'BBa_B0032') {
-    return {
+  if (name.startsWith('rbs') || name in KNOWN_RBS || /^B003\d+$/.test(name) || /^BBa_B003/.test(name)) {
+    return withSequence({
       id: name, type: 'rbs', name,
       strength: KNOWN_RBS[name]?.strength ?? 0.5,
-      color: '#3b82f6',
-    };
+      color: '#58a6ff',
+    });
   }
-  // Terminator
-  if (name.startsWith('term') || TERMINATORS.has(name)) {
-    return { id: name, type: 'terminator', name, color: '#ef4444' };
-  }
-  // Reporter
-  if (KNOWN_REPORTERS.has(name)) {
+  if (KNOWN_REPORTERS.has(name) || name === 'gfp' || name === 'rfp') {
     const reporterColors: Record<string, string> = {
-      GFP: '#22c55e', RFP: '#ef4444', BFP: '#3b82f6',
-      YFP: '#eab308', mCherry: '#dc2626', CFP: '#06b6d4',
-      Venus: '#facc15', mCitrine: '#fbbf24',
+      GFP: '#3fb950', gfp: '#3fb950', RFP: '#f85149', rfp: '#f85149', BFP: '#58a6ff',
+      YFP: '#d29922', mCherry: '#da3633', CFP: '#39c5cf',
+      Venus: '#e3b341', mCitrine: '#d29922',
     };
-    return { id: name, type: 'reporter', name, color: reporterColors[name] || '#a855f7' };
+    return withSequence({ id: name, type: 'reporter', name, color: reporterColors[name] || '#bc8cff' });
   }
-  // Known gene
   if (KNOWN_GENES.has(name)) {
-    return { id: name, type: 'cds', name, color: '#f59e0b' };
+    return withSequence({ id: name, type: 'cds', name, color: '#d29922' });
   }
-  // Generic gene/cds
-  return { id: name, type: 'cds', name, color: '#f59e0b' };
+  return withSequence({ id: name, type: 'cds', name, color: '#d29922' });
 }
 
 function calculateExpression(parts: GeneticPart[]): number {
@@ -717,27 +842,19 @@ function getSOUri(type: string): string {
 // ─── FASTA Export ────────────────────────────────────────────
 
 export function exportFASTA(circuit: Circuit): string {
-  const seqs: Record<string, string> = {
-    pLac: 'AATTGTGAGCGGATAACAATT',
-    pTet: 'TCCCTATCAGTGATAGAGATTGACATC',
-    pBad: 'AAGAAACCAATTGTCCATATTGCATCAGACATTG',
-    BBa_J23100: 'TTGACGGCTAGCTCAGTCCTAGGTACAGTGCTAGC',
-    BBa_B0034: 'AAAGAGGAGAAA',
-    rbs_strong: 'AAAGAGGAGAAATACTAG',
-    rbs_medium: 'AAAGAGGAGAAA',
-    GFP: 'ATGGTGAGCAAGGGCGAGGAGCTGTTCACCGGGGTGGTGCCCATCCTGGTCGAGCTGGACGGCGACGTAAACGGCCACAAGTTCAGCGTGTCCGGCGAGGGCGAGGGCGATGCCACCTACGGCAAGCTGACCCTGAAGTTCATCTGCACCACCGGCAAGCTGCCCGTGCCCTGGCCCACCCTCGTGACCACCCTGACCTACGGCGTGCAGTGCTTCAGCCGCTACCCCGACCACATGAAGCAGCACGACTTCTTCAAGTCCGCCATGCCCGAAGGCTACGTCCAGGAGCGCACCATCTTCTTCAAGGACGACGGCAACTACAAGACCCGCGCCGAGGTGAAGTTCGAGGGCGACACCCTGGTGAACCGCATCGAGCTGAAGGGCATCGACTTCAAGGAGGACGGCAACATCCTGGGGCACAAGCTGGAG',
-    RFP: 'ATGGCCTCCTCCGAGGACGTCATCAAGGAGTTCATGCGCTTCAAGGTGCGCATGGAGGGCTCCGTGAACGGCCACGAGTTCGAGATCGAGGGCGAGGGCGAG',
-    term_B0015: 'CCAGGCATCAAACTAAGCAGAAGGCCATCCTGACGGATGGCCTTTTTTGCGTTTCTACAAACTCT',
-  };
-
   let fasta = `>${circuit.name} | SynBio-LLVM | ${circuit.partCount} parts | ${circuit.chassisOrganism || 'E. coli'}\n`;
   let fullSeq = '';
+  const missing: string[] = [];
 
   for (const tu of circuit.transcriptionUnits) {
     for (const part of tu.parts) {
-      const seq = seqs[part.name] || generateRandomDNA(100);
-      fullSeq += seq;
+      const seq = part.sequence || PART_SEQUENCES[part.name];
+      if (seq) fullSeq += seq;
+      else missing.push(part.name);
     }
+  }
+  if (missing.length > 0) {
+    fasta += `; missing catalog sequence: ${missing.join(', ')}\n`;
   }
 
   // Wrap at 80 chars
@@ -748,22 +865,15 @@ export function exportFASTA(circuit: Circuit): string {
   return fasta;
 }
 
-function generateRandomDNA(length: number): string {
-  const bases = 'ATGC';
-  let seq = 'ATG'; // Start codon
-  for (let i = 3; i < length - 3; i++) {
-    seq += bases[Math.floor(Math.random() * 4)];
-  }
-  seq += 'TAA'; // Stop codon
-  return seq;
-}
-
 // ─── GenBank Export ──────────────────────────────────────────
 
 export function exportGenBank(circuit: Circuit): string {
   const now = new Date();
   const date = `${now.getDate()}-${['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][now.getMonth()]}-${now.getFullYear()}`;
-  const totalLen = circuit.partCount * 150;
+  const totalLen = circuit.transcriptionUnits.reduce(
+    (sum, tu) => sum + tu.parts.reduce((inner, part) => inner + (part.sequence?.length || PART_SEQUENCES[part.name]?.length || 0), 0),
+    0,
+  ) || circuit.partCount;
 
   let gb = `LOCUS       ${circuit.name.padEnd(16)} ${totalLen} bp    DNA     circular SYN ${date}\n`;
   gb += `DEFINITION  ${circuit.name} genetic circuit designed with SynBio-LLVM.\n`;
@@ -776,7 +886,7 @@ export function exportGenBank(circuit: Circuit): string {
   let pos = 1;
   for (const tu of circuit.transcriptionUnits) {
     for (const part of tu.parts) {
-      const len = part.type === 'cds' ? 300 : part.type === 'promoter' ? 35 : part.type === 'rbs' ? 12 : 60;
+      const len = part.sequence?.length || PART_SEQUENCES[part.name]?.length || (part.type === 'promoter' ? 35 : part.type === 'rbs' ? 12 : part.type === 'terminator' ? 40 : 0);
       const featureType = part.type === 'promoter' ? 'promoter' : part.type === 'rbs' ? 'RBS' : part.type === 'cds' || part.type === 'reporter' ? 'CDS' : 'terminator';
       gb += `     ${featureType.padEnd(16)}${pos}..${pos + len - 1}\n`;
       gb += `                     /label="${part.name}"\n`;
@@ -786,6 +896,23 @@ export function exportGenBank(circuit: Circuit): string {
   }
 
   gb += `ORIGIN\n`;
+  const fullSeq = circuit.transcriptionUnits.flatMap(tu => tu.parts).map(part => part.sequence || PART_SEQUENCES[part.name] || '').join('');
+  for (let i = 0; i < fullSeq.length; i += 60) {
+    const chunk = fullSeq.slice(i, i + 60);
+    const groups = chunk.match(/.{1,10}/g)?.join(' ') ?? '';
+    gb += `${String(i + 1).padStart(9, ' ')} ${groups}\n`;
+  }
   gb += `//\n`;
   return gb;
+}
+
+export function partFacts(name: string): { kind: string; strength?: number; ref?: string; sequence?: string } {
+  if (name in KNOWN_PROMOTERS) {
+    return { kind: 'promoter', strength: KNOWN_PROMOTERS[name].strength, ref: KNOWN_PROMOTERS[name].ref, sequence: PART_SEQUENCES[name] };
+  }
+  if (name in KNOWN_RBS) {
+    return { kind: 'rbs', strength: KNOWN_RBS[name].strength, sequence: PART_SEQUENCES[name] };
+  }
+  if (TERMINATORS.has(name)) return { kind: 'terminator', sequence: PART_SEQUENCES[name] };
+  return { kind: KNOWN_REPORTERS.has(name) ? 'reporter' : 'cds', sequence: PART_SEQUENCES[name] };
 }

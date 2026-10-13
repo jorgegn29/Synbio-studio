@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"cloningplanner-comparador-de-m-todos-de-ensamblaje";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"cloningplanner-comparador-de-m-todos-de-ensamblaje", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "cloningplanner-comparador-de-m-todos-de-ensamblaje") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comparador de Métodos de Ensamblaje</title>
+<style>
+:root{
+    --bg:#0d1321;
+    --panel:#121b2b;
+    --panel-soft:#172338;
+    --line:#26344b;
+    --text:#edf2f7;
+    --muted:#9bb0c8;
+    --accent:#61d6c6;
+    --accent-2:#8fb8ff;
+    --good:#9ee493;
+    --warn:#f3c969;
+    --bad:#ff8f8f;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Aptos','Segoe UI',sans-serif;background:radial-gradient(circle at top left, rgba(97,214,198,0.12), transparent 34%), linear-gradient(180deg, #0d1321 0%, #0a101b 100%);color:var(--text)}
+.shell{padding:24px;display:grid;gap:18px}
+.hero{display:grid;grid-template-columns:1.4fr 1fr;gap:18px}
+.panel{background:linear-gradient(180deg, rgba(18,27,43,0.96), rgba(11,17,28,0.96));border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 18px 40px rgba(0,0,0,0.22)}
+.hero h1{margin:0;font-size:26px;letter-spacing:0.02em}
+.hero p{margin:10px 0 0;color:var(--muted);line-height:1.5}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.selector{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+.selector select{background:#172338;color:var(--text);border:1px solid var(--line);padding:10px 12px;border-radius:14px;min-width:220px}
+button{border:1px solid var(--line);background:#18243a;color:var(--text);padding:10px 14px;border-radius:999px;cursor:pointer;font-weight:600}
+button:hover{border-color:var(--accent)}
+button.primary{background:linear-gradient(135deg, var(--accent), #4ab3db);color:#07131f;border:none}
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.summary-card{background:var(--panel-soft);border:1px solid rgba(143,184,255,0.14);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;min-height:118px}
+.summary-card.wide{grid-column:1 / -1}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)}
+.summary-card strong{font-size:18px}
+.meta{font-size:12px;color:var(--muted);line-height:1.4}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.chip-row,.method-meta{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(97,214,198,0.14);border:1px solid rgba(97,214,198,0.2);font-size:12px;color:var(--text)}
+.chip.subtle{background:#142032;border-color:#21324a;color:var(--muted)}
+.muted{color:var(--muted)}
+.warnings{display:grid;gap:8px}
+.warning,.reason,.blocker{padding:10px 12px;border-radius:12px;font-size:13px;line-height:1.45}
+.warning{background:rgba(243,201,105,0.12);border:1px solid rgba(243,201,105,0.2);color:#ffe49e}
+.reason{background:rgba(143,184,255,0.09);border:1px solid rgba(143,184,255,0.12);color:#d5e4ff}
+.blocker{background:rgba(255,143,143,0.1);border:1px solid rgba(255,143,143,0.16);color:#ffd0d0}
+.backbone-stack,.method-stack{display:grid;gap:12px}
+.backbone-card,.method-card{background:var(--panel-soft);border:1px solid #21324a;border-radius:16px;padding:16px}
+.method-card.recommended,.backbone-card.recommended{border-color:rgba(97,214,198,0.38);box-shadow:0 0 0 1px rgba(97,214,198,0.12) inset}
+.backbone-head,.method-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.backbone-meta,.eyebrow{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin:6px 0 10px}
+.method-card h3{margin:2px 0 0;font-size:18px}
+.method-card p,.backbone-card p{margin:10px 0 0;color:var(--muted);line-height:1.5}
+.score{padding:8px 10px;border-radius:999px;font-weight:700;font-size:12px;white-space:nowrap}
+.score.excellent{background:rgba(158,228,147,0.16);color:var(--good)}
+.score.good{background:rgba(97,214,198,0.16);color:var(--accent)}
+.score.caution{background:rgba(243,201,105,0.16);color:var(--warn)}
+.score.poor{background:rgba(255,143,143,0.16);color:var(--bad)}
+.reason-list,.blocker-list{display:grid;gap:8px;margin-top:12px}
+.actions-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--accent-2);font-size:12px;text-transform:uppercase;letter-spacing:0.06em}
+.empty{padding:18px;border-radius:16px;background:var(--panel-soft);border:1px dashed var(--line);color:var(--muted)}
+.map-wrap{margin-top:12px;min-height:260px}
+@media (max-width: 980px){
+    .hero,.grid-2,.summary-grid{grid-template-columns:1fr}
+    .summary-card.wide{grid-column:auto}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+    <section class="hero">
+        <div class="panel">
+            <div class="label">Diseño Genético</div>
+            <h1>Comparador de Métodos de Ensamblaje</h1>
+            <p>Parsea BioScript a fragmentos ensamblables reales, monta el cassette sobre el backbone elegido, diseña primers automáticos y valida junctions y colony PCR.</p>
+            <div class="toolbar" style="margin-top:14px">
+                <label class="selector">Backbone<select onchange="setBackbone(this.value)"><option value="pSB1C3" >pSB1C3</option><option value="pUC19" selected>pUC19</option><option value="pET-28a(+)" >pET-28a(+)</option><option value="pBAD33" >pBAD33</option><option value="pACYCDuet-1" >pACYCDuet-1</option></select></label>
+                <label class="selector">Método<select onchange="setMethod(this.value)"><option value="gibson" selected>Gibson Assembly (90/100)</option><option value="golden-gate" >Golden Gate (88/100)</option><option value="restriction-ligation" >RE/Ligation (82/100)</option><option value="in-fusion" >In-Fusion (80/100)</option><option value="biobrick" >BioBrick (58/100)</option><option value="gateway" >Gateway (38/100)</option></select></label>
+            </div>
+            <div class="toolbar">
+                <button class="primary" onclick="refreshPlanner()">Analizar editor activo</button>
+                <button onclick="exportReport()">Exportar informe</button>
+                <button onclick="designPrimers()">Diseñar primers</button>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="label">Entrada actual</div>
+            <h2 style="margin:6px 0 10px 0">inverter.bio</h2>
+            <div class="chip-row">
+                <span class="chip">Tipo: bioscript</span>
+                <span class="chip">81 bp analizados</span>
+                <span class="chip">1 fragmento(s)</span>
+                <span class="chip">GC 37.0%</span>
+            </div>
+            <p style="margin-top:14px;color:var(--muted)">Método activo: <strong style="color:var(--text)">Gibson Assembly</strong> con 90/100. Backbone activo: <strong style="color:var(--text)">pUC19</strong>.</p>
+            <p style="margin-top:10px;color:var(--muted)">Exactitud del ensamblaje: <strong style="color:var(--text)">Exacta</strong> · Backbone y cassette resueltos con coordenadas curadas para ensamblaje exacto de mapa y junctions.</p>
+        </div>
+    </section>
+
+    <section class="summary-grid panel">
+        
+                <div class="summary-card">
+                    <span class="label">Type IIS</span>
+                    <strong>0 sitio(s) BsaI/BsmBI</strong>
+                    <span class="meta">Golden Gate listo</span>
+                </div>
+                <div class="summary-card">
+                    <span class="label">BioBrick RFC10</span>
+                    <strong>1 conflicto(s)</strong>
+                    <span class="meta">EcoRI/XbaI/SpeI/PstI/NotI presentes</span>
+                </div>
+                <div class="summary-card">
+                    <span class="label">Restricción clásica</span>
+                    <strong>EcoRI / BamHI</strong>
+                    <span class="meta">Par direccional libre de corte interno</span>
+                </div>
+            
+    </section>
+
+    <section class="grid-2">
+        <div class="panel">
+            <div class="label">Fragmentos Semánticos</div>
+            <div class="chip-row" style="margin-top:12px"><span class="chip">inverter_tetR · 81 bp · tetR</span></div>
+            
+        </div>
+        <div class="panel">
+            <div class="label">Backbones sugeridos</div>
+            <div class="backbone-stack" style="margin-top:12px">
+                <div class="backbone-card recommended">
+                    <div class="backbone-head">
+                        <strong>pUC19</strong>
+                        <span class="score good">62/100</span>
+                    </div>
+                    <div class="backbone-meta">Ampicillin · pMB1 high-copy</div>
+                    <p>inserto 81 bp dentro del rango operativo</p>
+                    <div class="actions-row"><button onclick="setBackbone('pUC19')">Usar backbone</button></div>
+                </div>
+            
+                <div class="backbone-card ">
+                    <div class="backbone-head">
+                        <strong>pSB1C3</strong>
+                        <span class="score good">62/100</span>
+                    </div>
+                    <div class="backbone-meta">Chloramphenicol · pMB1 high-copy</div>
+                    <p>inserto 81 bp dentro del rango operativo</p>
+                    <div class="actions-row"><button onclick="setBackbone('pSB1C3')">Usar backbone</button></div>
+                </div>
+            
+                <div class="backbone-card ">
+                    <div class="backbone-head">
+                        <strong>pET-28a(+)</strong>
+                        <span class="score caution">42/100</span>
+                    </div>
+                    <div class="backbone-meta">Kanamycin · pBR322 medium-copy</div>
+                    <p>Vector de expresión T7 con opciones de His-tag y selección robusta.</p>
+                    <div class="actions-row"><button onclick="setBackbone('pET-28a(+)')">Usar backbone</button></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="grid-2">
+        <div class="panel">
+            <div class="label">Mapa Circular</div>
+            <div class="map-wrap"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 520" width="100%" height="100%"><rect width="520" height="520" rx="18" fill="#101926"/><circle cx="260" cy="260" r="182" fill="none" stroke="#45556f" stroke-width="4"/><text x="260" y="254" text-anchor="middle" fill="#edf2f7" font-size="18" font-weight="700">pUC19 + insert</text><text x="260" y="278" text-anchor="middle" fill="#9bb0c8" font-size="14">2758 bp</text><line x1="260" y1="82" x2="260" y2="70" stroke="#60708c" stroke-width="1"/><line x1="421.6685790141372" y1="185.51999892890927" x2="432.56758434093297" y2="180.49887526119528" stroke="#60708c" stroke-width="1"/><line x1="395.2929880689287" y1="375.67111730843055" x2="404.41386366908125" y2="383.4691701606843" stroke="#60708c" stroke-width="1"/><line x1="211.55189173063667" y1="431.27983186913764" x2="208.2857271282077" y2="442.8267868266076" stroke="#60708c" stroke-width="1"/><line x1="84.16302141652636" y1="287.66508562493584" x2="72.30884308505622" y2="289.5301475771787" stroke="#60708c" stroke-width="1"/><line x1="161.29823913189722" y1="111.8718041643123" x2="154.64418783741837" y2="101.8856336585356" stroke="#60708c" stroke-width="1"/><path d="M409.0861952029777,142.21499925754708 L420.0714937968813,133.5361044659979 A204,204 0 0 1 455.5871221036764,317.9799764332617 L442.16447646911035,314.0009584427437 A190,190 0 0 0 409.0861952029777,142.21499925754708" fill="#2196F3" opacity="0.88"><title>lacZ-α 396-816</title></path><text x="476.03149594691195" y="218.4020101574684" fill="#2196F3" font-size="9" text-anchor="middle">lacZ-α</text><path d="M415.3002127773973,150.53839069657744 L426.74338635046865,142.47279843211473 A204,204 0 0 1 445.283090555528,174.64089764886228 L432.56758434093297,180.49887526119528 A190,190 0 0 0 415.3002127773973,150.53839069657744" fill="#61d6c6" opacity="0.88"><title>Insert cassette 420-500</title></path><path d="M415.3002127773973,150.53839069657744 L426.74338635046865,142.47279843211473 A204,204 0 0 1 445.283090555528,174.64089764886228 L432.56758434093297,180.49887526119528 A190,190 0 0 0 415.3002127773973,150.53839069657744" fill="#8fb8ff" opacity="0.88"><title>inverter_tetR 420-500</title></path><path d="M415.3002127773973,150.53839069657744 L426.74338635046865,142.47279843211473 A204,204 0 0 1 445.283090555528,174.64089764886228 L432.56758434093297,180.49887526119528 A190,190 0 0 0 415.3002127773973,150.53839069657744" fill="#2196F3" opacity="0.88"><title>tetR 420-500</title></path><path d="M444.0114088870595,212.67345988349234 L457.57014427873753,209.18624113806544 A204,204 0 0 1 462.7042491764239,237.0437946118647 L448.7931732525517,238.61922047183478 A190,190 0 0 0 444.0114088870595,212.67345988349234" fill="#4CAF50" opacity="0.88"><title>Plac 579-640</title></path><path d="M411.9907492458809,374.0123332963401 L423.1900676113669,382.41324206554407 A204,204 0 0 1 159.14248248281606,437.3238877316616 L166.06407682223065,425.1546013187044 A190,190 0 0 0 411.9907492458809,374.0123332963401" fill="#9C27B0" opacity="0.88"><title>ori (pMB1) 972-1606</title></path><text x="304.79232545193935" y="475.39184659732956" fill="#9C27B0" font-size="9" text-anchor="middle">ori (pMB1)</text><path d="M150.19781028349357,381.81740078273026 L140.8244526247674,392.2164471910121 A178,178 0 0 1 182.76869443707463,99.62754151336941 L188.84306678472043,112.24110566400327 A164,164 0 0 0 150.19781028349357,381.81740078273026" fill="#F44336" opacity="0.88"><title>bla (AmpR) 1701-2561</title></path><text x="67.96322073048347" y="232.47046299352306" fill="#F44336" font-size="9" text-anchor="middle">bla (AmpR)</text></svg></div>
+        </div>
+        <div class="panel">
+            <div class="label">Mapa Lineal</div>
+            <div class="map-wrap"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 240" width="100%" height="100%"><rect width="920" height="240" rx="18" fill="#101926"/><text x="460" y="28" fill="#edf2f7" text-anchor="middle" font-size="18" font-weight="700">pUC19 + insert</text><line x1="42" y1="130" x2="878" y2="130" stroke="#60708c" stroke-width="4"/><line x1="42" y1="124" x2="42" y2="136" stroke="#60708c" stroke-width="1"/><text x="42" y="154" fill="#9bb0c8" font-size="10" text-anchor="middle">0</text><line x1="193.5591007976795" y1="124" x2="193.5591007976795" y2="136" stroke="#60708c" stroke-width="1"/><text x="193.5591007976795" y="154" fill="#9bb0c8" font-size="10" text-anchor="middle">500</text><line x1="345.118201595359" y1="124" x2="345.118201595359" y2="136" stroke="#60708c" stroke-width="1"/><text x="345.118201595359" y="154" fill="#9bb0c8" font-size="10" text-anchor="middle">1000</text><line x1="496.6773023930385" y1="124" x2="496.6773023930385" y2="136" stroke="#60708c" stroke-width="1"/><text x="496.6773023930385" y="154" fill="#9bb0c8" font-size="10" text-anchor="middle">1500</text><line x1="648.236403190718" y1="124" x2="648.236403190718" y2="136" stroke="#60708c" stroke-width="1"/><text x="648.236403190718" y="154" fill="#9bb0c8" font-size="10" text-anchor="middle">2000</text><line x1="799.7955039883974" y1="124" x2="799.7955039883974" y2="136" stroke="#60708c" stroke-width="1"/><text x="799.7955039883974" y="154" fill="#9bb0c8" font-size="10" text-anchor="middle">2500</text><rect x="162.03480783176215" y="96" width="127.3096446700508" height="18" rx="4" fill="#2196F3" opacity="0.9"><title>lacZ-α</title></rect><text x="225.68963016678754" y="92" fill="#edf2f7" font-size="9" text-anchor="middle">lacZ-α</text><rect x="169.30964467005077" y="96" width="24.24945612762872" height="18" rx="4" fill="#61d6c6" opacity="0.9"><title>Insert cassette</title></rect><rect x="169.30964467005077" y="96" width="24.24945612762872" height="18" rx="4" fill="#8fb8ff" opacity="0.9"><title>inverter_tetR</title></rect><rect x="169.30964467005077" y="96" width="24.24945612762872" height="18" rx="4" fill="#2196F3" opacity="0.9"><title>tetR</title></rect><rect x="217.50543872371284" y="96" width="18.490210297316906" height="18" rx="4" fill="#4CAF50" opacity="0.9"><title>Plac</title></rect><rect x="336.6308919506889" y="96" width="192.1769398114575" height="18" rx="4" fill="#9C27B0" opacity="0.9"><title>ori (pMB1)</title></rect><text x="432.71936185641766" y="92" fill="#edf2f7" font-size="9" text-anchor="middle">ori (pMB1)</text><rect x="557.6040609137056" y="140" width="260.6816533720088" height="18" rx="4" fill="#F44336" opacity="0.9"><title>bla (AmpR)</title></rect><text x="687.94488759971" y="170" fill="#edf2f7" font-size="9" text-anchor="middle">bla (AmpR)</text></svg></div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="label">Ranking de métodos</div>
+        <div class="method-stack" style="margin-top:12px">
+                <div class="method-card recommended">
+                    <div class="method-top">
+                        <div>
+                            <div class="eyebrow">Gibson Assembly® (NEB E2611)</div>
+                            <h3>Gibson Assembly</h3>
+                        </div>
+                        <div class="score excellent">90/100</div>
+                    </div>
+                    <p>Ensamblaje sin cicatriz para insertos simples o cassettes modulares con overlaps de 20-40 bp.</p>
+                    <div class="method-meta">
+                        <span class="chip subtle">Máx 6 fragmentos</span>
+                        <span class="chip subtle">Overlap 30 bp</span>
+                        <span class="chip subtle">60 min + transformation</span>
+                    </div>
+                    <div class="reason-list"><div class="reason">1 fragmento(s): Gibson funciona muy bien entre 1 y 6 fragmentos</div><div class="reason">No depende de sitios de restricción internos y permite ensamblaje scarless</div><div class="reason">Encaja bien con el backbone recomendado pUC19</div></div>
+                    
+                    <div class="actions-row">
+                        <button onclick="setMethod('gibson')">Activar método</button>
+                        <button class="primary" onclick="selectMethod('gibson')">Ver protocolo</button>
+                        <button onclick="designPrimers('gibson')">Diseñar primers</button>
+                    </div>
+                </div>
+            
+                <div class="method-card ">
+                    <div class="method-top">
+                        <div>
+                            <div class="eyebrow">Golden Gate / BsaI Assembly</div>
+                            <h3>Golden Gate</h3>
+                        </div>
+                        <div class="score excellent">88/100</div>
+                    </div>
+                    <p>One-pot Type IIS de alta productividad, especialmente fuerte para ensamblaje modular y multi-fragmento.</p>
+                    <div class="method-meta">
+                        <span class="chip subtle">Máx 12 fragmentos</span>
+                        <span class="chip subtle">Overlap 4 bp</span>
+                        <span class="chip subtle">2-5h (cycling) + transformation</span>
+                    </div>
+                    <div class="reason-list"><div class="reason">Permite ensamblar hasta 12 fragmentos con overhangs definidos</div><div class="reason">No se detectan sitios internos BsaI/BsmBI en la secuencia analizada.</div></div>
+                    
+                    <div class="actions-row">
+                        <button onclick="setMethod('golden-gate')">Activar método</button>
+                        <button class="primary" onclick="selectMethod('golden-gate')">Ver protocolo</button>
+                        <button onclick="designPrimers('golden-gate')">Diseñar primers</button>
+                    </div>
+                </div>
+            
+                <div class="method-card ">
+                    <div class="method-top">
+                        <div>
+                            <div class="eyebrow">Traditional Restriction Enzyme / Ligation</div>
+                            <h3>RE/Ligation</h3>
+                        </div>
+                        <div class="score excellent">82/100</div>
+                    </div>
+                    <p>Clonación clásica útil cuando la secuencia ya es limpia para un doble digest dirigido.</p>
+                    <div class="method-meta">
+                        <span class="chip subtle">Máx 3 fragmentos</span>
+                        <span class="chip subtle">Overlap 0 bp</span>
+                        <span class="chip subtle">3-5h + transformation</span>
+                    </div>
+                    <div class="reason-list"><div class="reason">Sigue siendo válido cuando dispones de un par de sitios únicos y buscas un flujo barato y simple.</div><div class="reason">Par direccional libre de corte interno detectado: EcoRI / BamHI.</div></div>
+                    
+                    <div class="actions-row">
+                        <button onclick="setMethod('restriction-ligation')">Activar método</button>
+                        <button class="primary" onclick="selectMethod('restriction-ligation')">Ver protocolo</button>
+                        <button onclick="designPrimers('restriction-ligation')">Diseñar primers</button>
+                    </div>
+                </div>
+            
+                <div class="method-card ">
+                    <div class="method-top">
+                        <div>
+                            <div class="eyebrow">In-Fusion® HD Cloning (Takara)</div>
+                            <h3>In-Fusion</h3>
+                        </div>
+                        <div class="score excellent">80/100</div>
+                    </div>
+                    <p>Alternativa rápida a Gibson cuando trabajas con pocos fragmentos y vector linealizado.</p>
+                    <div class="method-meta">
+                        <span class="chip subtle">Máx 5 fragmentos</span>
+                        <span class="chip subtle">Overlap 15 bp</span>
+                        <span class="chip subtle">15 min + transformation</span>
+                    </div>
+                    <div class="reason-list"><div class="reason">Solo necesita 15 bp de homología y suele ser rápido para 1-3 fragmentos.</div></div>
+                    
+                    <div class="actions-row">
+                        <button onclick="setMethod('in-fusion')">Activar método</button>
+                        <button class="primary" onclick="selectMethod('in-fusion')">Ver protocolo</button>
+                        <button onclick="designPrimers('in-fusion')">Diseñar primers</button>
+                    </div>
+                </div>
+            
+                <div class="method-card ">
+                    <div class="method-top">
+                        <div>
+                            <div class="eyebrow">BioBrick Standard Assembly (RFC10)</div>
+                            <h3>BioBrick</h3>
+                        </div>
+                        <div class="score caution">58/100</div>
+                    </div>
+                    <p>Montaje secuencial útil para estandarización de partes, pero menos eficiente en diseños complejos.</p>
+                    <div class="method-meta">
+                        <span class="chip subtle">Máx 2 fragmentos</span>
+                        <span class="chip subtle">Overlap 0 bp</span>
+                        <span class="chip subtle">4h + transformation</span>
+                    </div>
+                    <div class="reason-list"><div class="reason">Adecuado si buscas estandarización iGEM o ensamblaje secuencial RFC10.</div></div>
+                    <div class="blocker-list"><div class="blocker">1 sitio(s) internos RFC10 detectados.</div></div>
+                    <div class="actions-row">
+                        <button onclick="setMethod('biobrick')">Activar método</button>
+                        <button class="primary" onclick="selectMethod('biobrick')">Ver protocolo</button>
+                        <button onclick="designPrimers('biobrick')">Diseñar primers</button>
+                    </div>
+                </div>
+            
+                <div class="method-card ">
+                    <div class="method-top">
+                        <div>
+                            <div class="eyebrow">Gateway® Cloning (Invitrogen)</div>
+                            <h3>Gateway</h3>
+                        </div>
+                        <div class="score poor">38/100</div>
+                    </div>
+                    <p>Recombinación dirigida de alto rendimiento cuando el ecosistema Gateway ya está establecido.</p>
+                    <div class="method-meta">
+                        <span class="chip subtle">Máx 4 fragmentos</span>
+                        <span class="chip subtle">Overlap 25 bp</span>
+                        <span class="chip subtle">1h + transformation</span>
+                    </div>
+                    <div class="reason-list"><div class="reason">Muy potente si ya estás en un pipeline entry/destination con att sites.</div></div>
+                    <div class="blocker-list"><div class="blocker">Requiere vectores entry/destination y química Clonase específica.</div></div>
+                    <div class="actions-row">
+                        <button onclick="setMethod('gateway')">Activar método</button>
+                        <button class="primary" onclick="selectMethod('gateway')">Ver protocolo</button>
+                        <button onclick="designPrimers('gateway')">Diseñar primers</button>
+                    </div>
+                </div>
+            </div>
+    </section>
+
+    <section class="grid-2">
+        <div class="panel">
+            <div class="label">Primers Automáticos</div>
+            <div style="overflow:auto;margin-top:12px"><table>
+                <tr><th>Primer</th><th>Fragmento</th><th>Rol</th><th>Tm</th><th>Secuencia</th></tr>
+                <tr><td>inverter_tetR_F</td><td>inverter_tetR</td><td>Gibson overlap</td><td>48.5 °C</td><td style="font-size:11px">GAATTCGAGCTCGGTACCCGGGGAATGTCTAGATTAGATAAAAGTAAAGT</td></tr><tr><td>inverter_tetR_R</td><td>inverter_tetR</td><td>Gibson overlap</td><td>58.0 °C</td><td style="font-size:11px">AAGCTTGCATGCCTGCAGGTCGACGGTTGTTAAACCTTCGATTCCGACCT</td></tr>
+            </table></div>
+        </div>
+        <div class="panel">
+            <div class="label">Junctions y Overhangs</div>
+            <div class="reason-list" style="margin-top:12px"><div class="warning"><strong>Vector → inverter_tetR</strong><br>24 bp overlap · La región de homología es corta; conviene revisar el backbone seleccionado.</div><div class="warning"><strong>inverter_tetR → Vector</strong><br>24 bp de cierre vectorial · El cierre vectorial queda aproximado por falta de flanco exacto.</div></div>
+            <div class="chip-row" style="margin-top:12px"><span class="chip subtle">GAATTCGAGCTCGGTACCCGGGGA</span></div>
+        </div>
+    </section>
+
+    <section class="grid-2">
+        <div class="panel">
+            <div class="label">Colony PCR</div>
+            <div style="overflow:auto;margin-top:12px"><table>
+                <tr><th>Ensayo</th><th>Objetivo</th><th>Amplicón</th></tr>
+                <tr><td>Colony PCR 5-prime junction</td><td>Confirmar la unión entre backbone y primer fragmento.</td><td>101 bp</td></tr><tr><td>Colony PCR 3-prime junction</td><td>Confirmar la unión entre último fragmento y backbone.</td><td>101 bp</td></tr><tr><td>Insert size check</td><td>Verificar el tamaño total del cassette insertado.</td><td>121 bp</td></tr>
+            </table></div>
+        </div>
+        <div class="panel">
+            <div class="label">Verificación Post-Clonación</div>
+            <div class="reason-list" style="margin-top:12px"><div class="reason">1. Seleccionar 8-12 colonias después del ensamblaje gibson.</div><div class="reason">2. Ejecutar 3 colony PCRs orientadas a junctions y tamaño del insert.</div><div class="reason">3. Confirmar 2 junction(s) críticas por Sanger.</div><div class="reason">4. Verificar digestión diagnóstica con EcoRI / BamHI para confirmar orientación.</div><div class="reason">5. El mapa del constructo final está curado con coordenadas exactas del backbone seleccionado.</div></div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="label">Matriz de decisión</div>
+        <div style="margin-top:12px;overflow:auto"><table>
+                <tr>
+                    <th>Parámetro</th>
+                    <th>Gibson Assembly</th><th>Golden Gate</th><th>RE/Ligation</th><th>In-Fusion</th><th>BioBrick</th><th>Gateway</th>
+                </tr>
+                <tr>
+                    <td>Ajuste al diseño actual</td>
+                    <td>90/100</td><td>88/100</td><td>82/100</td><td>80/100</td><td>58/100</td><td>38/100</td>
+                </tr>
+                <tr>
+                    <td>Scarless</td>
+                    <td>Sí</td><td>No</td><td>No</td><td>Sí</td><td>No</td><td>No</td>
+                </tr>
+                <tr>
+                    <td>Max fragmentos</td>
+                    <td>6</td><td>12</td><td>3</td><td>5</td><td>2</td><td>4</td>
+                </tr>
+                <tr>
+                    <td>Coste</td>
+                    <td>$$</td><td>$</td><td>$</td><td>$$</td><td>$</td><td>$$$</td>
+                </tr>
+                <tr>
+                    <td>Backbone activo</td>
+                    <td>pUC19</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+                </tr>
+            </table></div>
+    </section>
+</div>
+
+<script>
+const vscode = acquireVsCodeApi();
+function selectMethod(key) { vscode.postMessage({ command: 'selectMethod', data: key }); }
+function setMethod(key) { vscode.postMessage({ command: 'setMethod', data: key }); }
+function setBackbone(name) { vscode.postMessage({ command: 'setBackbone', data: name }); }
+function designPrimers(key) { vscode.postMessage({ command: 'designPrimers', data: key || null }); }
+function refreshPlanner() { vscode.postMessage({ command: 'refresh' }); }
+function exportReport() { vscode.postMessage({ command: 'exportReport' }); }
+</script>
+</body>
+</html>

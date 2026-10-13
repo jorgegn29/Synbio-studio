@@ -1,0 +1,67 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbioengineinstall-instalar-synbio-engine";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbioengineinstall-instalar-synbio-engine", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbioengineinstall-instalar-synbio-engine") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+            <style>
+                body { 
+                    font-family: var(--vscode-font-family); 
+                    padding: 20px;
+                    line-height: 1.6;
+                }
+                h1 { color: var(--vscode-textLink-foreground); }
+                code { 
+                    background: var(--vscode-textCodeBlock-background); 
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                }
+                .step { 
+                    background: var(--vscode-editor-background);
+                    padding: 15px;
+                    margin: 10px 0;
+                    border-left: 3px solid var(--vscode-textLink-foreground);
+                }
+            </style>
+        </head>
+        <body>
+            <h1>🧬 Instalar SynBio Python Engine</h1>
+            
+            <div class="step">
+                <h3>Paso 1: Verificar Python</h3>
+                <p>Abre PowerShell y ejecuta:</p>
+                <code>python --version</code>
+                <p>Debes tener Python 3.9 o superior. Si no lo tienes, descárgalo de <a href="https://python.org">python.org</a></p>
+            </div>
+            
+            <div class="step">
+                <h3>Paso 2: Ejecutar el instalador</h3>
+                <p>En PowerShell, navega a:</p>
+                <code>cd "/workspace/client\..\python-engine"</code>
+                <p>Luego ejecuta:</p>
+                <code>start-server.bat</code>
+            </div>
+            
+            <div class="step">
+                <h3>Paso 3: Verificar</h3>
+                <p>El servidor se iniciará en <code>http://127.0.0.1:8765</code></p>
+                <p>Recarga VS Code (Ctrl+Shift+P → "Reload Window") para reconectar.</p>
+            </div>
+            
+            <h2>⚡ Inicio Automático (Opcional)</h2>
+            <p>Para que el servidor inicie automáticamente con VS Code, puedes crear una tarea en <code>.vscode/tasks.json</code></p>
+        </body>
+        </html>
+        

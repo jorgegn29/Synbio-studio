@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><script>
+function acquireVsCodeApi(){
+  const key='synbio-wv-'+"synbiocircuitoptimizer-optimizador-de-circuitos";
+  return {
+    postMessage(msg){ parent.postMessage({source:'webview', panel:"synbiocircuitoptimizer-optimizador-de-circuitos", msg}, '*'); },
+    getState(){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch(e){ return null; } },
+    setState(state){ localStorage.setItem(key, JSON.stringify(state)); return state; }
+  };
+}
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.source === 'host' && event.data.panel === "synbiocircuitoptimizer-optimizador-de-circuitos") {
+    window.dispatchEvent(new MessageEvent('message', { data: event.data.msg }));
+  }
+});
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizador de Circuitos Genéticos</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1e1e2e; color: #cdd6f4; padding: 20px; }
+        
+        .header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+        .header h1 { font-size: 22px; color: #cba6f7; }
+        .header .badge { background: #313244; color: #a6adc8; padding: 4px 10px; border-radius: 12px; font-size: 11px; }
+
+        .card { background: #313244; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #45475a; }
+        .card h3 { color: #cba6f7; margin-bottom: 12px; font-size: 15px; }
+
+        .demo-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .demo-btn { padding: 10px 16px; background: #45475a; color: #cdd6f4; border: 1px solid #585b70; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .demo-btn:hover { background: #585b70; border-color: #cba6f7; }
+        .demo-btn.active { background: #cba6f7; color: #1e1e2e; border-color: #cba6f7; font-weight: 600; }
+
+        .circuit-info { background: #1e1e2e; border-radius: 8px; padding: 14px; margin-top: 12px; display: none; }
+        .circuit-info.visible { display: block; }
+        .circuit-info .name { font-size: 16px; color: #f5c2e7; font-weight: 600; }
+        .circuit-info .meta { font-size: 12px; color: #a6adc8; margin-top: 4px; }
+
+        .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .config-item label { display: block; font-size: 13px; color: #a6adc8; margin-bottom: 4px; }
+        .config-item input[type="number"] { width: 100%; background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a; border-radius: 6px; padding: 8px; font-size: 13px; }
+        .config-item input[type="number"]:focus { border-color: #cba6f7; outline: none; }
+
+        .objectives { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+        .objectives label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; padding: 6px 10px; background: #1e1e2e; border-radius: 6px; border: 1px solid #45475a; transition: all 0.2s; }
+        .objectives label:has(input:checked) { border-color: #cba6f7; background: rgba(203, 166, 247, 0.1); }
+        input[type="checkbox"] { accent-color: #cba6f7; width: 15px; height: 15px; }
+
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #cba6f7, #f5c2e7); color: #1e1e2e; }
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .results { display: none; }
+        .results.visible { display: block; }
+
+        .predictions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+        .pred-card { background: #1e1e2e; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #45475a; }
+        .pred-value { font-size: 24px; font-weight: 700; }
+        .pred-value.good { color: #a6e3a1; }
+        .pred-value.medium { color: #f9e2af; }
+        .pred-value.bad { color: #f38ba8; }
+        .pred-label { font-size: 10px; color: #a6adc8; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .pred-unit { font-size: 11px; color: #6c7086; }
+
+        .fitness-chart { width: 100%; height: 200px; background: #1e1e2e; border-radius: 8px; border: 1px solid #45475a; position: relative; overflow: hidden; }
+        .fitness-chart canvas { width: 100%; height: 100%; }
+
+        .improvements-list { list-style: none; }
+        .improvements-list li { padding: 8px 0; border-bottom: 1px solid #45475a; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .improvements-list li:last-child { border-bottom: none; }
+        .imp-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+        .imp-icon.up { background: rgba(166, 227, 161, 0.2); color: #a6e3a1; }
+        .imp-icon.down { background: rgba(249, 226, 175, 0.2); color: #f9e2af; }
+
+        .changes-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+        .changes-table th { background: #1e1e2e; padding: 8px; text-align: left; color: #cba6f7; border-bottom: 2px solid #45475a; }
+        .changes-table td { padding: 6px 8px; border-bottom: 1px solid #45475a; }
+        .changes-table .delta { font-weight: 600; }
+        .changes-table .delta.positive { color: #a6e3a1; }
+        .changes-table .delta.negative { color: #f38ba8; }
+
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #45475a; border-top-color: #cba6f7; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .circuit-canvas { width: 100%; height: 180px; background: #1e1e2e; border-radius: 8px; margin-top: 12px; }
+
+        .tabs { display: flex; gap: 2px; margin-bottom: 16px; }
+        .tab { padding: 8px 16px; background: #45475a; color: #a6adc8; border: none; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .tab:first-child { border-radius: 8px 0 0 8px; }
+        .tab:last-child { border-radius: 0 8px 8px 0; }
+        .tab.active { background: #cba6f7; color: #1e1e2e; font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .progress-bar { height: 4px; background: #45475a; border-radius: 2px; overflow: hidden; margin-top: 12px; display: none; }
+        .progress-bar.visible { display: block; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #cba6f7, #f5c2e7); border-radius: 2px; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚡ Optimizador de Circuitos Genéticos</h1>
+        <span class="badge">Algoritmo Genético</span>
+    </div>
+
+    <div class="card">
+        <h3>🧬 Seleccionar Circuito</h3>
+        <div class="demo-buttons">
+            <button class="demo-btn" onclick="loadDemo('repressilator')">🔄 Repressilator</button>
+            <button class="demo-btn" onclick="loadDemo('toggleSwitch')">🔀 Toggle Switch</button>
+            <button class="demo-btn" onclick="loadDemo('bandpass')">📡 Band-pass Filter</button>
+        </div>
+        <div class="circuit-info" id="circuitInfo">
+            <div class="name" id="circuitName"></div>
+            <div class="meta" id="circuitMeta"></div>
+            <canvas class="circuit-canvas" id="circuitCanvas"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>⚙️ Configuración del Algoritmo Genético</h3>
+        <div class="config-grid">
+            <div class="config-item">
+                <label>Tamaño de Población</label>
+                <input type="number" id="popSize" value="30" min="10" max="200">
+            </div>
+            <div class="config-item">
+                <label>Generaciones</label>
+                <input type="number" id="generations" value="50" min="10" max="500">
+            </div>
+            <div class="config-item">
+                <label>Tasa de Mutación</label>
+                <input type="number" id="mutationRate" value="0.15" min="0.01" max="0.5" step="0.01">
+            </div>
+            <div class="config-item">
+                <label>Tasa de Crossover</label>
+                <input type="number" id="crossoverRate" value="0.7" min="0.1" max="1.0" step="0.05">
+            </div>
+        </div>
+
+        <h3 style="margin-top: 16px;">🎯 Objetivos de Optimización</h3>
+        <div class="objectives">
+            <label><input type="checkbox" id="objExpression" checked> 💪 Maximizar Expresión</label>
+            <label><input type="checkbox" id="objNoise" checked> 🔇 Minimizar Ruido</label>
+            <label><input type="checkbox" id="objOscillation"> 🔄 Oscilación Estable</label>
+            <label><input type="checkbox" id="objCrosstalk"> 🚫 Minimizar Crosstalk</label>
+            <label><input type="checkbox" id="objStability" checked> 🛡️ Maximizar Estabilidad</label>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+        <button class="btn btn-primary" id="optimizeBtn" onclick="runOptimization()">⚡ Ejecutar Optimización</button>
+        <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <div class="results" id="results">
+        <div class="card">
+            <h3>📊 Predicciones de Rendimiento</h3>
+            <div class="predictions-grid" id="predictionsGrid"></div>
+        </div>
+
+        <div class="card">
+            <h3>📈 Evolución del Fitness</h3>
+            <canvas id="fitnessChart" width="700" height="200"></canvas>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('improvements')">Mejoras</button>
+                <button class="tab" onclick="switchTab('parameters')">Parámetros</button>
+                <button class="tab" onclick="switchTab('summary')">Resumen</button>
+            </div>
+
+            <div class="tab-content active" id="tab-improvements">
+                <ul class="improvements-list" id="improvementsList"></ul>
+            </div>
+
+            <div class="tab-content" id="tab-parameters">
+                <div id="parametersContent"></div>
+            </div>
+
+            <div class="tab-content" id="tab-summary">
+                <div id="summaryContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        let currentCircuit = null;
+        let currentResult = null;
+
+        function loadDemo(id) {
+            document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            vscode.postMessage({ command: 'loadDemo', circuitId: id });
+        }
+
+        function runOptimization() {
+            if (!currentCircuit) { return; }
+
+            const btn = document.getElementById('optimizeBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Optimizando...';
+
+            const bar = document.getElementById('progressBar');
+            bar.classList.add('visible');
+            animateProgress();
+
+            vscode.postMessage({
+                command: 'optimize',
+                circuit: currentCircuit,
+                config: {
+                    populationSize: parseInt(document.getElementById('popSize').value),
+                    generations: parseInt(document.getElementById('generations').value),
+                    mutationRate: parseFloat(document.getElementById('mutationRate').value),
+                    crossoverRate: parseFloat(document.getElementById('crossoverRate').value),
+                    objectives: {
+                        maximizeExpression: document.getElementById('objExpression').checked,
+                        minimizeNoise: document.getElementById('objNoise').checked,
+                        targetOscillation: document.getElementById('objOscillation').checked,
+                        minimizeCrosstalk: document.getElementById('objCrosstalk').checked,
+                        maximizeStability: document.getElementById('objStability').checked,
+                    }
+                }
+            });
+        }
+
+        let progressInterval;
+        function animateProgress() {
+            let p = 0;
+            const fill = document.getElementById('progressFill');
+            clearInterval(progressInterval);
+            progressInterval = setInterval(() => {
+                p = Math.min(95, p + Math.random() * 5);
+                fill.style.width = p + '%';
+            }, 100);
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        function drawCircuit(circuit) {
+            const canvas = document.getElementById('circuitCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 180;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const colors = { promoter: '#cba6f7', gene: '#89b4fa', rbs: '#a6e3a1', terminator: '#f38ba8', protein: '#f9e2af' };
+            const symbols = { promoter: '→', gene: '▣', rbs: '◆', terminator: '⊣', protein: '●' };
+
+            const nodePositions = {};
+            const nodeCount = circuit.nodes.length;
+            const spacing = canvas.width / (nodeCount + 1);
+
+            // Draw nodes
+            circuit.nodes.forEach((node, i) => {
+                const x = spacing * (i + 1);
+                const y = 90;
+                nodePositions[node.id] = { x, y };
+
+                ctx.fillStyle = colors[node.type] || '#cdd6f4';
+                ctx.beginPath();
+                ctx.arc(x, y, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#1e1e2e';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(symbols[node.type] || '?', x, y + 5);
+
+                ctx.fillStyle = '#a6adc8';
+                ctx.font = '10px sans-serif';
+                ctx.fillText(node.name, x, y + 35);
+            });
+
+            // Draw connections
+            for (const conn of circuit.connections) {
+                const from = nodePositions[conn.from];
+                const to = nodePositions[conn.to];
+                if (!from || !to) continue;
+
+                ctx.strokeStyle = conn.type === 'repression' ? '#f38ba8' : conn.type === 'activation' ? '#a6e3a1' : '#89b4fa';
+                ctx.lineWidth = conn.strength * 3;
+                ctx.setLineDash(conn.type === 'repression' ? [5, 3] : []);
+
+                ctx.beginPath();
+                const midY = conn.from === conn.to ? y - 40 : from.y - 50;
+                ctx.moveTo(from.x, from.y - 18);
+                ctx.quadraticCurveTo((from.x + to.x) / 2, midY, to.x, to.y - 18);
+                ctx.stroke();
+
+                // Arrow
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.beginPath();
+                if (conn.type === 'repression') {
+                    ctx.fillRect(to.x - 4, to.y - 22, 8, 3);
+                } else {
+                    ctx.moveTo(to.x, to.y - 18);
+                    ctx.lineTo(to.x - 5, to.y - 25);
+                    ctx.lineTo(to.x + 5, to.y - 25);
+                }
+                ctx.fill();
+                ctx.setLineDash([]);
+            }
+        }
+
+        function drawFitnessChart(history) {
+            const canvas = document.getElementById('fitnessChart');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth || 700;
+            canvas.height = 200;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (history.length === 0) return;
+
+            const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+            const w = canvas.width - padding.left - padding.right;
+            const h = canvas.height - padding.top - padding.bottom;
+
+            const maxVal = Math.max(...history);
+            const minVal = Math.min(...history);
+            const range = maxVal - minVal || 1;
+
+            // Grid
+            ctx.strokeStyle = '#313244';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = padding.top + (h / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(padding.left + w, y);
+                ctx.stroke();
+
+                ctx.fillStyle = '#6c7086';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText((maxVal - (range / 4) * i).toFixed(1), padding.left - 5, y + 4);
+            }
+
+            // X axis labels
+            ctx.fillStyle = '#6c7086';
+            ctx.textAlign = 'center';
+            for (let i = 0; i <= 4; i++) {
+                const x = padding.left + (w / 4) * i;
+                const gen = Math.round(history.length / 4 * i);
+                ctx.fillText('Gen ' + gen, x, canvas.height - 5);
+            }
+
+            // Gradient fill
+            const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + h);
+            gradient.addColorStop(0, 'rgba(203, 166, 247, 0.3)');
+            gradient.addColorStop(1, 'rgba(203, 166, 247, 0.0)');
+
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top + h);
+            for (let i = 0; i < history.length; i++) {
+                const x = padding.left + (i / (history.length - 1)) * w;
+                const y = padding.top + h - ((history[i] - minVal) / range) * h;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(padding.left + w, padding.top + h);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Line
+            ctx.beginPath();
+            ctx.strokeStyle = '#cba6f7';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < history.length; i++) {
+                const x = padding.left + (i / (history.length - 1)) * w;
+                const y = padding.top + h - ((history[i] - minVal) / range) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Final point
+            const lastX = padding.left + w;
+            const lastY = padding.top + h - ((history[history.length - 1] - minVal) / range) * h;
+            ctx.fillStyle = '#f5c2e7';
+            ctx.beginPath();
+            ctx.arc(lastX, lastY, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Labels
+            ctx.fillStyle = '#cba6f7';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Fitness: ' + history[history.length - 1].toFixed(2), padding.left + 5, padding.top + 15);
+        }
+
+        function renderResults(result) {
+            currentResult = result;
+            const p = result.predictions;
+
+            // Predictions grid
+            const predClass = (val, threshGood, threshBad, invert) => {
+                if (invert) return val < threshGood ? 'good' : val < threshBad ? 'medium' : 'bad';
+                return val > threshGood ? 'good' : val > threshBad ? 'medium' : 'bad';
+            };
+
+            document.getElementById('predictionsGrid').innerHTML =
+                '<div class="pred-card"><div class="pred-value ' + predClass(p.expressionLevel, 70, 40) + '">' + p.expressionLevel + '</div><div class="pred-label">Expresión</div><div class="pred-unit">% máximo teórico</div></div>' +
+                '<div class="pred-card"><div class="pred-value ' + predClass(p.noiseCoefficient, 15, 30, true) + '">' + p.noiseCoefficient + '%</div><div class="pred-label">Ruido (CV)</div><div class="pred-unit">coef. variación</div></div>' +
+                '<div class="pred-card"><div class="pred-value ' + predClass(p.responseTime, 30, 60, true) + '">' + p.responseTime + '</div><div class="pred-label">Respuesta</div><div class="pred-unit">minutos</div></div>' +
+                '<div class="pred-card"><div class="pred-value ' + predClass(p.stabilityScore, 80, 50) + '">' + p.stabilityScore + '</div><div class="pred-label">Estabilidad</div><div class="pred-unit">score</div></div>' +
+                '<div class="pred-card"><div class="pred-value ' + predClass(p.estimatedSuccessRate, 70, 40) + '">' + p.estimatedSuccessRate + '%</div><div class="pred-label">Éxito Estimado</div><div class="pred-unit">probabilidad</div></div>' +
+                '<div class="pred-card"><div class="pred-value ' + predClass(p.metabolicBurden, 30, 60, true) + '">' + p.metabolicBurden + '</div><div class="pred-label">Carga Metabólica</div><div class="pred-unit">% ATP estimado</div></div>' +
+                '<div class="pred-card"><div class="pred-value ' + predClass(p.robustness, 70, 40) + '">' + p.robustness + '</div><div class="pred-label">Robustez</div><div class="pred-unit">score</div></div>';
+
+            // Fitness chart
+            drawFitnessChart(result.fitnessHistory);
+
+            // Improvements
+            const list = document.getElementById('improvementsList');
+            list.innerHTML = '';
+            for (const imp of result.improvements) {
+                const li = document.createElement('li');
+                const icon = imp.includes('fortalecido') || imp.includes('eficiencia') ? 'up' : 'down';
+                li.innerHTML = '<span class="imp-icon ' + icon + '">' + (icon === 'up' ? '↑' : '↓') + '</span>' + imp;
+                list.appendChild(li);
+            }
+            if (result.improvements.length === 0) {
+                list.innerHTML = '<li><span class="imp-icon up">✓</span>Circuito ya está optimizado</li>';
+            }
+
+            // Parameters table
+            if (result.parametersChanged.length > 0) {
+                let html = '<table class="changes-table"><thead><tr><th>Componente</th><th>Parámetro</th><th>Original</th><th>Optimizado</th><th>Impacto</th></tr></thead><tbody>';
+                for (const c of result.parametersChanged) {
+                    const delta = c.newValue - c.oldValue;
+                    const cls = delta > 0 ? 'positive' : 'negative';
+                    html += '<tr><td>' + c.nodeName + '</td><td>' + c.parameter + '</td><td>' + c.oldValue.toFixed(3) + '</td><td class="delta ' + cls + '">' + c.newValue.toFixed(3) + ' (' + (delta > 0 ? '+' : '') + delta.toFixed(3) + ')</td><td>' + c.impact + '</td></tr>';
+                }
+                html += '</tbody></table>';
+                document.getElementById('parametersContent').innerHTML = html;
+            } else {
+                document.getElementById('parametersContent').innerHTML = '<p style="color:#a6adc8; padding:12px;">Sin cambios de parámetros</p>';
+            }
+
+            // Summary
+            document.getElementById('summaryContent').innerHTML =
+                '<div style="padding:12px; line-height:1.8;">' +
+                '<p>🧬 <strong>Circuito:</strong> ' + result.originalCircuit.name + '</p>' +
+                '<p>🔄 <strong>Generaciones:</strong> ' + result.generationsRun + '</p>' +
+                '<p>📊 <strong>Fitness final:</strong> ' + result.finalFitness.toFixed(2) + '/100</p>' +
+                '<p>🔧 <strong>Parámetros modificados:</strong> ' + result.parametersChanged.length + '</p>' +
+                '<p>✅ <strong>Mejoras aplicadas:</strong> ' + result.improvements.length + '</p>' +
+                '<p>🎯 <strong>Tasa de éxito estimada:</strong> ' + p.estimatedSuccessRate + '%</p>' +
+                '</div>';
+
+            document.getElementById('results').classList.add('visible');
+        }
+
+        window.addEventListener('message', event => {
+            const msg = event.data;
+            switch (msg.command) {
+                case 'loadCircuit':
+                    currentCircuit = msg.circuit;
+                    const info = document.getElementById('circuitInfo');
+                    info.classList.add('visible');
+                    document.getElementById('circuitName').textContent = msg.circuit.name;
+                    document.getElementById('circuitMeta').textContent =
+                        msg.circuit.nodes.length + ' nodos · ' + msg.circuit.connections.length + ' conexiones · ' +
+                        msg.circuit.nodes.filter(n => n.type === 'gene').length + ' genes';
+                    drawCircuit(msg.circuit);
+
+                    // Auto-set oscillation for repressilator
+                    if (msg.circuit.name === 'Repressilator') {
+                        document.getElementById('objOscillation').checked = true;
+                    }
+                    break;
+
+                case 'optimizationResult':
+                    clearInterval(progressInterval);
+                    document.getElementById('progressFill').style.width = '100%';
+                    setTimeout(() => {
+                        document.getElementById('progressBar').classList.remove('visible');
+                    }, 500);
+                    document.getElementById('optimizeBtn').disabled = false;
+                    document.getElementById('optimizeBtn').innerHTML = '⚡ Ejecutar Optimización';
+                    renderResults(msg.result);
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
