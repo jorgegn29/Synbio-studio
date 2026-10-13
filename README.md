@@ -9,6 +9,14 @@
 
 ---
 
+## Browser demo and the full Windows installer
+
+**English.** The GitHub Pages site is a browser demo. The full professional version is the Windows installer `SynBio-Studio-1.0.0-Windows-x64-Setup.exe` (Inno Setup). It includes everything: the 3D atlas, the LSP, the Python engine, and the lab integrations. Download it from the latest release: [github.com/jorgegn29/Synbio-studio/releases/latest](https://github.com/jorgegn29/Synbio-studio/releases/latest).
+
+**Español.** El sitio de GitHub Pages es una demo en el navegador. La versión profesional completa es el instalador de Windows `SynBio-Studio-1.0.0-Windows-x64-Setup.exe` (Inno Setup). Incluye todo: el atlas 3D, el LSP, el motor Python y las integraciones de laboratorio. La descarga está en el release más reciente: [github.com/jorgegn29/Synbio-studio/releases/latest](https://github.com/jorgegn29/Synbio-studio/releases/latest).
+
+---
+
 ## Visión general
 
 SynBio-LLVM trata los circuitos genéticos como **programas de software**. El ecosistema incluye:
@@ -190,6 +198,8 @@ Todos los parámetros numéricos provienen de literatura publicada — **sin val
 ## Instalación
 
 ### SynBio Studio (recomendado)
+
+El instalador de Windows `SynBio-Studio-1.0.0-Windows-x64-Setup.exe` está en [releases/latest](https://github.com/jorgegn29/Synbio-studio/releases/latest). Para compilar desde el código:
 
 ```bash
 cd synbio-studio
