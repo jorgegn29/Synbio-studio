@@ -1,7 +1,6 @@
 # Dependencies
 node_modules/
 .npm
-package-lock.json
 
 # Build outputs
 dist/
@@ -101,3 +100,4 @@ client/.vscode-test/user-data/Network/Network Persistent State
 client/.vscode-test/user-data/Local Storage/leveldb/MANIFEST-000001
 client/.vscode-test/user-data/Code Cache/js/index-dir/the-real-index
 client/.vscode-test/user-data/Code Cache/wasm/index-dir/the-real-index
+web-demo/.next/
