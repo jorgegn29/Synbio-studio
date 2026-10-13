@@ -3,6 +3,7 @@
 import React from 'react';
 import { StudioProvider, useStudio, type Activity } from './studio-context';
 import { Bottom, Center, Sidebar, onFilesPicked } from './panels';
+import { ReleaseTitleLink } from './release-notice';
 
 const ACTIVITIES: { id: Activity; label: string }[] = [
   { id: 'explorer', label: 'Explorer' },
@@ -62,6 +63,7 @@ function Shell() {
         <button type="button" onClick={() => document.getElementById('open-file')?.click()}>Abrir</button>
         <button type="button" onClick={studio.saveProject}>Guardar</button>
         <span className="spacer" />
+        <ReleaseTitleLink />
         <span>{studio.activeFile}</span>
       </header>
       <div className="studio-body">

@@ -16,6 +16,7 @@ import {
   AtlasTransdermal, DesignHub, EntornoPanel, equivalentOf, GuidedFlows, HomeExtras, LabRun,
   NodeCanvas, PlasmidGauge, pointMutation, ProgramaView, TerminatorCard, TransdermalEditor, WorkspaceTasks,
 } from './tour-views';
+import { ReleaseBanner } from './release-notice';
 
 const BioEditor = dynamic(() => import('@/components/BioEditor'), { ssr: false });
 
@@ -259,6 +260,7 @@ function Welcome() {
   const studio = useStudio();
   return (
     <div className="welcome">
+      <ReleaseBanner />
       <div className="logo-lockup">
         <svg viewBox="0 0 64 64" width="54" height="54" aria-hidden>
           <rect width="64" height="64" rx="14" fill="#0d1117" />
