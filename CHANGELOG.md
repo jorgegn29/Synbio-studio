@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Web demo renders the SynBio Studio shell on GitHub Pages (`/Synbio-studio/` asset prefix) and runs the in-browser compiler, Gillespie SSA, ODE, FBA, sequence analysis, and export panels from the desktop feature list.
+
 ### Fixed
 - Restored the BioScript compiler module (`parseCircuits` and `SEQUENCE_DB`) so headless unit tests and assembly/protocol tools can resolve circuits and registry parts.
 - Headless `npm test` / `test:ci` no longer loads the VS Code end-to-end suite. Run that suite with `npm run test:e2e` inside the client package.

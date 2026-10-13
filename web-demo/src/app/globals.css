@@ -18,7 +18,82 @@ html {
 
 body {
   @apply bg-surface-950 text-surface-200 antialiased;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.studio { height: 100vh; display: flex; flex-direction: column; background: #1e2228; color: #c9d1d9; }
+.studio button, .studio input, .studio select, .studio textarea { font: inherit; color: inherit; }
+.studio .titlebar, .studio .statusbar { display: flex; gap: 8px; align-items: center; padding: 4px 10px; background: #161b22; border-color: #30363d; border-style: solid; }
+.studio .titlebar { border-bottom-width: 1px; }
+.studio .statusbar { border-top-width: 1px; font-size: 12px; color: #8b949e; }
+.studio .titlebar button, .studio .statusbar button { background: transparent; border: 0; color: #c9d1d9; cursor: pointer; }
+.studio .spacer { flex: 1; }
+.studio-body { flex: 1; display: flex; min-height: 0; }
+.studio .activity { width: 68px; background: #0d1117; display: flex; flex-direction: column; gap: 2px; padding: 4px; overflow: auto; }
+.studio .activity button { background: transparent; border: 0; color: #8b949e; border-radius: 6px; padding: 6px 2px; font-size: 10px; cursor: pointer; }
+.studio .activity button.on { background: #21262d; color: #3fb950; }
+.studio .sidebar { width: 280px; background: #1c2128; border-right: 1px solid #30363d; overflow: auto; }
+.studio main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #22272e; }
+.studio .side-pad, .welcome, .research, .map-view, .atlas-t, .chassis, .lab, .results, .safety, .tutor, .diff, .flows, .settings { padding: 12px; overflow: auto; }
+.studio .side-pad h2, .studio h2 { font-size: 12px; letter-spacing: .04em; margin: 0 0 8px; }
+.studio h3 { font-size: 11px; color: #8b949e; margin: 10px 0 4px; }
+.studio .muted { color: #8b949e; font-size: 12px; }
+.studio .row { display: flex; gap: 6px; margin: 6px 0; }
+.studio .wrap { flex-wrap: wrap; }
+.studio .studio-btn, .studio .side-pad .file, .palette button, .flow button, .plate button { background: #21262d; border: 1px solid #30363d; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
+.studio .studio-btn.green, .flow button:first-child { background: #238636; border-color: #238636; }
+.studio .studio-btn.blue { background: #1f6feb; border-color: #1f6feb; }
+.studio .file { display: block; width: 100%; text-align: left; margin: 2px 0; }
+.studio .file.on { border-color: #3fb950; }
+.studio .file small { display: block; color: #8b949e; }
+.studio .card { border: 1px solid #30363d; border-radius: 8px; padding: 8px; margin-top: 8px; }
+.studio .card.green { background: #12261a; }
+.studio .card.blue { background: #122033; }
+.studio .tool-scroll { max-height: 180px; overflow: auto; }
+.studio input, .studio select, .studio textarea { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 4px 6px; margin: 4px 0; }
+.studio textarea { min-height: 70px; }
+.welcome { height: 100%; }
+.logo-lockup { display: flex; gap: 12px; align-items: center; }
+.logo-lockup h1 { margin: 0; font-size: 28px; }
+.logo-lockup p, .welcome-grid p { margin: 0; color: #8b949e; }
+.welcome-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; margin-top: 12px; }
+.welcome .panel { border-radius: 8px; padding: 10px; border: 1px solid #30363d; }
+.welcome .panel.blue { background: #122033; }
+.welcome .panel.green { background: #12261a; }
+.welcome .panel header { font-size: 12px; margin-bottom: 6px; }
+.flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+.code-card { background: #0d1117; border-radius: 8px; padding: 10px; overflow: auto; cursor: pointer; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; }
+.editor-pane, .design, .sim-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.tabstrip { display: flex; gap: 4px; overflow: auto; background: #161b22; border-bottom: 1px solid #30363d; }
+.tabstrip button { background: transparent; border: 0; color: #8b949e; padding: 6px 8px; cursor: pointer; font-size: 11px; }
+.tabstrip button.on { color: #c9d1d9; border-bottom: 2px solid #3fb950; }
+.editor-pane .tabstrip { align-items: center; }
+.design-body, .chassis-body, .sim-split { display: flex; min-height: 0; flex: 1; }
+.palette { width: 150px; overflow: auto; border-right: 1px solid #30363d; padding: 6px; }
+.palette button { display: block; width: 100%; margin: 2px 0; text-align: left; }
+.track-wrap { flex: 1; overflow: auto; }
+.track { width: 100%; height: 200px; background: #1b2028; }
+.track.iso { transform: perspective(600px) rotateX(28deg); }
+.plasmid { width: 220px; height: 220px; }
+.part-editor { width: 220px; border-left: 1px solid #30363d; padding: 8px; overflow: auto; }
+.context { position: fixed; z-index: 20; background: #161b22; border: 1px solid #30363d; display: flex; flex-direction: column; min-width: 180px; }
+.context button { background: transparent; border: 0; text-align: left; padding: 6px 8px; cursor: pointer; }
+.gauges { display: flex; gap: 8px; }
+.gauge { width: 80px; text-align: center; font-size: 11px; }
+.hist div { display: flex; gap: 6px; align-items: center; font-size: 11px; font-family: ui-monospace, monospace; }
+.hist i { display: inline-block; height: 8px; background: #58a6ff; }
+.banner { background: #3d2a00; color: #e3b341; padding: 6px 8px; border-radius: 6px; font-size: 12px; }
+.plate { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+.plate button { font-size: 9px; padding: 4px 0; }
+.plate button.on { border-color: #3fb950; }
+.bottom { height: 230px; border-top: 1px solid #30363d; display: flex; flex-direction: column; background: #161b22; }
+.bottom-body { overflow: auto; padding: 8px; font-size: 12px; }
+.bottom pre, .studio pre { white-space: pre-wrap; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; }
+.sim-split > :first-child { flex: 1; min-width: 0; }
+.hyp-graph { background: #1b2028; border-radius: 8px; }
+@media (max-width: 900px) {
+  .studio .sidebar { display: none; }
+  .welcome-grid, .design-body, .chassis-body, .sim-split { display: block; }
 }
 
 /* ─── Scrollbar ───────────────────────────────────────────── */
