@@ -5,7 +5,7 @@ import { runTests } from '@vscode/test-electron';
 
 async function main(): Promise<void> {
     const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
-    const extensionTestsPath = path.resolve(__dirname, 'vscode-suite.js');
+    const extensionTestsPath = path.resolve(__dirname, 'vscode-entry.cjs');
     const workspacePath = path.resolve(extensionDevelopmentPath, '..');
     const vscodeTestCache = path.join(extensionDevelopmentPath, '.vscode-test');
     const localCodeExecutable = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Microsoft VS Code', 'Code.exe');

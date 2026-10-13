@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths:
       - 'web-demo/**'
+      - '.github/workflows/deploy-demo.yml'
+  pull_request:
+    paths:
+      - 'web-demo/**'
+      - '.github/workflows/deploy-demo.yml'
   workflow_dispatch:
 
 permissions:
@@ -46,6 +51,7 @@ jobs:
           path: web-demo/out
 
   deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
