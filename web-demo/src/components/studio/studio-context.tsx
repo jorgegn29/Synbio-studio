@@ -355,7 +355,8 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as { files?: StudioFile[]; eln?: string; notebook?: string };
-      if (parsed.files?.length) {
+      const filesOk = parsed.files?.every(file => file && typeof file.name === 'string' && typeof file.contents === 'string' && typeof file.language === 'string');
+      if (parsed.files?.length && filesOk) {
         setFiles(parsed.files);
         setSaved(Object.fromEntries(parsed.files.map(file => [file.name, file.contents])));
       }

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Pages shell now includes the walkthrough screens from both tour reels: workspace tasks, Nueva Variante, guided CDS/Bugi flows, the variant node editor, Lab Run Center, ELN, materiales, Design Hub, Atlas Transdermal, microplates, and schematic Three.js models of E. coli BL21(DE3) and S. cerevisiae S288C.
 
 ### Fixed
+- GitHub Pages no longer replaces the studio with a blank client-error screen when WebGL cannot be created. 3D views show a fallback, and a panel error stays inside the shell.
 - Restored the BioScript compiler module (`parseCircuits` and `SEQUENCE_DB`) so headless unit tests and assembly/protocol tools can resolve circuits and registry parts.
 - Headless `npm test` / `test:ci` no longer loads the VS Code end-to-end suite. Run that suite with `npm run test:e2e` inside the client package.
 - Web demo static export typechecks on the TypeScript version pinned by the lockfile.

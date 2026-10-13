@@ -26,6 +26,27 @@ const ACTIVITIES: { id: Activity; label: string }[] = [
   { id: 'panels', label: 'Paneles' },
 ];
 
+class PanelBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="welcome">
+          <h2>Esta vista se detuvo</h2>
+          <p className="muted">{this.state.error.message}</p>
+          <button type="button" className="studio-btn" onClick={() => this.setState({ error: null })}>Reintentar</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function Shell() {
   const studio = useStudio();
   return (
@@ -64,9 +85,15 @@ function Shell() {
             </button>
           ))}
         </nav>
-        <aside className="sidebar"><Sidebar /></aside>
+        <aside className="sidebar">
+          <PanelBoundary key={studio.activity}>
+            <Sidebar />
+          </PanelBoundary>
+        </aside>
         <main>
-          <Center />
+          <PanelBoundary key={studio.center}>
+            <Center />
+          </PanelBoundary>
           {studio.bottomOpen && <Bottom />}
         </main>
       </div>

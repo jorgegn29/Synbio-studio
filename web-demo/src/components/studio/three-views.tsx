@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useStudio } from './studio-context';
@@ -42,52 +42,97 @@ function labelSprite(text: string): THREE.Sprite {
   return sprite;
 }
 
-function mount(host: HTMLDivElement) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(host.clientWidth || 640, host.clientHeight || 420);
-  renderer.localClippingEnabled = true;
-  host.appendChild(renderer.domElement);
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0d1117);
-  const camera = new THREE.PerspectiveCamera(45, (host.clientWidth || 640) / (host.clientHeight || 420), 0.1, 100);
-  camera.position.set(4, 2.4, 6);
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-  const key = new THREE.DirectionalLight(0xffffff, 1.1);
-  key.position.set(4, 6, 3);
-  scene.add(key);
-  let frame = 0;
-  const loop = () => {
-    frame = requestAnimationFrame(loop);
-    controls.update();
-    renderer.render(scene, camera);
-  };
-  loop();
-  const resize = () => {
-    const w = host.clientWidth || 640;
-    const h = host.clientHeight || 420;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
-  };
-  window.addEventListener('resize', resize);
-  return {
-    scene, camera, controls, renderer,
-    dispose() {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', resize);
-      controls.dispose();
+interface SceneView {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  controls: OrbitControls;
+  renderer: THREE.WebGLRenderer;
+  dispose: () => void;
+}
+
+function WebGLFallback() {
+  return (
+    <p className="muted" style={{ padding: 12 }}>
+      WebGL no está disponible en este navegador. Suele pasar en Windows cuando la aceleración gráfica está desactivada o la bloquea una política. El resto de SynBio Studio sigue usable; esta vista 3D no puede dibujar.
+    </p>
+  );
+}
+
+function webglSupported(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!gl || !('getParameter' in gl)) return false;
+    const lose = (gl as WebGLRenderingContext).getExtension('WEBGL_lose_context');
+    lose?.loseContext();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function mount(host: HTMLDivElement): SceneView | null {
+  if (!webglSupported()) return null;
+  let renderer: THREE.WebGLRenderer | null = null;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(host.clientWidth || 640, host.clientHeight || 420);
+    renderer.localClippingEnabled = true;
+    host.appendChild(renderer.domElement);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0d1117);
+    const camera = new THREE.PerspectiveCamera(45, (host.clientWidth || 640) / (host.clientHeight || 420), 0.1, 100);
+    camera.position.set(4, 2.4, 6);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    const key = new THREE.DirectionalLight(0xffffff, 1.1);
+    key.position.set(4, 6, 3);
+    scene.add(key);
+    let frame = 0;
+    const loop = () => {
+      frame = requestAnimationFrame(loop);
+      try {
+        controls.update();
+        renderer?.render(scene, camera);
+      } catch {
+        cancelAnimationFrame(frame);
+      }
+    };
+    loop();
+    const resize = () => {
+      const w = host.clientWidth || 640;
+      const h = host.clientHeight || 420;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer?.setSize(w, h);
+    };
+    window.addEventListener('resize', resize);
+    const active = renderer;
+    return {
+      scene, camera, controls, renderer: active,
+      dispose() {
+        cancelAnimationFrame(frame);
+        window.removeEventListener('resize', resize);
+        controls.dispose();
+        active.dispose();
+        if (active.domElement.parentNode === host) host.removeChild(active.domElement);
+      },
+    };
+  } catch {
+    if (renderer) {
       renderer.dispose();
-      host.removeChild(renderer.domElement);
-    },
-  };
+      if (renderer.domElement.parentNode === host) host.removeChild(renderer.domElement);
+    }
+    return null;
+  }
 }
 
 export function ThreeConstruct() {
   const studio = useStudio();
   const host = useRef<HTMLDivElement>(null);
+  const [missing, setMissing] = useState(false);
   const nodes = studio.construct.nodes;
   const edges = studio.construct.edges;
 
@@ -95,6 +140,11 @@ export function ThreeConstruct() {
     const el = host.current;
     if (!el) return;
     const view = mount(el);
+    if (!view) {
+      setMissing(true);
+      return;
+    }
+    setMissing(false);
     const visible = nodes.filter(node => studio.group === 'todos' || node.type === studio.group);
     const placed = new Map<string, THREE.Vector3>();
     visible.forEach((node, index) => {
@@ -129,7 +179,7 @@ export function ThreeConstruct() {
     return () => view.dispose();
   }, [nodes, edges, studio.group, studio.separation, studio.showLabels, studio.rotation]);
 
-  return <div ref={host} className="three-host" />;
+  return <div ref={host} className="three-host">{missing && <WebGLFallback />}</div>;
 }
 
 function cellMaterial(color: string, opacity: number, clip: THREE.Plane | null, glow = 0) {
@@ -148,6 +198,7 @@ function cellMaterial(color: string, opacity: number, clip: THREE.Plane | null, 
 export function ThreeCell({ onSelect, toggles, induction = 0.35, surface = false }: { onSelect: (layer: AtlasLayer) => void; toggles?: CellToggles; induction?: number; surface?: boolean }) {
   const studio = useStudio();
   const host = useRef<HTMLDivElement>(null);
+  const [missing, setMissing] = useState(false);
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
   const layers = studio.organism === 'bl21' ? BL21_LAYERS : studio.organism === 's288c' ? S288C_LAYERS : studio.organism === 'pichia' ? PICHIA_LAYERS : ECOLI_LAYERS;
@@ -157,6 +208,11 @@ export function ThreeCell({ onSelect, toggles, induction = 0.35, surface = false
     const el = host.current;
     if (!el) return;
     const view = mount(el);
+    if (!view) {
+      setMissing(true);
+      return;
+    }
+    setMissing(false);
     const bacterium = studio.organism === 'ecoli' || studio.organism === 'bl21';
     const clip = studio.cut && !surface ? new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0) : null;
     const explode = studio.explode / 28;
@@ -250,15 +306,20 @@ export function ThreeCell({ onSelect, toggles, induction = 0.35, surface = false
     };
   }, [layers, studio.organism, studio.cut, studio.explode, studio.isolate, studio.zoom, studio.showLabels, studio.circuit, show, induction, surface]);
 
-  return <div ref={host} className="three-host" />;
+  return <div ref={host} className="three-host">{missing && <WebGLFallback />}</div>;
 }
 
 export function Quadrant3D() {
   const host = useRef<HTMLDivElement>(null);
+  const [missing, setMissing] = useState(false);
   useEffect(() => {
     const el = host.current;
     if (!el) return;
     const view = mount(el);
+    if (!view) {
+      setMissing(true);
+      return;
+    }
     const spots = [
       { geo: new THREE.SphereGeometry(0.28, 20, 16), color: 0xf0883e, at: [-0.8, 0.2, 0] },
       { geo: new THREE.SphereGeometry(0.18, 16, 12), color: 0xf0883e, at: [0.2, 0.6, 0.4] },
@@ -273,5 +334,5 @@ export function Quadrant3D() {
     view.camera.position.set(2.4, 1.4, 2.8);
     return () => view.dispose();
   }, []);
-  return <div ref={host} className="three-host short" />;
+  return <div ref={host} className="three-host short">{missing && <WebGLFallback />}</div>;
 }
