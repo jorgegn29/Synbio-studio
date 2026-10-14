@@ -180,28 +180,95 @@ export function generateLlvmIr(circuit: Circuit): string {
   return lines.join('\n');
 }
 
+function ref(species: string): string {
+  return `<speciesReference species="${species}" stoichiometry="1" constant="true"/>`;
+}
+
+type TranscriptionLaw =
+  | { kind: 'constitutive' }
+  | { kind: 'repress' | 'activate'; species: string };
+
+/**
+ * TetR inverters are Hill repression of an external input.
+ * A pLac GFP cassette is Hill activation by IPTG.
+ * Other regulatory links use the matching regulator species.
+ */
+function transcriptionLaw(circuit: Circuit, tu: TranscriptionUnit): TranscriptionLaw {
+  const promoter = partOf(tu, 'promoter')?.name || '';
+  const cds = (cdsOf(tu)?.name || '').toLowerCase();
+  const promoterKey = promoter.toLowerCase();
+  const circuitName = (circuit.name || '').toLowerCase();
+  if (promoterKey.includes('plac') && (cds.includes('gfp') || circuitName.includes('gfp') || circuitName.includes('cassette'))) {
+    return { kind: 'activate', species: 'IPTG' };
+  }
+  const tetInverter = cds.includes('tetr') && !promoterKey.includes('ptet') && !promoterKey.includes('plac') && !promoterKey.includes('pbad');
+  if (circuitName.includes('inverter') || tetInverter) {
+    return { kind: 'repress', species: 'input' };
+  }
+  const link = regulatoryLinks(circuit).find(item => item.to.toLowerCase() === promoterKey);
+  if (link) {
+    return {
+      kind: link.kind === 'repression' ? 'repress' : 'activate',
+      species: `regulator_${ident(link.from)}`,
+    };
+  }
+  return { kind: 'constitutive' };
+}
+
+function hillMath(kind: 'repress' | 'activate', rate: string, signal: string): string {
+  const numerator = kind === 'repress'
+    ? '<apply><power/><ci>K_hill</ci><cn type="integer">2</cn></apply>'
+    : `<apply><power/><ci>${signal}</ci><cn type="integer">2</cn></apply>`;
+  return `<apply><times/><ci>${rate}</ci><ci>cell</ci><apply><divide/>${numerator}<apply><plus/><apply><power/><ci>K_hill</ci><cn type="integer">2</cn></apply><apply><power/><ci>${signal}</ci><cn type="integer">2</cn></apply></apply></apply></apply>`;
+}
+
 export function generateSbml(circuit: Circuit): string {
   const model = ident(circuit.name || 'circuit');
   const species: string[] = [];
   const parameters = [
     '      <parameter id="k_mRNA_deg" value="0.0023" constant="true"/>',
     '      <parameter id="k_prot_deg" value="0.00019" constant="true"/>',
+    '      <parameter id="K_hill" value="10" constant="true"/>',
   ];
   const reactions: string[] = [];
+  const signals = new Set<string>();
   circuit.transcriptionUnits.forEach((tu, index) => {
     const cds = cdsOf(tu);
     const id = ident(`${cds?.name || 'tu'}_${index}`);
     const txn = partOf(tu, 'promoter')?.strength ?? 0.5;
     const tln = partOf(tu, 'rbs')?.strength ?? 0.5;
+    const law = transcriptionLaw(circuit, tu);
     species.push(`      <species id="mRNA_${id}" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>`);
     species.push(`      <species id="protein_${id}" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>`);
     parameters.push(`      <parameter id="k_txn_${id}" value="${txn.toFixed(6)}" constant="true"/>`);
     parameters.push(`      <parameter id="k_tln_${id}" value="${tln.toFixed(6)}" constant="true"/>`);
-    reactions.push(`      <reaction id="txn_${id}" reversible="false"><listOfProducts><speciesReference species="mRNA_${id}" stoichiometry="1"/></listOfProducts><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k_txn_${id}</ci><ci>cell</ci></apply></math></kineticLaw></reaction>`);
-    reactions.push(`      <reaction id="tln_${id}" reversible="false"><listOfReactants><speciesReference species="mRNA_${id}" stoichiometry="1"/></listOfReactants><listOfProducts><speciesReference species="mRNA_${id}" stoichiometry="1"/><speciesReference species="protein_${id}" stoichiometry="1"/></listOfProducts><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k_tln_${id}</ci><ci>mRNA_${id}</ci></apply></math></kineticLaw></reaction>`);
-    reactions.push(`      <reaction id="mrna_deg_${id}" reversible="false"><listOfReactants><speciesReference species="mRNA_${id}" stoichiometry="1"/></listOfReactants><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k_mRNA_deg</ci><ci>mRNA_${id}</ci></apply></math></kineticLaw></reaction>`);
-    reactions.push(`      <reaction id="prot_deg_${id}" reversible="false"><listOfReactants><speciesReference species="protein_${id}" stoichiometry="1"/></listOfReactants><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k_prot_deg</ci><ci>protein_${id}</ci></apply></math></kineticLaw></reaction>`);
+    const txnMath = law.kind === 'constitutive'
+      ? `<apply><times/><ci>k_txn_${id}</ci><ci>cell</ci></apply>`
+      : hillMath(law.kind, `k_txn_${id}`, law.species);
+    if (law.kind !== 'constitutive') signals.add(law.species);
+    const modifiers = law.kind === 'constitutive'
+      ? ''
+      : `<listOfModifiers><modifierSpeciesReference species="${law.species}"/></listOfModifiers>`;
+    reactions.push(`      <reaction id="txn_${id}" reversible="false"><listOfProducts>${ref(`mRNA_${id}`)}</listOfProducts>${modifiers}<kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML">${txnMath}</math></kineticLaw></reaction>`);
+    reactions.push(`      <reaction id="tln_${id}" reversible="false"><listOfReactants>${ref(`mRNA_${id}`)}</listOfReactants><listOfProducts>${ref(`mRNA_${id}`)}${ref(`protein_${id}`)}</listOfProducts><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k_tln_${id}</ci><ci>mRNA_${id}</ci></apply></math></kineticLaw></reaction>`);
+    reactions.push(`      <reaction id="mrna_deg_${id}" reversible="false"><listOfReactants>${ref(`mRNA_${id}`)}</listOfReactants><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k_mRNA_deg</ci><ci>mRNA_${id}</ci></apply></math></kineticLaw></reaction>`);
+    reactions.push(`      <reaction id="prot_deg_${id}" reversible="false"><listOfReactants>${ref(`protein_${id}`)}</listOfReactants><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k_prot_deg</ci><ci>protein_${id}</ci></apply></math></kineticLaw></reaction>`);
   });
+  for (const signal of signals) {
+    species.push(`      <species id="${signal}" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="false" boundaryCondition="true" constant="false"/>`);
+  }
+  const stepped = [...signals].filter(id => id === 'input' || id === 'IPTG');
+  const events = stepped.length === 0 ? '' : `
+    <listOfEvents>
+      <event id="step_signal" useValuesFromTriggerTime="true">
+        <trigger initialValue="false" persistent="true">
+          <math xmlns="http://www.w3.org/1998/Math/MathML"><apply><gt/><csymbol encoding="text" definitionURL="http://www.sbml.org/sbml/symbols/time">time</csymbol><cn>300</cn></apply></math>
+        </trigger>
+        <listOfEventAssignments>
+${stepped.map(id => `          <eventAssignment variable="${id}"><math xmlns="http://www.w3.org/1998/Math/MathML"><cn>100</cn></math></eventAssignment>`).join('\n')}
+        </listOfEventAssignments>
+      </event>
+    </listOfEvents>`;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" level="3" version="2">
   <model id="${model}" name="${circuit.name}">
@@ -216,7 +283,7 @@ ${parameters.join('\n')}
     </listOfParameters>
     <listOfReactions>
 ${reactions.join('\n')}
-    </listOfReactions>
+    </listOfReactions>${events}
   </model>
 </sbml>
 `;

@@ -13,8 +13,8 @@
 //!
 //! Pipeline: AST → HIR → MIR → BioIR
 
-use std::collections::{HashMap, HashSet};
 use crate::compiler::hir::*;
+use std::collections::{HashMap, HashSet};
 
 // ─── MIR Types ────────────────────────────────────────────────────────────────
 
@@ -33,8 +33,8 @@ pub struct MirProgram {
 pub struct MirChassis {
     pub name: String,
     pub species: MirSpecies,
-    pub growth_rate: f64,          // doubling time in minutes
-    pub atp_capacity: f64,         // relative units
+    pub growth_rate: f64,  // doubling time in minutes
+    pub atp_capacity: f64, // relative units
     pub codon_bias: CodonBias,
 }
 
@@ -260,11 +260,11 @@ pub struct MetabolicBurden {
 
 #[derive(Debug, Clone)]
 pub enum BurdenCategory {
-    Negligible,  // < 5% resources
-    Low,         // 5-15%
-    Moderate,    // 15-30%
-    High,        // 30-50%
-    Critical,    // > 50%
+    Negligible, // < 5% resources
+    Low,        // 5-15%
+    Moderate,   // 15-30%
+    High,       // 30-50%
+    Critical,   // > 50%
 }
 
 impl Default for MetabolicBurden {
@@ -386,9 +386,8 @@ impl MirLowering {
     pub fn lower(&self, hir: &HirProgram) -> MirProgram {
         let chassis = hir.chassis.as_ref().map(|ch| self.lower_chassis(ch));
 
-        let mut circuits: Vec<MirCircuit> = hir.circuits.iter()
-            .map(|c| self.lower_circuit(c))
-            .collect();
+        let mut circuits: Vec<MirCircuit> =
+            hir.circuits.iter().map(|c| self.lower_circuit(c)).collect();
 
         // Post-processing: detect crosstalk between TUs
         for circuit in &mut circuits {
@@ -396,9 +395,7 @@ impl MirLowering {
             self.calculate_burden(circuit);
         }
 
-        let genes: Vec<MirGene> = hir.genes.iter()
-            .map(|g| self.lower_gene(g))
-            .collect();
+        let genes: Vec<MirGene> = hir.genes.iter().map(|g| self.lower_gene(g)).collect();
 
         // Build program analysis
         let analysis = self.build_analysis(&circuits, &genes);
@@ -413,13 +410,9 @@ impl MirLowering {
     }
 
     fn lower_chassis(&self, ch: &HirChassis) -> MirChassis {
-        let species = match ch.host_type.as_str() {
-            "EColi" | "EcoliDH5Alpha" | "EcoliBL21" | "ecoli" => MirSpecies::EColi,
-            "BSubtilis" | "bacillus" => MirSpecies::BSubtilis,
-            "Yeast" | "SCerevisiae" | "yeast" => MirSpecies::SCerevisiae,
-            "Mammalian" | "CHO" | "HEK293" => MirSpecies::Mammalian,
-            other => MirSpecies::Custom(other.to_string()),
-        };
+        let species = classify_species(&ch.host_type)
+            .or_else(|| classify_species(&ch.name))
+            .unwrap_or_else(|| MirSpecies::Custom(ch.host_type.clone()));
 
         let codon_bias = match &species {
             MirSpecies::EColi => CodonBias::EColi,
@@ -441,7 +434,7 @@ impl MirLowering {
             name: ch.name.clone(),
             species,
             growth_rate,
-            atp_capacity: 100.0,
+            atp_capacity: chassis_number(&ch.properties, "atp_capacity").unwrap_or(100.0),
             codon_bias,
         }
     }
@@ -451,12 +444,16 @@ impl MirLowering {
         let mut resources = ResourceMap::default();
 
         // Lower transcription units
-        let transcription_units: Vec<MirTranscriptionUnit> = hir_circuit.transcription_units.iter()
+        let transcription_units: Vec<MirTranscriptionUnit> = hir_circuit
+            .transcription_units
+            .iter()
             .map(|tu| self.lower_tu(tu, &mut ownership, &mut resources))
             .collect();
 
         // Lower regulations
-        let regulations: Vec<MirRegulation> = hir_circuit.regulations.iter()
+        let regulations: Vec<MirRegulation> = hir_circuit
+            .regulations
+            .iter()
             .map(|r| MirRegulation {
                 from: r.regulator.clone(),
                 to: r.target.clone(),
@@ -536,15 +533,20 @@ impl MirLowering {
                     ),
                 });
             } else {
-                ownership.part_owners.insert(part.name.clone(), hir_tu.id.clone());
+                ownership
+                    .part_owners
+                    .insert(part.name.clone(), hir_tu.id.clone());
             }
 
             match part.part_type {
                 HirPartType::Promoter => {
                     promoter = MirPromoter {
                         name: part.name.clone(),
-                        strength: self.default_promoter_strength
-                            .get(&part.name).copied().unwrap_or(0.5),
+                        strength: self
+                            .default_promoter_strength
+                            .get(&part.name)
+                            .copied()
+                            .unwrap_or(0.5),
                         is_regulated: self.is_regulated_promoter(&part.name),
                         regulators: self.get_regulators(&part.name),
                         sequence_length: 35, // Typical promoter length
@@ -554,20 +556,30 @@ impl MirLowering {
                 HirPartType::RBS => {
                     rbs = MirRBS {
                         name: part.name.clone(),
-                        translation_rate: self.default_rbs_rate
-                            .get(&part.name).copied().unwrap_or(0.5),
+                        translation_rate: self
+                            .default_rbs_rate
+                            .get(&part.name)
+                            .copied()
+                            .unwrap_or(0.5),
                         sequence_length: 12,
                     };
                     resources.rbs_count += 1;
                 }
                 HirPartType::CDS | HirPartType::Gene => {
-                    let est_length = self.default_cds_length
-                        .get(&part.name).copied().unwrap_or(750);
-                    let func = self.default_protein_function
-                        .get(&part.name).cloned()
+                    let est_length = self
+                        .default_cds_length
+                        .get(&part.name)
+                        .copied()
+                        .unwrap_or(750);
+                    let func = self
+                        .default_protein_function
+                        .get(&part.name)
+                        .cloned()
                         .unwrap_or(MirProteinFunction::Other(part.name.clone()));
-                    let tox = self.default_toxicity
-                        .get(&part.name).cloned()
+                    let tox = self
+                        .default_toxicity
+                        .get(&part.name)
+                        .cloned()
                         .unwrap_or(MirToxicity::None);
 
                     coding_sequences.push(MirCDS {
@@ -594,7 +606,10 @@ impl MirLowering {
         // Calculate transcript length
         let transcript_length = promoter.sequence_length
             + rbs.sequence_length
-            + coding_sequences.iter().map(|c| c.estimated_length_bp).sum::<usize>()
+            + coding_sequences
+                .iter()
+                .map(|c| c.estimated_length_bp)
+                .sum::<usize>()
             + terminator.as_ref().map(|_| 80).unwrap_or(0);
 
         resources.estimated_construct_size += transcript_length;
@@ -683,7 +698,10 @@ impl MirLowering {
                 }
 
                 // Check shared regulators
-                let shared: Vec<_> = tu1.promoter.regulators.iter()
+                let shared: Vec<_> = tu1
+                    .promoter
+                    .regulators
+                    .iter()
                     .filter(|r| tu2.promoter.regulators.contains(r))
                     .collect();
                 if !shared.is_empty() {
@@ -724,13 +742,17 @@ impl MirLowering {
 
         for tu in &circuit.transcription_units {
             // Transcription cost: ~2 ATP per nucleotide × copies
-            let transcription_cost = (tu.transcript_length as f64) * 2.0
-                * tu.promoter.strength * 100.0; // ~100 transcripts at max
+            let transcription_cost =
+                (tu.transcript_length as f64) * 2.0 * tu.promoter.strength * 100.0; // ~100 transcripts at max
 
             // Translation cost: ~4 ATP per amino acid × copies × translation rate
-            let translation_cost: f64 = tu.coding_sequences.iter()
+            let translation_cost: f64 = tu
+                .coding_sequences
+                .iter()
                 .map(|cds| (cds.estimated_length_aa as f64) * 4.0)
-                .sum::<f64>() * tu.rbs.translation_rate * tu.estimated_expression;
+                .sum::<f64>()
+                * tu.rbs.translation_rate
+                * tu.estimated_expression;
 
             total_atp += transcription_cost + translation_cost;
         }
@@ -806,7 +828,10 @@ impl MirLowering {
             }
 
             // Check metabolic burden
-            if matches!(circuit.estimated_burden.category, BurdenCategory::High | BurdenCategory::Critical) {
+            if matches!(
+                circuit.estimated_burden.category,
+                BurdenCategory::High | BurdenCategory::Critical
+            ) {
                 analysis.warnings.push(MirWarning {
                     code: "MIR_W002".to_string(),
                     message: format!(
@@ -820,6 +845,27 @@ impl MirLowering {
         }
 
         analysis
+    }
+}
+
+/// `atp_capacity` is stored on the chassis declaration. The old lowering
+/// ignored it and always wrote 100.
+fn chassis_number(props: &HashMap<String, HirValue>, key: &str) -> Option<f64> {
+    match props.get(key)? {
+        HirValue::Integer(n) => Some(*n as f64),
+        HirValue::Float(v) => Some(*v),
+        HirValue::ValueWithUnit(v, _) => Some(*v),
+        _ => None,
+    }
+}
+
+fn classify_species(label: &str) -> Option<MirSpecies> {
+    match label {
+        "EColi" | "EcoliDH5Alpha" | "EcoliBL21" | "ecoli" | "e_coli" => Some(MirSpecies::EColi),
+        "BSubtilis" | "bacillus" => Some(MirSpecies::BSubtilis),
+        "Yeast" | "SCerevisiae" | "yeast" => Some(MirSpecies::SCerevisiae),
+        "Mammalian" | "CHO" | "HEK293" => Some(MirSpecies::Mammalian),
+        _ => None,
     }
 }
 

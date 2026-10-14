@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- CI checks exported examples with pySBOL3 and python-libsbml, and Rust tests compile `examples/*.bio`.
 - The browser demo and the shared client tree labels can be shown in English or Spanish. English is the default when the browser or editor language is not Spanish. ES/EN is in the title bar and in Settings, and the saved choice accepts only `en` or `es`.
 - The browser demo states, in the welcome banner and the title bar, that the full professional app is the Windows installer `SynBio-Studio-1.0.0-Windows-x64-Setup.exe` on the latest GitHub release.
 - Web demo renders the SynBio Studio shell on GitHub Pages (`/Synbio-studio/` asset prefix) and runs the in-browser compiler, Gillespie SSA, ODE, FBA, sequence analysis, and export panels from the desktop feature list.
@@ -15,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Pages shell now includes the walkthrough screens from both tour reels: workspace tasks, Nueva Variante, guided CDS/Bugi flows, the variant node editor, Lab Run Center, ELN, materiales, Design Hub, Atlas Transdermal, microplates, and schematic Three.js models of E. coli BL21(DE3) and S. cerevisiae S288C.
 
 ### Fixed
+- SBOL3 export from the web demo and the Rust compiler uses absolute namespace URIs, DNA type SBO:0000251, SO roles, sequences, SubComponents, and precedes constraints so pySBOL3 1.2 reports no errors.
+- SBML L3V2 species references include `constant`, and transcription encodes Hill repression for a TetR inverter and IPTG activation for a pLac GFP cassette.
+- The BioScript lexer no longer panics on multi-byte characters in comments, and `synbio-lsp --compile-full` parses the repository examples. Chassis `atp_capacity` is read from the declaration instead of a hardcoded 100.
 - GitHub Pages no longer replaces the studio with a blank client-error screen when WebGL cannot be created. 3D views show a fallback, and a panel error stays inside the shell.
 - Restored the BioScript compiler module (`parseCircuits` and `SEQUENCE_DB`) so headless unit tests and assembly/protocol tools can resolve circuits and registry parts.
 - Headless `npm test` / `test:ci` no longer loads the VS Code end-to-end suite. Run that suite with `npm run test:e2e` inside the client package.

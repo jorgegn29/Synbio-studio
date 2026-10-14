@@ -793,50 +793,121 @@ export function compile(source: string): CompilerResult {
 
 // ─── SBOL 3.0 Export ─────────────────────────────────────────
 
+const SBOL_NAMESPACE = 'https://synbio.studio/sbol';
+const SBO_DNA = 'https://identifiers.org/SBO:0000251';
+const IUPAC_DNA = 'https://identifiers.org/edam:format_1207';
+
+function sbolDisplayId(raw: string): string {
+  const cleaned = raw.replace(/[^A-Za-z0-9_]/g, '_').replace(/^_+/, '');
+  const body = cleaned || 'part';
+  return /^[0-9]/.test(body) ? `p_${body}` : body;
+}
+
+function xmlText(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function dnaElements(sequence: string): string {
+  return sequence.toUpperCase().replace(/[^ACGT]/g, '');
+}
+
+/** Absolute SO role URI for an SBOL component. */
+function soRole(type: string): string {
+  const map: Record<string, string> = {
+    promoter: 'https://identifiers.org/SO:0000167',
+    rbs: 'https://identifiers.org/SO:0000139',
+    cds: 'https://identifiers.org/SO:0000316',
+    terminator: 'https://identifiers.org/SO:0000141',
+    reporter: 'https://identifiers.org/SO:0000316',
+    gene: 'https://identifiers.org/SO:0000704',
+  };
+  return map[type] || 'https://identifiers.org/SO:0000110';
+}
+
+/**
+ * SBOL 3 document that pySBOL3 1.2 accepts: absolute identities, hasNamespace,
+ * DNA type SBO:0000251, SO roles, sequences, SubComponents and precedes constraints.
+ */
 export function exportSBOL(circuit: Circuit): string {
   const parts = circuit.transcriptionUnits.flatMap(tu => tu.parts);
-  const partsXml = parts.map((p, i) => `
-    <sbol:Component rdf:about="${circuit.name}/${p.name}">
-      <sbol:displayId>${p.name}</sbol:displayId>
-      <sbol:name>${p.name}</sbol:name>
-      <sbol:type rdf:resource="http://www.biopax.org/release/biopax-level3.owl#DnaRegion"/>
-      <sbol:role rdf:resource="http://identifiers.org/so/${getSOUri(p.type)}"/>
-      <sbol:hasSequence rdf:resource="${circuit.name}/${p.name}/sequence"/>
-    </sbol:Component>`).join('\n');
+  const defined = new Set<string>();
+  const definitions: string[] = [];
+  const features: { id: string; of: string }[] = [];
+
+  parts.forEach((part, index) => {
+    const display = sbolDisplayId(part.name);
+    const sequence = dnaElements(part.sequence || PART_SEQUENCES[part.name] || '');
+    if (!defined.has(display)) {
+      defined.add(display);
+      const sequenceId = `seq_${display}`;
+      const sequenceBlock = sequence
+        ? `
+  <rdf:Description rdf:about="${SBOL_NAMESPACE}/${sequenceId}">
+    <sbol:displayId>${sequenceId}</sbol:displayId>
+    <rdf:type rdf:resource="http://sbols.org/v3#Sequence"/>
+    <sbol:hasNamespace rdf:resource="${SBOL_NAMESPACE}"/>
+    <sbol:elements>${xmlText(sequence)}</sbol:elements>
+    <sbol:encoding rdf:resource="${IUPAC_DNA}"/>
+  </rdf:Description>`
+        : '';
+      definitions.push(`
+  <rdf:Description rdf:about="${SBOL_NAMESPACE}/${display}">
+    <sbol:displayId>${display}</sbol:displayId>
+    <rdf:type rdf:resource="http://sbols.org/v3#Component"/>
+    <sbol:hasNamespace rdf:resource="${SBOL_NAMESPACE}"/>
+    <sbol:type rdf:resource="${SBO_DNA}"/>
+    <sbol:role rdf:resource="${soRole(part.type)}"/>${sequence ? `
+    <sbol:hasSequence rdf:resource="${SBOL_NAMESPACE}/${sequenceId}"/>` : ''}
+  </rdf:Description>${sequenceBlock}`);
+    }
+    features.push({ id: `${display}_inst${index}`, of: display });
+  });
+
+  let parentId = sbolDisplayId(circuit.name || 'circuit');
+  if (defined.has(parentId)) parentId = `${parentId}_circuit`;
+
+  const featureLinks = features
+    .map(feature => `    <sbol:hasFeature rdf:resource="${SBOL_NAMESPACE}/${parentId}/${feature.id}"/>`)
+    .join('\n');
+  const featureBlocks = features.map(feature => `
+  <rdf:Description rdf:about="${SBOL_NAMESPACE}/${parentId}/${feature.id}">
+    <sbol:displayId>${feature.id}</sbol:displayId>
+    <rdf:type rdf:resource="http://sbols.org/v3#SubComponent"/>
+    <sbol:instanceOf rdf:resource="${SBOL_NAMESPACE}/${feature.of}"/>
+  </rdf:Description>`).join('');
+
+  const constraintLinks: string[] = [];
+  const constraintBlocks: string[] = [];
+  for (let i = 0; i + 1 < features.length; i++) {
+    const id = `order_${i}`;
+    constraintLinks.push(`    <sbol:hasConstraint rdf:resource="${SBOL_NAMESPACE}/${parentId}/${id}"/>`);
+    constraintBlocks.push(`
+  <rdf:Description rdf:about="${SBOL_NAMESPACE}/${parentId}/${id}">
+    <sbol:displayId>${id}</sbol:displayId>
+    <rdf:type rdf:resource="http://sbols.org/v3#Constraint"/>
+    <sbol:restriction rdf:resource="http://sbols.org/v3#precedes"/>
+    <sbol:subject rdf:resource="${SBOL_NAMESPACE}/${parentId}/${features[i].id}"/>
+    <sbol:object rdf:resource="${SBOL_NAMESPACE}/${parentId}/${features[i + 1].id}"/>
+  </rdf:Description>`);
+  }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-         xmlns:sbol="http://sbols.org/v3#"
-         xmlns:dcterms="http://purl.org/dc/terms/"
-         xmlns:prov="http://www.w3.org/ns/prov#">
-
-  <!-- Generated by SynBio-LLVM Web Demo -->
-  <!-- Circuit: ${circuit.name} -->
-  <!-- Parts: ${circuit.partCount} -->
-  <!-- Host: ${circuit.chassisOrganism || 'E. coli K-12'} -->
-
-  <sbol:Component rdf:about="${circuit.name}">
-    <sbol:displayId>${circuit.name}</sbol:displayId>
-    <sbol:name>${circuit.name}</sbol:name>
-    <dcterms:description>Genetic circuit designed with SynBio-LLVM</dcterms:description>
-    <sbol:type rdf:resource="http://www.biopax.org/release/biopax-level3.owl#DnaRegion"/>
-    <sbol:role rdf:resource="http://identifiers.org/so/SO:0000804"/>
-  </sbol:Component>
-${partsXml}
-
-</rdf:RDF>`;
-}
-
-function getSOUri(type: string): string {
-  const map: Record<string, string> = {
-    promoter: 'SO:0000167',
-    rbs: 'SO:0000139',
-    cds: 'SO:0000316',
-    terminator: 'SO:0000141',
-    reporter: 'SO:0000316',
-    gene: 'SO:0000704',
-  };
-  return map[type] || 'SO:0000110';
+         xmlns:sbol="http://sbols.org/v3#">
+  <rdf:Description rdf:about="${SBOL_NAMESPACE}/${parentId}">
+    <sbol:displayId>${parentId}</sbol:displayId>
+    <rdf:type rdf:resource="http://sbols.org/v3#Component"/>
+    <sbol:hasNamespace rdf:resource="${SBOL_NAMESPACE}"/>
+    <sbol:type rdf:resource="${SBO_DNA}"/>
+    <sbol:role rdf:resource="https://identifiers.org/SO:0000804"/>
+${featureLinks}
+${constraintLinks.join('\n')}
+  </rdf:Description>
+${featureBlocks}
+${constraintBlocks.join('')}
+${definitions.join('\n')}
+</rdf:RDF>
+`;
 }
 
 // ─── FASTA Export ────────────────────────────────────────────

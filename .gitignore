@@ -10,6 +10,7 @@ out/
 # Rust
 target/
 Cargo.lock
+!server/Cargo.lock
 
 # WebAssembly
 *.wasm
