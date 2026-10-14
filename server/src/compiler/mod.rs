@@ -695,18 +695,28 @@ mod tests {
         assert!(message.contains("ATP"), "{message}");
     }
 
+    fn python_with_validators() -> Option<&'static str> {
+        for bin in ["python3", "python"] {
+            let ok = std::process::Command::new(bin)
+                .args(["-c", "import sbol3, libsbml"])
+                .status()
+                .map(|status| status.success())
+                .unwrap_or(false);
+            if ok {
+                return Some(bin);
+            }
+        }
+        None
+    }
+
     #[test]
     fn exports_validate_with_pysbol_and_libsbml() {
-        let py = std::process::Command::new("python3")
-            .args(["-c", "import sbol3, libsbml"])
-            .status();
-        let available = py.map(|status| status.success()).unwrap_or(false);
-        if !available {
+        let Some(python) = python_with_validators() else {
             if std::env::var("CI").is_ok() {
-                panic!("pySBOL3 and python-libsbml must be installed in CI");
+                panic!("pySBOL3 and python-libsbml must be installed for python3 or python in CI");
             }
             return;
-        }
+        };
 
         let compiler = Compiler::new(CompilerConfig::default());
         let cases = [
@@ -748,7 +758,7 @@ mod tests {
 
         let script =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../scripts/validate_exports.py");
-        let status = std::process::Command::new("python3")
+        let status = std::process::Command::new(python)
             .arg(&script)
             .arg(&dir)
             .status()

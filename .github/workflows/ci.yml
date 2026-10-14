@@ -109,8 +109,13 @@ jobs:
         run: cd server && cargo build --release
 
       - name: Install SBOL and SBML validators
-        if: runner.os == 'Linux'
-        run: python -m pip install 'sbol3==1.2' python-libsbml
+        shell: bash
+        run: |
+          if command -v python3 >/dev/null 2>&1; then PY=python3; else PY=python; fi
+          "$PY" -m pip install 'sbol3==1.2' python-libsbml \
+            || "$PY" -m pip install --user 'sbol3==1.2' python-libsbml \
+            || "$PY" -m pip install --break-system-packages 'sbol3==1.2' python-libsbml
+          "$PY" -c 'import sbol3, libsbml'
 
       - name: Run tests
         run: cd server && cargo test
