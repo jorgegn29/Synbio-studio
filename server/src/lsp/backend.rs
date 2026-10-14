@@ -261,14 +261,14 @@ impl LanguageServer for BioScriptBackend {
             },
             server_info: Some(ServerInfo {
                 name: "SynBio-LLVM Language Server".to_string(),
-                version: Some("0.2.0".to_string()),
+                version: Some("1.0.1".to_string()),
             }),
         })
     }
 
     async fn initialized(&self, _: InitializedParams) {
         self.client
-            .log_message(MessageType::INFO, "🧬 SynBio-LLVM LSP v0.2.0 inicializado — Parser real + Diagnósticos biológicos activos")
+            .log_message(MessageType::INFO, "🧬 SynBio-LLVM LSP v1.0.1 inicializado — Parser real + Diagnósticos biológicos activos")
             .await;
     }
 

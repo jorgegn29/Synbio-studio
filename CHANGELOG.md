@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-14
+
+### Changed
+- Repository licensing is AGPL-3.0-only (#6).
+
+### Fixed
+- SBOL3 and SBML export validation (#7). SBOL uses absolute namespace URIs, DNA type SBO:0000251, SO roles, sequences, and precedes constraints. SBML species references include `constant`, and transcription encodes Hill repression for a TetR inverter and IPTG activation for a pLac GFP cassette. Repository examples compile, and chassis `atp_capacity` is read from the declaration.
+- SBML kinetics are consistent substance/time rates with declared units (#8). Every concentration-based law is multiplied by the compartment volume, models declare mole, second, and litre, and the lexer accepts the degree sign so `examples/DEMO-complete-circuit.bioscript` compiles.
+
 ### Added
 - CI checks exported examples with pySBOL3 and python-libsbml, and Rust tests compile `examples/*.bio`.
 - The browser demo and the shared client tree labels can be shown in English or Spanish. English is the default when the browser or editor language is not Spanish. ES/EN is in the title bar and in Settings, and the saved choice accepts only `en` or `es`.
@@ -16,10 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Pages shell now includes the walkthrough screens from both tour reels: workspace tasks, Nueva Variante, guided CDS/Bugi flows, the variant node editor, Lab Run Center, ELN, materiales, Design Hub, Atlas Transdermal, microplates, and schematic Three.js models of E. coli BL21(DE3) and S. cerevisiae S288C.
 
 ### Fixed
-- SBML export from the web demo and the Rust compiler scales every concentration-based rate by the compartment volume, so transcription, translation, and degradation are all substance/time. Models declare mole, second, and litre units that pass libSBML unit checks. The lexer accepts `°C`, and `examples/DEMO-complete-circuit.bioscript` compiles.
-- SBOL3 export from the web demo and the Rust compiler uses absolute namespace URIs, DNA type SBO:0000251, SO roles, sequences, SubComponents, and precedes constraints so pySBOL3 1.2 reports no errors.
-- SBML L3V2 species references include `constant`, and transcription encodes Hill repression for a TetR inverter and IPTG activation for a pLac GFP cassette.
-- The BioScript lexer no longer panics on multi-byte characters in comments, and `synbio-lsp --compile-full` parses the repository examples. Chassis `atp_capacity` is read from the declaration instead of a hardcoded 100.
 - GitHub Pages no longer replaces the studio with a blank client-error screen when WebGL cannot be created. 3D views show a fallback, and a panel error stays inside the shell.
 - Restored the BioScript compiler module (`parseCircuits` and `SEQUENCE_DB`) so headless unit tests and assembly/protocol tools can resolve circuits and registry parts.
 - Headless `npm test` / `test:ci` no longer loads the VS Code end-to-end suite. Run that suite with `npm run test:e2e` inside the client package.
@@ -187,5 +192,6 @@ Complete IDE for synthetic biology with 8 phases of development.
 - **3 languages**: Rust (7,333 LOC), TypeScript (15,730 LOC), Python (406 LOC)
 - **Build outputs**: extension.js (1.34 MB), synbio-lsp.exe (2.85 MB)
 
+[1.0.1]: https://github.com/jorgegn29/Synbio-studio/releases/tag/v1.0.1
 [0.2.0]: https://github.com/synbio-llvm/synbio-llvm/releases/tag/v0.2.0
 [0.1.0]: https://github.com/synbio-llvm/synbio-llvm/releases/tag/v0.1.0

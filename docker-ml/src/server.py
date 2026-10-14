@@ -11,7 +11,7 @@ import numpy as np
 app = FastAPI(
     title="SynBio-LLVM ML Engine",
     description="Motor de inferencia para predicción de estructuras moleculares",
-    version="0.1.0"
+    version="1.0.1"
 )
 
 # ===== Modelos de datos =====
@@ -51,7 +51,7 @@ async def root():
     return {
         "service": "SynBio-LLVM ML Engine",
         "status": "running",
-        "version": "0.1.0"
+        "version": "1.0.1"
     }
 
 @app.get("/health")

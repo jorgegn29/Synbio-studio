@@ -1,6 +1,6 @@
 {
   "name": "synbio-llvm-demo",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Interactive web demo for SynBio-LLVM — Compile genetic circuits in your browser",
   "scripts": {

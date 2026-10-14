@@ -2,7 +2,7 @@
   "name": "synbio-llvm-client",
   "displayName": "SynBio-LLVM",
   "description": "Compilador de circuitos genéticos para VS Code",
-  "version": "0.2.0",
+  "version": "1.0.1",
   "publisher": "synbio-llvm",
   "license": "AGPL-3.0-only",
   "engines": {
