@@ -5,7 +5,7 @@
 ### **The TypeScript for Biology**  
 *Design, compile and simulate genetic circuits with type safety and real-time validation*
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/synbio-llvm/ci.yml?branch=main)](https://github.com/YOUR_USERNAME/synbio-llvm/actions)
 [![VS Code](https://img.shields.io/badge/VS_Code-Extension-007ACC?logo=visual-studio-code)](vscode-extension/)
 [![Powered by Rust](https://img.shields.io/badge/Powered_by-Rust-orange?logo=rust)](synbio-lsp/)
@@ -346,7 +346,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 📄 License
 
-MIT License — see [LICENSE](LICENSE) for details.
+GNU AGPL-3.0 — see [LICENSE](LICENSE) for details.
 
 **Note:** Commercial use requires compliance with biosafety regulations in your jurisdiction (BSL1-4).
 

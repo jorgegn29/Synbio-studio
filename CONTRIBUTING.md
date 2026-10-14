@@ -290,7 +290,7 @@ All contributors are recognized in our [CONTRIBUTORS.md](CONTRIBUTORS.md) file. 
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+By contributing, you agree that your contributions will be licensed under the [GNU AGPL-3.0](LICENSE).
 
 ---
 

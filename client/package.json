@@ -4,7 +4,7 @@
   "description": "Compilador de circuitos genéticos para VS Code",
   "version": "0.2.0",
   "publisher": "synbio-llvm",
-  "license": "AGPL-3.0",
+  "license": "AGPL-3.0-only",
   "engines": {
     "vscode": "^1.85.0"
   },

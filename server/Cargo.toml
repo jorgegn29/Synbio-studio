@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["SynBio-LLVM Team"]
 description = "Language Server Protocol para BioScript - Compilador de Sistemas Genéticos"
-license = "MIT"
+license = "AGPL-3.0-only"
 repository = "https://github.com/synbio-llvm/synbio-llvm"
 
 [dependencies]

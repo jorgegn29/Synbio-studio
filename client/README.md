@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/VS%20Code-1.85+-58a6ff?style=flat-square&logo=visualstudiocode" />
   <img src="https://img.shields.io/badge/Rust-LSP%20Server-f85149?style=flat-square&logo=rust" />
   <img src="https://img.shields.io/badge/TypeScript-Extension-3178c6?style=flat-square&logo=typescript" />
-  <img src="https://img.shields.io/badge/license-MIT-d29922?style=flat-square" />
+  <img src="https://img.shields.io/badge/license-AGPL--3.0-d29922?style=flat-square" />
   <img src="https://img.shields.io/badge/commands-124-bc8cff?style=flat-square" />
   <img src="https://img.shields.io/badge/phases-18-f0883e?style=flat-square" />
 </p>
@@ -192,7 +192,7 @@ SynBio-LLVM-Proyecto/
 
 ## 📝 Licencia
 
-MIT — Libre para uso académico, investigación e industria.
+AGPL-3.0 — Libre para uso académico, investigación e industria.
 
 ---
 
