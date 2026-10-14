@@ -16,6 +16,16 @@
 // ============================================================================
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { extensionLang, translate, type Lang } from './locale';
+
+function uiLang(): Lang {
+  try {
+    const configured = vscode.workspace.getConfiguration('synbio').get('uiLanguage', 'auto');
+    return extensionLang(vscode.env.language, configured);
+  } catch {
+    return 'es';
+  }
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Tree Item — icon/color contextual
@@ -27,14 +37,17 @@ export class SynBioTreeItem extends vscode.TreeItem {
         public readonly itemType: string,
         public readonly meta?: Record<string, any>
     ) {
-        super(label, collapsibleState);
+        const lang = uiLang();
+        const shown = translate(label, lang);
+        super(shown, collapsibleState);
+        this.label = shown;
         this.contextValue = itemType;
         this.iconPath = this.getIcon();
         if (meta?.command) {
-            this.command = { command: meta.command, title: label, arguments: meta.args || [] };
+            this.command = { command: meta.command, title: shown, arguments: meta.args || [] };
         }
-        if (meta?.description) { this.description = meta.description; }
-        if (meta?.tooltip) { this.tooltip = new vscode.MarkdownString(meta.tooltip); }
+        if (meta?.description) { this.description = translate(String(meta.description), lang); }
+        if (meta?.tooltip) { this.tooltip = new vscode.MarkdownString(translate(String(meta.tooltip), lang)); }
     }
 
     private getIcon(): vscode.ThemeIcon {
