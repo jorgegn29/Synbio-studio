@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Pages shell now includes the walkthrough screens from both tour reels: workspace tasks, Nueva Variante, guided CDS/Bugi flows, the variant node editor, Lab Run Center, ELN, materiales, Design Hub, Atlas Transdermal, microplates, and schematic Three.js models of E. coli BL21(DE3) and S. cerevisiae S288C.
 
 ### Fixed
+- SBML export from the web demo and the Rust compiler scales every concentration-based rate by the compartment volume, so transcription, translation, and degradation are all substance/time. Models declare mole, second, and litre units that pass libSBML unit checks. The lexer accepts `°C`, and `examples/DEMO-complete-circuit.bioscript` compiles.
 - SBOL3 export from the web demo and the Rust compiler uses absolute namespace URIs, DNA type SBO:0000251, SO roles, sequences, SubComponents, and precedes constraints so pySBOL3 1.2 reports no errors.
 - SBML L3V2 species references include `constant`, and transcription encodes Hill repression for a TetR inverter and IPTG activation for a pLac GFP cassette.
 - The BioScript lexer no longer panics on multi-byte characters in comments, and `synbio-lsp --compile-full` parses the repository examples. Chassis `atp_capacity` is read from the declaration instead of a hardcoded 100.

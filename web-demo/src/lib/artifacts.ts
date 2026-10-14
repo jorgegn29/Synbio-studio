@@ -215,20 +215,59 @@ function transcriptionLaw(circuit: Circuit, tu: TranscriptionUnit): Transcriptio
   return { kind: 'constitutive' };
 }
 
-function hillMath(kind: 'repress' | 'activate', rate: string, signal: string): string {
-  const numerator = kind === 'repress'
-    ? '<apply><power/><ci>K_hill</ci><cn type="integer">2</cn></apply>'
-    : `<apply><power/><ci>${signal}</ci><cn type="integer">2</cn></apply>`;
-  return `<apply><times/><ci>${rate}</ci><ci>cell</ci><apply><divide/>${numerator}<apply><plus/><apply><power/><ci>K_hill</ci><cn type="integer">2</cn></apply><apply><power/><ci>${signal}</ci><cn type="integer">2</cn></apply></apply></apply></apply>`;
+const MATH_NS = 'xmlns="http://www.w3.org/1998/Math/MathML" xmlns:sbml="http://www.sbml.org/sbml/level3/version2/core"';
+
+/** Dimensionless Hill exponent. SBML L3 requires units on every cn. */
+function hillExponent(): string {
+  return '<cn type="integer" sbml:units="dimensionless">2</cn>';
 }
+
+function hillMath(kind: 'repress' | 'activate', rate: string, signal: string): string {
+  const exponent = hillExponent();
+  const kPow = `<apply><power/><ci>K_hill</ci>${exponent}</apply>`;
+  const sPow = `<apply><power/><ci>${signal}</ci>${exponent}</apply>`;
+  const numerator = kind === 'repress' ? kPow : sPow;
+  // k_txn is mole/litre/second; cell is litre; the Hill term is dimensionless.
+  return `<apply><times/><ci>${rate}</ci><ci>cell</ci><apply><divide/>${numerator}<apply><plus/>${kPow}${sPow}</apply></apply></apply>`;
+}
+
+/** Concentration-based mass action, scaled by compartment volume to substance/time. */
+function scaledMassAction(rate: string, species: string): string {
+  return `<apply><times/><ci>${rate}</ci><ci>${species}</ci><ci>cell</ci></apply>`;
+}
+
+function speciesEl(id: string, boundary: boolean): string {
+  return `      <species id="${id}" compartment="cell" initialAmount="0" substanceUnits="mole" hasOnlySubstanceUnits="false" boundaryCondition="${boundary}" constant="false"/>`;
+}
+
+const UNIT_DEFINITIONS = `    <listOfUnitDefinitions>
+      <unitDefinition id="per_second">
+        <listOfUnits>
+          <unit kind="second" exponent="-1" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+      <unitDefinition id="mole_per_litre">
+        <listOfUnits>
+          <unit kind="mole" exponent="1" scale="0" multiplier="1"/>
+          <unit kind="litre" exponent="-1" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+      <unitDefinition id="mole_per_litre_per_second">
+        <listOfUnits>
+          <unit kind="mole" exponent="1" scale="0" multiplier="1"/>
+          <unit kind="litre" exponent="-1" scale="0" multiplier="1"/>
+          <unit kind="second" exponent="-1" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+    </listOfUnitDefinitions>`;
 
 export function generateSbml(circuit: Circuit): string {
   const model = ident(circuit.name || 'circuit');
   const species: string[] = [];
   const parameters = [
-    '      <parameter id="k_mRNA_deg" value="0.0023" constant="true"/>',
-    '      <parameter id="k_prot_deg" value="0.00019" constant="true"/>',
-    '      <parameter id="K_hill" value="10" constant="true"/>',
+    '      <parameter id="k_mRNA_deg" name="mRNA degradation rate" value="0.0023" units="per_second" constant="true"/>',
+    '      <parameter id="k_prot_deg" name="Protein degradation rate" value="0.00019" units="per_second" constant="true"/>',
+    '      <parameter id="K_hill" name="Hill threshold" value="10" units="mole_per_litre" constant="true"/>',
   ];
   const reactions: string[] = [];
   const signals = new Set<string>();
@@ -238,10 +277,10 @@ export function generateSbml(circuit: Circuit): string {
     const txn = partOf(tu, 'promoter')?.strength ?? 0.5;
     const tln = partOf(tu, 'rbs')?.strength ?? 0.5;
     const law = transcriptionLaw(circuit, tu);
-    species.push(`      <species id="mRNA_${id}" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>`);
-    species.push(`      <species id="protein_${id}" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>`);
-    parameters.push(`      <parameter id="k_txn_${id}" value="${txn.toFixed(6)}" constant="true"/>`);
-    parameters.push(`      <parameter id="k_tln_${id}" value="${tln.toFixed(6)}" constant="true"/>`);
+    species.push(speciesEl(`mRNA_${id}`, false));
+    species.push(speciesEl(`protein_${id}`, false));
+    parameters.push(`      <parameter id="k_txn_${id}" value="${txn.toFixed(6)}" units="mole_per_litre_per_second" constant="true"/>`);
+    parameters.push(`      <parameter id="k_tln_${id}" value="${tln.toFixed(6)}" units="per_second" constant="true"/>`);
     const txnMath = law.kind === 'constitutive'
       ? `<apply><times/><ci>k_txn_${id}</ci><ci>cell</ci></apply>`
       : hillMath(law.kind, `k_txn_${id}`, law.species);
@@ -249,31 +288,33 @@ export function generateSbml(circuit: Circuit): string {
     const modifiers = law.kind === 'constitutive'
       ? ''
       : `<listOfModifiers><modifierSpeciesReference species="${law.species}"/></listOfModifiers>`;
-    reactions.push(`      <reaction id="txn_${id}" reversible="false"><listOfProducts>${ref(`mRNA_${id}`)}</listOfProducts>${modifiers}<kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML">${txnMath}</math></kineticLaw></reaction>`);
-    reactions.push(`      <reaction id="tln_${id}" reversible="false"><listOfReactants>${ref(`mRNA_${id}`)}</listOfReactants><listOfProducts>${ref(`mRNA_${id}`)}${ref(`protein_${id}`)}</listOfProducts><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k_tln_${id}</ci><ci>mRNA_${id}</ci></apply></math></kineticLaw></reaction>`);
-    reactions.push(`      <reaction id="mrna_deg_${id}" reversible="false"><listOfReactants>${ref(`mRNA_${id}`)}</listOfReactants><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k_mRNA_deg</ci><ci>mRNA_${id}</ci></apply></math></kineticLaw></reaction>`);
-    reactions.push(`      <reaction id="prot_deg_${id}" reversible="false"><listOfReactants>${ref(`protein_${id}`)}</listOfReactants><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><times/><ci>k_prot_deg</ci><ci>protein_${id}</ci></apply></math></kineticLaw></reaction>`);
+    const math = (body: string) => `<kineticLaw><math ${MATH_NS}>${body}</math></kineticLaw>`;
+    reactions.push(`      <reaction id="txn_${id}" reversible="false"><listOfProducts>${ref(`mRNA_${id}`)}</listOfProducts>${modifiers}${math(txnMath)}</reaction>`);
+    reactions.push(`      <reaction id="tln_${id}" reversible="false"><listOfReactants>${ref(`mRNA_${id}`)}</listOfReactants><listOfProducts>${ref(`mRNA_${id}`)}${ref(`protein_${id}`)}</listOfProducts>${math(scaledMassAction(`k_tln_${id}`, `mRNA_${id}`))}</reaction>`);
+    reactions.push(`      <reaction id="mrna_deg_${id}" reversible="false"><listOfReactants>${ref(`mRNA_${id}`)}</listOfReactants>${math(scaledMassAction('k_mRNA_deg', `mRNA_${id}`))}</reaction>`);
+    reactions.push(`      <reaction id="prot_deg_${id}" reversible="false"><listOfReactants>${ref(`protein_${id}`)}</listOfReactants>${math(scaledMassAction('k_prot_deg', `protein_${id}`))}</reaction>`);
   });
   for (const signal of signals) {
-    species.push(`      <species id="${signal}" compartment="cell" initialAmount="0" hasOnlySubstanceUnits="false" boundaryCondition="true" constant="false"/>`);
+    species.push(speciesEl(signal, true));
   }
   const stepped = [...signals].filter(id => id === 'input' || id === 'IPTG');
   const events = stepped.length === 0 ? '' : `
     <listOfEvents>
       <event id="step_signal" useValuesFromTriggerTime="true">
         <trigger initialValue="false" persistent="true">
-          <math xmlns="http://www.w3.org/1998/Math/MathML"><apply><gt/><csymbol encoding="text" definitionURL="http://www.sbml.org/sbml/symbols/time">time</csymbol><cn>300</cn></apply></math>
+          <math ${MATH_NS}><apply><gt/><csymbol encoding="text" definitionURL="http://www.sbml.org/sbml/symbols/time">time</csymbol><cn type="real" sbml:units="second">300</cn></apply></math>
         </trigger>
         <listOfEventAssignments>
-${stepped.map(id => `          <eventAssignment variable="${id}"><math xmlns="http://www.w3.org/1998/Math/MathML"><cn>100</cn></math></eventAssignment>`).join('\n')}
+${stepped.map(id => `          <eventAssignment variable="${id}"><math ${MATH_NS}><cn type="real" sbml:units="mole_per_litre">100</cn></math></eventAssignment>`).join('\n')}
         </listOfEventAssignments>
       </event>
     </listOfEvents>`;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" level="3" version="2">
-  <model id="${model}" name="${circuit.name}">
+  <model id="${model}" name="${circuit.name}" substanceUnits="mole" timeUnits="second" volumeUnits="litre" extentUnits="mole">
+${UNIT_DEFINITIONS}
     <listOfCompartments>
-      <compartment id="cell" spatialDimensions="3" size="1e-15" constant="true"/>
+      <compartment id="cell" spatialDimensions="3" size="1e-15" units="litre" constant="true"/>
     </listOfCompartments>
     <listOfSpecies>
 ${species.join('\n')}

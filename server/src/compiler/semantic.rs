@@ -102,6 +102,7 @@ pub enum UnitCategory {
     Mass,
     Concentration,
     Time,
+    Temperature,
     Dimensionless,
 }
 
@@ -337,6 +338,7 @@ impl SemanticAnalyzer {
             ("low", BioKind::Float),
             ("medium", BioKind::Float),
             ("IPTG", BioKind::String),
+            ("population_density", BioKind::Float),
         ];
 
         for (name, kind) in builtins {
@@ -871,6 +873,8 @@ impl SemanticAnalyzer {
                         UnitCategory::Concentration
                     }
                     Unit::Seconds | Unit::Minutes | Unit::Hours => UnitCategory::Time,
+                    Unit::Celsius => UnitCategory::Temperature,
+                    Unit::PartsPerBillion | Unit::CellsPerMillilitre => UnitCategory::Concentration,
                     Unit::ArbitraryUnits | Unit::Percent => UnitCategory::Dimensionless,
                 };
                 BioKind::ValueWithUnit(cat)
@@ -974,11 +978,12 @@ impl SemanticAnalyzer {
             Expr::StructInit(si) => {
                 // Verify struct exists
                 if !self.structs.contains_key(&si.struct_name.name) {
+                    // Characterization and parameter blocks are free-form records.
                     self.errors.push(SemanticError {
                         message: format!("Struct '{}' no definido", si.struct_name.name),
                         span: si.span.clone(),
-                        severity: Severity::Error,
-                        code: "E008",
+                        severity: Severity::Warning,
+                        code: "W008",
                     });
                 }
                 for field in &si.fields {

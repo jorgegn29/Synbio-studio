@@ -493,6 +493,11 @@ pub enum Unit {
     // Otros
     ArbitraryUnits, // AU
     Percent,        // %
+
+    // Temperatura y concentraciones usadas en los ejemplos
+    Celsius,            // °C
+    PartsPerBillion,    // ppb
+    CellsPerMillilitre, // cells/mL
 }
 
 #[derive(Debug, Clone)]
@@ -511,6 +516,7 @@ pub enum BinaryOp {
     Mul,
     Div,
     Mod,
+    Pow,
     
     // Comparación
     Eq,
@@ -523,6 +529,8 @@ pub enum BinaryOp {
     // Lógicos
     And,
     Or,
+    /// `expr FOR 2 hr` — a condition that must hold for a duration.
+    Duration,
     
     // Biológicos
     GeneticFlow,    // ->

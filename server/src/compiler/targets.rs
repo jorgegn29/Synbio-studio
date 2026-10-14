@@ -212,13 +212,14 @@ impl SbmlGenerator {
         xml.push_str("<sbml xmlns=\"http://www.sbml.org/sbml/level3/version2/core\"\n");
         xml.push_str("      level=\"3\" version=\"2\">\n");
         xml.push_str(&format!(
-            "  <model id=\"{}\" name=\"{} - BioScript Model\">\n",
+            "  <model id=\"{}\" name=\"{} - BioScript Model\" substanceUnits=\"mole\" timeUnits=\"second\" volumeUnits=\"litre\" extentUnits=\"mole\">\n",
             Self::sanitize_id(&program.name),
             Self::xml_escape(&program.name)
         ));
 
+        xml.push_str(Self::unit_definitions());
         xml.push_str("    <listOfCompartments>\n");
-        xml.push_str("      <compartment id=\"cell\" name=\"Cell\" spatialDimensions=\"3\" size=\"1e-15\" constant=\"true\"/>\n");
+        xml.push_str("      <compartment id=\"cell\" name=\"Cell\" spatialDimensions=\"3\" size=\"1e-15\" units=\"litre\" constant=\"true\"/>\n");
         xml.push_str("    </listOfCompartments>\n\n");
 
         xml.push_str("    <listOfSpecies>\n");
@@ -226,10 +227,10 @@ impl SbmlGenerator {
             for tu in &circuit.transcription_units {
                 let tu_id = Self::sanitize_id(&tu.name);
                 xml.push_str(&format!(
-                    "      <species id=\"mRNA_{}\" name=\"mRNA {}\" compartment=\"cell\" initialAmount=\"0\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"false\" constant=\"false\"/>\n",
+                    "      <species id=\"mRNA_{}\" name=\"mRNA {}\" compartment=\"cell\" initialAmount=\"0\" substanceUnits=\"mole\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"false\" constant=\"false\"/>\n",
                     tu_id, Self::xml_escape(&tu.cds.name)));
                 xml.push_str(&format!(
-                    "      <species id=\"protein_{}\" name=\"Protein {}\" compartment=\"cell\" initialAmount=\"0\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"false\" constant=\"false\"/>\n",
+                    "      <species id=\"protein_{}\" name=\"Protein {}\" compartment=\"cell\" initialAmount=\"0\" substanceUnits=\"mole\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"false\" constant=\"false\"/>\n",
                     tu_id, Self::xml_escape(&tu.cds.name)));
             }
             for tu in &circuit.transcription_units {
@@ -242,22 +243,22 @@ impl SbmlGenerator {
         }
         for signal in &signals {
             xml.push_str(&format!(
-                "      <species id=\"{signal}\" compartment=\"cell\" initialAmount=\"0\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"true\" constant=\"false\"/>\n"));
+                "      <species id=\"{signal}\" compartment=\"cell\" initialAmount=\"0\" substanceUnits=\"mole\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"true\" constant=\"false\"/>\n"));
         }
         xml.push_str("    </listOfSpecies>\n\n");
 
         xml.push_str("    <listOfParameters>\n");
-        xml.push_str("      <parameter id=\"k_mRNA_deg\" name=\"mRNA degradation rate\" value=\"0.0023\" constant=\"true\"/>\n");
-        xml.push_str("      <parameter id=\"k_prot_deg\" name=\"Protein degradation rate\" value=\"0.00019\" constant=\"true\"/>\n");
-        xml.push_str("      <parameter id=\"K_hill\" name=\"Hill threshold\" value=\"10\" constant=\"true\"/>\n");
+        xml.push_str("      <parameter id=\"k_mRNA_deg\" name=\"mRNA degradation rate\" value=\"0.0023\" units=\"per_second\" constant=\"true\"/>\n");
+        xml.push_str("      <parameter id=\"k_prot_deg\" name=\"Protein degradation rate\" value=\"0.00019\" units=\"per_second\" constant=\"true\"/>\n");
+        xml.push_str("      <parameter id=\"K_hill\" name=\"Hill threshold\" value=\"10\" units=\"mole_per_litre\" constant=\"true\"/>\n");
         for circuit in &program.circuits {
             for tu in &circuit.transcription_units {
                 let tu_id = Self::sanitize_id(&tu.name);
                 xml.push_str(&format!(
-                    "      <parameter id=\"k_txn_{}\" name=\"Transcription rate {}\" value=\"{:.6}\" constant=\"true\"/>\n",
+                    "      <parameter id=\"k_txn_{}\" name=\"Transcription rate {}\" value=\"{:.6}\" units=\"mole_per_litre_per_second\" constant=\"true\"/>\n",
                     tu_id, Self::xml_escape(&tu.name), tu.promoter.strength));
                 xml.push_str(&format!(
-                    "      <parameter id=\"k_tln_{}\" name=\"Translation rate {}\" value=\"{:.6}\" constant=\"true\"/>\n",
+                    "      <parameter id=\"k_tln_{}\" name=\"Translation rate {}\" value=\"{:.6}\" units=\"per_second\" constant=\"true\"/>\n",
                     tu_id, Self::xml_escape(&tu.name), tu.rbs.translation_rate));
             }
         }
@@ -293,7 +294,7 @@ impl SbmlGenerator {
                     xml.push_str("        </listOfModifiers>\n");
                 }
                 xml.push_str("        <kineticLaw>\n");
-                xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n");
+                xml.push_str(&format!("          {}\n", Self::math_open()));
                 xml.push_str(&format!("            {txn_math}\n"));
                 xml.push_str("          </math>\n");
                 xml.push_str("        </kineticLaw>\n");
@@ -308,9 +309,10 @@ impl SbmlGenerator {
                 xml.push_str(&format!("          {}\n", Self::species_ref(&protein)));
                 xml.push_str("        </listOfProducts>\n");
                 xml.push_str("        <kineticLaw>\n");
-                xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n");
+                xml.push_str(&format!("          {}\n", Self::math_open()));
                 xml.push_str(&format!(
-                    "            <apply><times/><ci>k_tln_{tu_id}</ci><ci>{mrna}</ci></apply>\n"
+                    "            {}\n",
+                    Self::scaled_mass_action(&format!("k_tln_{tu_id}"), &mrna)
                 ));
                 xml.push_str("          </math>\n");
                 xml.push_str("        </kineticLaw>\n");
@@ -323,9 +325,10 @@ impl SbmlGenerator {
                 xml.push_str(&format!("          {}\n", Self::species_ref(&mrna)));
                 xml.push_str("        </listOfReactants>\n");
                 xml.push_str("        <kineticLaw>\n");
-                xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n");
+                xml.push_str(&format!("          {}\n", Self::math_open()));
                 xml.push_str(&format!(
-                    "            <apply><times/><ci>k_mRNA_deg</ci><ci>{mrna}</ci></apply>\n"
+                    "            {}\n",
+                    Self::scaled_mass_action("k_mRNA_deg", &mrna)
                 ));
                 xml.push_str("          </math>\n");
                 xml.push_str("        </kineticLaw>\n");
@@ -338,9 +341,10 @@ impl SbmlGenerator {
                 xml.push_str(&format!("          {}\n", Self::species_ref(&protein)));
                 xml.push_str("        </listOfReactants>\n");
                 xml.push_str("        <kineticLaw>\n");
-                xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n");
+                xml.push_str(&format!("          {}\n", Self::math_open()));
                 xml.push_str(&format!(
-                    "            <apply><times/><ci>k_prot_deg</ci><ci>{protein}</ci></apply>\n"
+                    "            {}\n",
+                    Self::scaled_mass_action("k_prot_deg", &protein)
                 ));
                 xml.push_str("          </math>\n");
                 xml.push_str("        </kineticLaw>\n");
@@ -357,11 +361,11 @@ impl SbmlGenerator {
             xml.push_str("    <listOfEvents>\n");
             xml.push_str("      <event id=\"step_signal\" useValuesFromTriggerTime=\"true\">\n");
             xml.push_str("        <trigger initialValue=\"false\" persistent=\"true\">\n");
-            xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\"><apply><gt/><csymbol encoding=\"text\" definitionURL=\"http://www.sbml.org/sbml/symbols/time\">time</csymbol><cn>300</cn></apply></math>\n");
+            xml.push_str(&format!("          {}<apply><gt/><csymbol encoding=\"text\" definitionURL=\"http://www.sbml.org/sbml/symbols/time\">time</csymbol><cn type=\"real\" sbml:units=\"second\">300</cn></apply></math>\n", Self::math_open()));
             xml.push_str("        </trigger>\n");
             xml.push_str("        <listOfEventAssignments>\n");
             for id in stepped {
-                xml.push_str(&format!("          <eventAssignment variable=\"{id}\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><cn>100</cn></math></eventAssignment>\n"));
+                xml.push_str(&format!("          <eventAssignment variable=\"{id}\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" xmlns:sbml=\"http://www.sbml.org/sbml/level3/version2/core\"><cn type=\"real\" sbml:units=\"mole_per_litre\">100</cn></math></eventAssignment>\n"));
             }
             xml.push_str("        </listOfEventAssignments>\n");
             xml.push_str("      </event>\n");
@@ -377,15 +381,56 @@ impl SbmlGenerator {
         format!("<speciesReference species=\"{species}\" stoichiometry=\"1\" constant=\"true\"/>")
     }
 
+    fn math_open() -> &'static str {
+        "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" xmlns:sbml=\"http://www.sbml.org/sbml/level3/version2/core\">"
+    }
+
+    /// Every concentration law is multiplied by the compartment volume so the
+    /// kinetic law returns substance/time (mole/second).
+    fn scaled_mass_action(rate: &str, species: &str) -> String {
+        format!("<apply><times/><ci>{rate}</ci><ci>{species}</ci><ci>cell</ci></apply>")
+    }
+
+    fn hill_exponent() -> &'static str {
+        "<cn type=\"integer\" sbml:units=\"dimensionless\">2</cn>"
+    }
+
     fn hill_math(kind: &str, rate: &str, signal: &str) -> String {
+        let exponent = Self::hill_exponent();
+        let k_pow = format!("<apply><power/><ci>K_hill</ci>{exponent}</apply>");
+        let s_pow = format!("<apply><power/><ci>{signal}</ci>{exponent}</apply>");
         let numerator = if kind == "repress" {
-            "<apply><power/><ci>K_hill</ci><cn type=\"integer\">2</cn></apply>".to_string()
+            k_pow.clone()
         } else {
-            format!("<apply><power/><ci>{signal}</ci><cn type=\"integer\">2</cn></apply>")
+            s_pow.clone()
         };
         format!(
-            "<apply><times/><ci>{rate}</ci><ci>cell</ci><apply><divide/>{numerator}<apply><plus/><apply><power/><ci>K_hill</ci><cn type=\"integer\">2</cn></apply><apply><power/><ci>{signal}</ci><cn type=\"integer\">2</cn></apply></apply></apply></apply>"
+            "<apply><times/><ci>{rate}</ci><ci>cell</ci><apply><divide/>{numerator}<apply><plus/>{k_pow}{s_pow}</apply></apply></apply>"
         )
+    }
+
+    fn unit_definitions() -> &'static str {
+        r#"    <listOfUnitDefinitions>
+      <unitDefinition id="per_second">
+        <listOfUnits>
+          <unit kind="second" exponent="-1" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+      <unitDefinition id="mole_per_litre">
+        <listOfUnits>
+          <unit kind="mole" exponent="1" scale="0" multiplier="1"/>
+          <unit kind="litre" exponent="-1" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+      <unitDefinition id="mole_per_litre_per_second">
+        <listOfUnits>
+          <unit kind="mole" exponent="1" scale="0" multiplier="1"/>
+          <unit kind="litre" exponent="-1" scale="0" multiplier="1"/>
+          <unit kind="second" exponent="-1" scale="0" multiplier="1"/>
+        </listOfUnits>
+      </unitDefinition>
+    </listOfUnitDefinitions>
+"#
     }
 
     fn signal_species(circuit: &GeneticCircuit, tu: &TranscriptionUnit) -> Option<String> {

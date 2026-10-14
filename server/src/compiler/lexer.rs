@@ -27,6 +27,9 @@ pub enum Token {
     Match,
     #[token("for")]
     For,
+    /// Duration suffix in `absence_of("arabinose") FOR 2 hr`.
+    #[token("FOR")]
+    ForDuration,
     #[token("while")]
     While,
     #[token("loop")]
@@ -161,6 +164,11 @@ pub enum Token {
     #[regex(r"[0-9]+", |lex| lex.slice().parse::<i64>().ok())]
     Integer(i64),
 
+    #[token("true")]
+    True,
+    #[token("false")]
+    False,
+
     #[regex(r#""([^"\\]|\\.)*""#, |lex| {
         let s = lex.slice();
         s[1..s.len()-1].to_string()
@@ -197,6 +205,11 @@ pub enum Token {
     UnitMin,
     #[token("sec")]
     UnitSec,
+    #[token("°C")]
+    #[token("℃")]
+    UnitCelsius,
+    #[token("°")]
+    UnitDegree,
 
     // ===== Partes biológicas conocidas =====
     #[token("pLac")]
@@ -242,6 +255,8 @@ pub enum Token {
     Slash,
     #[token("%")]
     Percent,
+    #[token("^")]
+    Caret,
 
     #[token("==")]
     EqEq,
@@ -438,6 +453,17 @@ mod tests {
         let source = "// ════ SynBio ════\ncircuit X { }\n";
         let tokens = Lexer::tokenize(source).unwrap();
         assert!(matches!(tokens[0].token, Token::Circuit));
+    }
+
+    #[test]
+    fn degree_sign_is_celsius_at_demo_column() {
+        let source = include_str!("../../../examples/DEMO-complete-circuit.bioscript");
+        let tokens = Lexer::tokenize(source).unwrap();
+        let degree = tokens
+            .iter()
+            .find(|token| token.line == 48 && matches!(token.token, Token::UnitCelsius))
+            .expect("°C token");
+        assert_eq!(degree.column, 26);
     }
 
     #[test]

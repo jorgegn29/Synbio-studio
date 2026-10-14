@@ -22,20 +22,48 @@ def validate_sbol(path: Path) -> dict:
 
 
 def validate_sbml(path: Path) -> dict:
+    text = path.read_text(encoding="utf-8")
     document = libsbml.readSBML(str(path))
-    document.setConsistencyChecks(libsbml.LIBSBML_CAT_UNITS_CONSISTENCY, False)
+    document.setConsistencyChecks(libsbml.LIBSBML_CAT_UNITS_CONSISTENCY, True)
     issues = document.checkConsistency()
     messages = []
-    for index in range(issues):
+    for index in range(document.getNumErrors()):
         item = document.getError(index)
-        messages.append(f"{item.getErrorId()}: {item.getMessage()}")
+        messages.append(f"{item.getSeverityAsString()} {item.getErrorId()}: {item.getMessage().strip()}")
+    kinetic = kinetic_issues(text)
+    messages.extend(kinetic)
     return {
         "file": path.name,
         "format": "sbml",
-        "read_errors": document.getNumErrors(),
-        "consistency": issues,
-        "messages": messages[:8],
+        "read_errors": document.getNumErrors() - issues if document.getNumErrors() >= issues else document.getNumErrors(),
+        "consistency": issues + len(kinetic),
+        "messages": messages[:12],
     }
+
+
+def kinetic_issues(text: str) -> list:
+    """Every rate law must be substance/time and the model must declare units."""
+    missing = [
+        token
+        for token in (
+            'substanceUnits="mole"',
+            'timeUnits="second"',
+            'volumeUnits="litre"',
+            'extentUnits="mole"',
+            'units="per_second"',
+            'units="mole_per_litre"',
+            'units="mole_per_litre_per_second"',
+        )
+        if token not in text
+    ]
+    issues = [f"missing {token}" for token in missing]
+    import re
+
+    laws = re.findall(r"<kineticLaw>(.*?)</kineticLaw>", text, flags=re.S)
+    for index, law in enumerate(laws):
+        if "<ci>cell</ci>" not in law:
+            issues.append(f"kinetic law {index} is not scaled by compartment volume")
+    return issues
 
 
 def main() -> int:

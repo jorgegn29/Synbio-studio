@@ -657,6 +657,7 @@ mod tests {
             "hello-biology.bio",
             "test-lsp-real.bio",
             "test-extension.bio",
+            "DEMO-complete-circuit.bioscript",
         ] {
             let source = std::fs::read_to_string(root.join(name))
                 .unwrap_or_else(|err| panic!("read {name}: {err}"));
@@ -745,6 +746,20 @@ mod tests {
             assert!(
                 sbml.contains("constant=\"true\""),
                 "{name} SBML missing constant"
+            );
+            for token in [
+                "substanceUnits=\"mole\"",
+                "timeUnits=\"second\"",
+                "volumeUnits=\"litre\"",
+                "extentUnits=\"mole\"",
+            ] {
+                assert!(sbml.contains(token), "{name} SBML missing {token}");
+            }
+            assert!(
+                sbml.contains("<ci>k_mRNA_deg</ci><ci>mRNA_")
+                    && sbml.contains("<ci>k_prot_deg</ci><ci>protein_")
+                    && sbml.contains("<ci>cell</ci>"),
+                "{name} SBML rate laws are not scaled by compartment volume"
             );
             if name == "inverter" {
                 assert!(sbml.contains("input"), "{name} SBML missing Hill input");
