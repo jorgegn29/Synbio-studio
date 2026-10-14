@@ -3,7 +3,7 @@
 > **El IDE profesional de biología sintética**: diseña, compila, simula, revisa bioseguridad y prepara laboratorio en un solo flujo — desde BioScript hasta LLVM IR, SBOL, SBML y OpenTrons.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT%20%2F%20AGPL--3.0-green)
+![License](https://img.shields.io/badge/license-AGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-purple)
 ![Code](https://img.shields.io/badge/código-~240k%20LOC-orange)
 
@@ -301,8 +301,7 @@ SynBio-LLVM-Proyecto/
 
 ## Licencia
 
-- **Repositorio raíz** (compilador, extensión VS Code, servidor Rust): [MIT](LICENSE)
-- **SynBio Studio** (aplicación de escritorio): [AGPL-3.0](synbio-studio/package.json)
+Todo el proyecto (compilador, extensión VS Code, servidor Rust, motor Python, cliente y aplicación de escritorio SynBio Studio) se distribuye bajo [GNU AGPL-3.0](LICENSE).
 
 ---
 
