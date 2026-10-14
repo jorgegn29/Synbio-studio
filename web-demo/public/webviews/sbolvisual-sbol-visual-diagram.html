@@ -107,5 +107,6 @@ window.addEventListener('message', (event) => {
     function exportSVG() { vscode.postMessage({ command: 'exportSVG' }); }
     function goToLine(line) { vscode.postMessage({ command: 'goToLine', line: line }); }
   </script>
+<script src="locale.js"></script>
 </body>
 </html>

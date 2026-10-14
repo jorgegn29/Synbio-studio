@@ -27,6 +27,9 @@ body {
 .studio .titlebar { border-bottom-width: 1px; }
 .studio .statusbar { border-top-width: 1px; font-size: 12px; color: #8b949e; }
 .studio .titlebar button, .studio .statusbar button { background: transparent; border: 0; color: #c9d1d9; cursor: pointer; }
+.studio .titlebar .lang-switch, .settings .lang-switch { display: inline-flex; border: 1px solid #30363d; border-radius: 6px; overflow: hidden; }
+.studio .lang-switch button { padding: 1px 7px; font-size: 11px; letter-spacing: 0.04em; color: #c9d1d9; }
+.studio .lang-switch button.on { background: #1f6feb; color: #fff; }
 .studio .titlebar a.release-link { color: #58a6ff; font-size: 12px; text-decoration: none; white-space: nowrap; }
 .studio .titlebar a.release-link:hover { text-decoration: underline; }
 .release-banner { display: flex; gap: 10px; align-items: center; margin: 0 0 12px; padding: 8px 10px; background: #122033; border: 1px solid #1f6feb; border-radius: 8px; font-size: 12px; line-height: 1.45; }

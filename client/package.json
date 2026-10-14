@@ -9,6 +9,19 @@
     "vscode": "^1.85.0"
   },
   "categories": ["Other"],
+  "contributes": {
+    "configuration": {
+      "title": "SynBio",
+      "properties": {
+        "synbio.uiLanguage": {
+          "type": "string",
+          "enum": ["auto", "en", "es"],
+          "default": "auto",
+          "description": "Language for SynBio tree labels. auto follows the editor language: English unless that language is Spanish."
+        }
+      }
+    }
+  },
   "main": "./dist/extension.js",
   "scripts": {
     "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",

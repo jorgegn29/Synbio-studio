@@ -15,6 +15,10 @@
 
 **Español.** El sitio de GitHub Pages es una demo en el navegador. La versión profesional completa es el instalador de Windows `SynBio-Studio-1.0.0-Windows-x64-Setup.exe` (Inno Setup). Incluye todo: el atlas 3D, el LSP, el motor Python y las integraciones de laboratorio. La descarga está en el release más reciente: [github.com/jorgegn29/Synbio-studio/releases/latest](https://github.com/jorgegn29/Synbio-studio/releases/latest).
 
+**English.** The studio interface is available in English and Spanish. English is the default unless the browser language is Spanish. The ES/EN control is in the title bar and in Settings. The choice is saved in this browser.
+
+**Español.** La interfaz del estudio está disponible en inglés y en español. El inglés es el idioma por defecto, salvo que el idioma del navegador sea español. El control ES/EN está en la barra de título y en Ajustes. La elección se guarda en este navegador.
+
 ---
 
 ## Visión general

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useStudio } from './studio-context';
+import { useLocale } from './i18n';
 
 interface PanelEntry {
   id?: string;
@@ -165,6 +166,7 @@ function vectorFromSource(source: string, fileName: string) {
 
 export function WebviewHost() {
   const studio = useStudio();
+  const { lang } = useLocale();
   const { items } = useWebviewCatalog();
   const studioRef = useRef(studio);
   studioRef.current = studio;
@@ -195,7 +197,7 @@ export function WebviewHost() {
           <button key={item.id} type="button" className={item.id === current.id ? 'on' : ''} onClick={() => item.id && studio.openWebview(item.id)}>{item.title}</button>
         ))}
       </div>
-      <iframe key={current.id} title={current.title} src={`${assetBase()}/webviews/${current.filename}`} />
+      <iframe key={`${current.id}-${lang}`} title={current.title} src={`${assetBase()}/webviews/${current.filename}${lang === 'en' ? '?lang=en' : ''}`} />
     </div>
   );
 }

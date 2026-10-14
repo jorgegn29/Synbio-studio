@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { StudioProvider, useStudio, type Activity } from './studio-context';
 import { Bottom, Center, Sidebar, onFilesPicked } from './panels';
 import { ReleaseTitleLink } from './release-notice';
+import { LanguageSwitch, LocaleProvider, useDomLocale, useLocale } from './i18n';
 
 const ACTIVITIES: { id: Activity; label: string }[] = [
   { id: 'explorer', label: 'Explorer' },
@@ -50,8 +51,10 @@ class PanelBoundary extends React.Component<{ children: React.ReactNode }, { err
 
 function Shell() {
   const studio = useStudio();
+  const rootRef = useRef<HTMLDivElement>(null);
+  useDomLocale(rootRef);
   return (
-    <div className="studio">
+    <div className="studio" ref={rootRef}>
       <header className="titlebar">
         <strong>SynBio Studio</strong>
         <button type="button" onClick={() => { studio.setActivity('map'); studio.setCenter('map'); }}>Mapa Vivo</button>
@@ -63,6 +66,7 @@ function Shell() {
         <button type="button" onClick={() => document.getElementById('open-file')?.click()}>Abrir</button>
         <button type="button" onClick={studio.saveProject}>Guardar</button>
         <span className="spacer" />
+        <LanguageSwitch />
         <ReleaseTitleLink />
         <span>{studio.activeFile}</span>
       </header>
@@ -101,7 +105,7 @@ function Shell() {
       </div>
       <footer className="statusbar">
         <span>{studio.result.success ? 'compilado' : 'diagnósticos'} · {studio.result.diagnostics.length}</span>
-        <span>{studio.circuit ? `${studio.circuit.partCount} piezas` : 'sin circuito'}</span>
+        <span>{studio.circuit ? <>{studio.circuit.partCount}{' '}piezas</> : 'sin circuito'}</span>
         <button type="button" onClick={() => studio.setBottomOpen(!studio.bottomOpen)}>{studio.bottomOpen ? 'Ocultar panel' : 'CENTRO DE CONTROL INFERIOR'}</button>
         <span>BSL preferido {studio.bslPref}</span>
       </footer>
@@ -111,10 +115,19 @@ function Shell() {
   );
 }
 
-export default function StudioApp() {
+function LocalizedApp() {
+  const { lang } = useLocale();
   return (
     <StudioProvider>
-      <Shell />
+      <Shell key={lang} />
     </StudioProvider>
+  );
+}
+
+export default function StudioApp() {
+  return (
+    <LocaleProvider>
+      <LocalizedApp />
+    </LocaleProvider>
   );
 }

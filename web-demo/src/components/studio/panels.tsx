@@ -17,6 +17,7 @@ import {
   NodeCanvas, PlasmidGauge, pointMutation, ProgramaView, TerminatorCard, TransdermalEditor, WorkspaceTasks,
 } from './tour-views';
 import { ReleaseBanner } from './release-notice';
+import { LanguageSwitch } from './i18n';
 
 const BioEditor = dynamic(() => import('@/components/BioEditor'), { ssr: false });
 
@@ -480,7 +481,7 @@ function Construct3D() {
         <label><input type="checkbox" checked={studio.showLabels} onChange={event => studio.setShowLabels(event.target.checked)} /> Etiquetas</label>
         <label>Orbitar <input type="range" min={0} max={6.28} step={0.05} value={studio.rotation} onChange={event => studio.setRotation(Number(event.target.value))} /></label>
       </div>
-      <p>{studio.construct.nodes.length} piezas, {studio.construct.edges.length} conexiones · Three.js</p>
+      <p>{studio.construct.nodes.length}{' '}piezas{', '}{studio.construct.edges.length}{' '}conexiones{' · Three.js'}</p>
       <ThreeConstruct />
     </div>
   );
@@ -852,6 +853,9 @@ function SettingsPane() {
   return (
     <div className="settings">
       <h2>Configuración</h2>
+      <h3>Idioma de la interfaz</h3>
+      <LanguageSwitch />
+      <p>Elige ES o EN. La elección se guarda en este navegador.</p>
       <label>BSL máximo que quieres recordar
         <input type="number" min={1} max={4} value={studio.bslPref} onChange={event => studio.setBslPref(Number(event.target.value))} />
       </label>
@@ -861,7 +865,7 @@ function SettingsPane() {
       </label>
       <p>Tema fijo oscuro del IDE. Actualizador de Electron: no aplica.</p>
       <h3>Organismos</h3>
-      {ORGANISMS.map(org => <p key={org.name}>{org.group}: {org.name} · BSL-{org.bsl}. {org.note}</p>)}
+      {ORGANISMS.map(org => <p key={org.name}><span>{org.group}</span>: {org.name} · BSL-{org.bsl}. {org.note}</p>)}
     </div>
   );
 }
