@@ -1343,6 +1343,8 @@ impl BioTypeChecker {
             Unit::Hours => MeasurementType::Hours,
             Unit::ArbitraryUnits => MeasurementType::ArbitraryUnits,
             Unit::Percent => MeasurementType::Percent,
+            Unit::Celsius => MeasurementType::Celsius,
+            Unit::PartsPerBillion | Unit::CellsPerMillilitre => MeasurementType::ArbitraryUnits,
         }
     }
 

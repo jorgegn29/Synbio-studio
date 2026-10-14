@@ -49,7 +49,15 @@ impl Parser {
         match self.current_token() {
             Some(Token::Import) => Ok(Item::Import(self.parse_import()?)),
             Some(Token::Chassis) => Ok(Item::Chassis(self.parse_chassis()?)),
-            Some(Token::Safe) | Some(Token::Circuit) => Ok(Item::Circuit(self.parse_circuit()?)),
+            Some(Token::Safe) | Some(Token::Circuit) | Some(Token::Module) => {
+                Ok(Item::Circuit(self.parse_circuit()?))
+            }
+            Some(token)
+                if token_to_name(token).is_some()
+                    && matches!(self.peek_token(), Some(Token::LBrace)) =>
+            {
+                Ok(Item::Circuit(self.parse_record_circuit()?))
+            }
             Some(Token::Identifier(name)) if name == "genetic_circuit" => {
                 self.advance();
                 Ok(Item::Circuit(self.parse_circuit_after_keyword(false)?))
@@ -169,7 +177,12 @@ impl Parser {
             false
         };
 
-        self.expect(Token::Circuit)?;
+        // `module Name` and `safe module Name` are circuits in the demo dialect.
+        if self.check(&Token::Module) {
+            self.advance();
+        } else {
+            self.expect(Token::Circuit)?;
+        }
         self.parse_circuit_after_keyword_from(is_safe, start)
     }
 
@@ -192,6 +205,21 @@ impl Parser {
 
         Ok(CircuitDecl {
             is_safe,
+            name,
+            body,
+            span: start..self.previous_span().end,
+        })
+    }
+
+    /// Top-level record such as `simulation_parameters { time_span: "..." }`.
+    fn parse_record_circuit(&mut self) -> ParseResult<CircuitDecl> {
+        let start = self.current_span().start;
+        let name = self.parse_name()?;
+        self.expect(Token::LBrace)?;
+        let body = self.parse_circuit_body()?;
+        self.expect(Token::RBrace)?;
+        Ok(CircuitDecl {
+            is_safe: false,
             name,
             body,
             span: start..self.previous_span().end,
@@ -252,6 +280,12 @@ impl Parser {
     fn parse_kill_switch(&mut self) -> ParseResult<KillSwitch> {
         let start = self.current_span().start;
         self.expect(Token::KillSwitch)?;
+        // `kill_switch CcdBA { ... }` names the switch before the body.
+        if self.current_token().and_then(token_to_name).is_some()
+            && !matches!(self.current_token(), Some(Token::LBrace))
+        {
+            let _name = self.parse_name()?;
+        }
         self.expect(Token::LBrace)?;
 
         let mut trigger = None;
@@ -295,7 +329,7 @@ impl Parser {
 
         Ok(KillSwitch {
             trigger: trigger
-                .ok_or_else(|| self.error("kill_switch requiere 'trigger'".to_string()))?,
+                .unwrap_or_else(|| Expr::Literal(Literal::String("unspecified".to_string()))),
             mechanism: mechanism.unwrap_or_else(|| Ident::new("unspecified", start..start)),
             delay,
             span: start..self.previous_span().end,
@@ -580,6 +614,8 @@ impl Parser {
             Some(Token::For) => Ok(Statement::Loop(self.parse_for()?)),
             Some(Token::While) => Ok(Statement::Loop(self.parse_while()?)),
             Some(Token::Loop) => Ok(Statement::Loop(self.parse_loop()?)),
+            _ if self.is_sequence_decl() => self.parse_sequence_decl(),
+            _ if self.is_property_assignment() => self.parse_property_statement(),
             Some(Token::Return) => {
                 self.advance();
                 let expr = if !self.check(&Token::Semicolon) {
@@ -812,7 +848,7 @@ impl Parser {
     fn parse_or_expr(&mut self) -> ParseResult<Expr> {
         let mut left = self.parse_and_expr()?;
 
-        while self.check(&Token::OrOr) {
+        while matches!(self.current_token(), Some(Token::OrOr | Token::GateOr)) {
             let start = left.span().start;
             self.advance();
             let right = self.parse_and_expr()?;
@@ -832,7 +868,7 @@ impl Parser {
     fn parse_and_expr(&mut self) -> ParseResult<Expr> {
         let mut left = self.parse_comparison_expr()?;
 
-        while self.check(&Token::AndAnd) {
+        while matches!(self.current_token(), Some(Token::AndAnd | Token::GateAnd)) {
             let start = left.span().start;
             self.advance();
             let right = self.parse_comparison_expr()?;
@@ -906,7 +942,7 @@ impl Parser {
     }
 
     fn parse_multiplicative_expr(&mut self) -> ParseResult<Expr> {
-        let mut left = self.parse_unary_expr()?;
+        let mut left = self.parse_power_expr()?;
 
         loop {
             let op = match self.current_token() {
@@ -960,6 +996,101 @@ impl Parser {
             }
             _ => self.parse_postfix_expr(),
         }
+    }
+
+    /// `10^7` and `call() FOR 2 hr`, then a trailing unit phrase such as `cells/mL`.
+    fn parse_power_expr(&mut self) -> ParseResult<Expr> {
+        let expr = self.parse_power_or_duration()?;
+        self.attach_trailing_unit(expr)
+    }
+
+    fn parse_power_or_duration(&mut self) -> ParseResult<Expr> {
+        let mut left = self.parse_unary_expr()?;
+
+        if self.check(&Token::Caret) {
+            let start = left.span().start;
+            self.advance();
+            let right = self.parse_power_or_duration()?;
+            let end = right.span().end;
+            left = Expr::Binary(BinaryExpr {
+                left: Box::new(left),
+                operator: BinaryOp::Pow,
+                right: Box::new(right),
+                span: start..end,
+            });
+        }
+
+        if self.check(&Token::ForDuration) {
+            let start = left.span().start;
+            self.advance();
+            let right = self.parse_power_or_duration()?;
+            let end = right.span().end;
+            left = Expr::Binary(BinaryExpr {
+                left: Box::new(left),
+                operator: BinaryOp::Duration,
+                right: Box::new(right),
+                span: start..end,
+            });
+        }
+
+        Ok(left)
+    }
+
+    fn attach_trailing_unit(&mut self, expr: Expr) -> ParseResult<Expr> {
+        let start = expr.span().start;
+        if let Some(unit) = self.try_parse_unit() {
+            if let Some(value) = numeric_literal(&expr) {
+                return Ok(Expr::ValueWithUnit(ValueWithUnit {
+                    value,
+                    unit,
+                    span: start..self.previous_span().end,
+                }));
+            }
+        }
+        Ok(expr)
+    }
+
+    /// `sequence arsM: Gene { ... }` declares a gene part.
+    fn is_sequence_decl(&self) -> bool {
+        match self.current_token() {
+            Some(Token::Identifier(name)) if name == "sequence" => {
+                self.peek_token().and_then(token_to_name).is_some()
+            }
+            _ => false,
+        }
+    }
+
+    fn parse_sequence_decl(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span().start;
+        self.advance();
+        let name = self.parse_name()?;
+        self.expect(Token::Colon)?;
+        let var_type = self.parse_type_annotation()?;
+        if self.check(&Token::LBrace) {
+            let _fields = self.parse_block()?;
+        }
+        self.try_consume(&Token::Semicolon);
+        Ok(Statement::Let(LetStatement {
+            is_mutable: false,
+            name: name.clone(),
+            var_type: Some(var_type),
+            value: Expr::BioPart(BioPart::Custom(name.name.clone())),
+            span: start..self.previous_span().end,
+        }))
+    }
+
+    fn is_property_assignment(&self) -> bool {
+        self.current_token().and_then(token_to_name).is_some()
+            && matches!(self.peek_token(), Some(Token::Colon))
+    }
+
+    fn parse_property_statement(&mut self) -> ParseResult<Statement> {
+        let _name = self.parse_name()?;
+        self.expect(Token::Colon)?;
+        let value = self.parse_expression()?;
+        self.try_consume(&Token::Comma);
+        self.try_consume(&Token::Semicolon);
+        Ok(Statement::Expression(value))
     }
 
     fn parse_postfix_expr(&mut self) -> ParseResult<Expr> {
@@ -1046,6 +1177,14 @@ impl Parser {
                 }
 
                 Ok(Expr::Literal(Literal::Float(f)))
+            }
+            Some(Token::True) => {
+                self.advance();
+                Ok(Expr::Literal(Literal::Bool(true)))
+            }
+            Some(Token::False) => {
+                self.advance();
+                Ok(Expr::Literal(Literal::Bool(false)))
             }
             // String literal
             Some(Token::String(s)) => {
@@ -1353,7 +1492,32 @@ impl Parser {
             Token::UnitSec => Unit::Seconds,
             Token::UnitMin => Unit::Minutes,
             Token::UnitHr => Unit::Hours,
+            Token::UnitCelsius => Unit::Celsius,
+            Token::UnitDegree => {
+                if matches!(self.peek_token(), Some(Token::Identifier(name)) if name == "C" || name == "c")
+                {
+                    self.advance();
+                    self.advance();
+                    return Some(Unit::Celsius);
+                }
+                Unit::Celsius
+            }
             Token::Percent => Unit::Percent,
+            Token::Identifier(name) if name == "ppb" => Unit::PartsPerBillion,
+            Token::Identifier(name) if name == "cells" => {
+                let slash = matches!(self.peek_token(), Some(Token::Slash));
+                let milli = matches!(
+                    self.tokens.get(self.position + 2).map(|t| &t.token),
+                    Some(Token::Identifier(unit)) if unit == "mL" || unit == "ml"
+                );
+                if slash && milli {
+                    self.advance();
+                    self.advance();
+                    self.advance();
+                    return Some(Unit::CellsPerMillilitre);
+                }
+                return None;
+            }
             Token::Identifier(name) if name == "AU" || name == "au" => Unit::ArbitraryUnits,
             Token::Identifier(name) if name == "Da" => Unit::Daltons,
             Token::Identifier(name) if name == "M" => Unit::Molar,
@@ -1536,6 +1700,7 @@ fn token_to_name(token: &Token) -> Option<String> {
         Token::TypeInducer => Some("Inducer".to_string()),
         Token::TypeOperator => Some("Operator".to_string()),
         Token::Circuit => Some("circuit".to_string()),
+        Token::Module => Some("module".to_string()),
         _ => None,
     }
 }
@@ -1552,6 +1717,20 @@ fn token_to_biopart(token: &Token) -> Option<BioPart> {
         Token::PartTetR => Some(BioPart::TetR),
         Token::PartCas9 => Some(BioPart::Cas9),
         Token::PartGRNA => Some(BioPart::GRNA),
+        _ => None,
+    }
+}
+
+fn numeric_literal(expr: &Expr) -> Option<f64> {
+    match expr {
+        Expr::Literal(Literal::Integer(n)) => Some(*n as f64),
+        Expr::Literal(Literal::Float(f)) => Some(*f),
+        Expr::ValueWithUnit(v) => Some(v.value),
+        Expr::Binary(bin) if bin.operator == BinaryOp::Pow => {
+            let left = numeric_literal(&bin.left)?;
+            let right = numeric_literal(&bin.right)?;
+            Some(left.powf(right))
+        }
         _ => None,
     }
 }

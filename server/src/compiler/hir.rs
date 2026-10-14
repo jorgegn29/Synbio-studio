@@ -731,6 +731,9 @@ impl HirLowering {
                     ast::Unit::Hours => "hr",
                     ast::Unit::ArbitraryUnits => "AU",
                     ast::Unit::Percent => "%",
+                    ast::Unit::Celsius => "°C",
+                    ast::Unit::PartsPerBillion => "ppb",
+                    ast::Unit::CellsPerMillilitre => "cells/mL",
                 };
                 HirValue::ValueWithUnit(vwu.value, unit_str.to_string())
             }
@@ -754,6 +757,8 @@ impl HirLowering {
                     ast::BinaryOp::GeneticFlow => "->",
                     ast::BinaryOp::Regulation => "~>",
                     ast::BinaryOp::Transform => "|>",
+                    ast::BinaryOp::Pow => "^",
+                    ast::BinaryOp::Duration => "FOR",
                 };
                 HirValue::BinaryOp(Box::new(left), op.to_string(), Box::new(right))
             }

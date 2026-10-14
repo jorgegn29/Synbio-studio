@@ -164,9 +164,10 @@ jobs:
       - name: Validate web demo SBOL3 and SBML exports
         if: matrix.python-version == '3.12'
         run: |
-          python -m pip install 'sbol3==1.2' python-libsbml
+          python -m pip install 'sbol3==1.2' python-libsbml 'copasi-basico'
           npx --yes tsx web-demo/scripts/export-fixtures.ts /tmp/synbio-web-exports
           python scripts/validate_exports.py /tmp/synbio-web-exports
+          python scripts/sbml_timecourse.py /tmp/synbio-web-exports
 
   # ─────────────────────────────────────────────
   # VS Code Extension Package
