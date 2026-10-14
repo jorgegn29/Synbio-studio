@@ -8,7 +8,7 @@
 //! 4. **Protocol** — Human-readable lab protocol (Markdown)
 
 use crate::compiler::bio_ir::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // ═══════════════════════════════════════════════════════════════════════
 // OpenTrons OT-2 Protocol Generator
@@ -29,7 +29,10 @@ impl OpenTronsGenerator {
 
         py.push_str("from opentrons import protocol_api\n\n");
         py.push_str("metadata = {\n");
-        py.push_str(&format!("    'protocolName': 'SynBio-LLVM: {}',\n", program.name));
+        py.push_str(&format!(
+            "    'protocolName': 'SynBio-LLVM: {}',\n",
+            program.name
+        ));
         py.push_str("    'author': 'SynBio-LLVM Compiler',\n");
         py.push_str("    'apiLevel': '2.15'\n");
         py.push_str("}\n\n");
@@ -37,13 +40,19 @@ impl OpenTronsGenerator {
         py.push_str("def run(protocol: protocol_api.ProtocolContext):\n");
         py.push_str("    # ── Labware Setup ──\n");
         py.push_str("    tip_rack = protocol.load_labware('opentrons_96_tiprack_20ul', '1')\n");
-        py.push_str("    tip_rack_300 = protocol.load_labware('opentrons_96_tiprack_300ul', '2')\n");
-        py.push_str("    parts_plate = protocol.load_labware('nest_96_wellplate_200ul_flat', '3')\n");
+        py.push_str(
+            "    tip_rack_300 = protocol.load_labware('opentrons_96_tiprack_300ul', '2')\n",
+        );
+        py.push_str(
+            "    parts_plate = protocol.load_labware('nest_96_wellplate_200ul_flat', '3')\n",
+        );
         py.push_str("    rxn_plate = protocol.load_labware('nest_96_wellplate_200ul_flat', '6')\n");
         py.push_str("    tube_rack = protocol.load_labware('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', '9')\n\n");
 
         py.push_str("    # ── Pipettes ──\n");
-        py.push_str("    p20 = protocol.load_instrument('p20_single_gen2', 'left', tip_racks=[tip_rack])\n");
+        py.push_str(
+            "    p20 = protocol.load_instrument('p20_single_gen2', 'left', tip_racks=[tip_rack])\n",
+        );
         py.push_str("    p300 = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tip_rack_300])\n\n");
 
         py.push_str("    # ── Reagent Positions ──\n");
@@ -55,9 +64,9 @@ impl OpenTronsGenerator {
         // Map parts to well positions
         py.push_str("    # ── Part Positions (DNA parts in parts_plate) ──\n");
         let mut well_idx = 0;
-        let wells: Vec<String> = (0..12).flat_map(|col| {
-            ('A'..='H').map(move |row| format!("{}{}", row, col + 1))
-        }).collect();
+        let wells: Vec<String> = (0..12)
+            .flat_map(|col| ('A'..='H').map(move |row| format!("{}{}", row, col + 1)))
+            .collect();
 
         for circuit in &program.circuits {
             py.push_str(&format!("    # Circuit: {}\n", circuit.name));
@@ -69,17 +78,24 @@ impl OpenTronsGenerator {
                 ];
                 for (name, ptype) in &parts {
                     if well_idx < wells.len() {
-                        py.push_str(&format!("    part_{} = parts_plate['{}']  # {} ({})\n",
+                        py.push_str(&format!(
+                            "    part_{} = parts_plate['{}']  # {} ({})\n",
                             name.to_lowercase().replace(' ', "_"),
-                            wells[well_idx], name, ptype));
+                            wells[well_idx],
+                            name,
+                            ptype
+                        ));
                         well_idx += 1;
                     }
                 }
                 if let Some(ref term) = tu.terminator {
                     if well_idx < wells.len() {
-                        py.push_str(&format!("    part_{} = parts_plate['{}']  # {} (terminator)\n",
+                        py.push_str(&format!(
+                            "    part_{} = parts_plate['{}']  # {} (terminator)\n",
                             term.name.to_lowercase().replace(' ', "_"),
-                            wells[well_idx], term.name));
+                            wells[well_idx],
+                            term.name
+                        ));
                         well_idx += 1;
                     }
                 }
@@ -99,7 +115,10 @@ impl OpenTronsGenerator {
 
             // Add buffer
             py.push_str(&format!("    # Reaction in well {}\n", wells[rxn_well]));
-            py.push_str(&format!("    rxn_well = rxn_plate['{}']\n\n", wells[rxn_well]));
+            py.push_str(&format!(
+                "    rxn_well = rxn_plate['{}']\n\n",
+                wells[rxn_well]
+            ));
 
             py.push_str("    # Step 1: Add ligase buffer (2 µL of 10x)\n");
             py.push_str("    p20.transfer(2, ligase_buffer, rxn_well, new_tip='always')\n\n");
@@ -113,11 +132,16 @@ impl OpenTronsGenerator {
                     tu.cds.name.to_lowercase().replace(' ', "_"),
                 ];
                 for pname in &part_names {
-                    py.push_str(&format!("    p20.transfer(1, part_{}, rxn_well, new_tip='always')\n", pname));
+                    py.push_str(&format!(
+                        "    p20.transfer(1, part_{}, rxn_well, new_tip='always')\n",
+                        pname
+                    ));
                 }
                 if let Some(ref term) = tu.terminator {
-                    py.push_str(&format!("    p20.transfer(1, part_{}, rxn_well, new_tip='always')\n",
-                        term.name.to_lowercase().replace(' ', "_")));
+                    py.push_str(&format!(
+                        "    p20.transfer(1, part_{}, rxn_well, new_tip='always')\n",
+                        term.name.to_lowercase().replace(' ', "_")
+                    ));
                 }
             }
             py.push_str("\n");
@@ -130,13 +154,21 @@ impl OpenTronsGenerator {
             py.push_str("    p20.transfer(1, t4_ligase, rxn_well, new_tip='always')\n\n");
 
             // Top up with water
-            let parts_count = circuit.transcription_units.iter()
+            let parts_count = circuit
+                .transcription_units
+                .iter()
                 .map(|tu| 3 + if tu.terminator.is_some() { 1 } else { 0 })
                 .sum::<usize>();
             let water_vol = 20.0 - 2.0 - (parts_count as f64) - 2.0;
             if water_vol > 0.0 {
-                py.push_str(&format!("    # Step 5: Add water to 20 µL total ({:.1} µL)\n", water_vol));
-                py.push_str(&format!("    p20.transfer({:.1}, water, rxn_well, new_tip='always')\n\n", water_vol));
+                py.push_str(&format!(
+                    "    # Step 5: Add water to 20 µL total ({:.1} µL)\n",
+                    water_vol
+                ));
+                py.push_str(&format!(
+                    "    p20.transfer({:.1}, water, rxn_well, new_tip='always')\n\n",
+                    water_vol
+                ));
             }
 
             rxn_well += 1;
@@ -148,7 +180,9 @@ impl OpenTronsGenerator {
         py.push_str("    # 30 cycles of: 37°C for 5 min, 16°C for 5 min\n");
         py.push_str("    # Final: 50°C for 5 min, 80°C for 10 min (enzyme inactivation)\n");
         py.push_str("    protocol.comment('Assembly complete. Transfer to thermocycler.')\n");
-        py.push_str("    protocol.comment('Program: 30x (37°C/5min → 16°C/5min), 50°C/5min, 80°C/10min')\n");
+        py.push_str(
+            "    protocol.comment('Program: 30x (37°C/5min → 16°C/5min), 50°C/5min, 80°C/10min')\n",
+        );
 
         py
     }
@@ -158,131 +192,156 @@ impl OpenTronsGenerator {
 // SBML Generator
 // ═══════════════════════════════════════════════════════════════════════
 
+enum TxnLaw {
+    Constitutive,
+    Repress { species: String },
+    Activate { species: String },
+}
+
 pub struct SbmlGenerator;
 
 impl SbmlGenerator {
-    /// Generate SBML Level 3 Version 2 for the circuit
+    /// Generate SBML Level 3 Version 2 for the circuit.
+    /// Every speciesReference carries constant="true" (libSBML error 21116).
+    /// TetR inverters use Hill repression; pLac/GFP cassettes use IPTG activation.
     pub fn generate(program: &BioIRProgram) -> String {
         let mut xml = String::with_capacity(4096);
+        let mut signals: Vec<String> = Vec::new();
 
         xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.push_str("<sbml xmlns=\"http://www.sbml.org/sbml/level3/version2/core\"\n");
         xml.push_str("      level=\"3\" version=\"2\">\n");
-        xml.push_str(&format!("  <model id=\"{}\" name=\"{} - BioScript Model\">\n",
-            Self::sanitize_id(&program.name), program.name));
+        xml.push_str(&format!(
+            "  <model id=\"{}\" name=\"{} - BioScript Model\">\n",
+            Self::sanitize_id(&program.name),
+            Self::xml_escape(&program.name)
+        ));
 
-        // Compartments
         xml.push_str("    <listOfCompartments>\n");
         xml.push_str("      <compartment id=\"cell\" name=\"Cell\" spatialDimensions=\"3\" size=\"1e-15\" constant=\"true\"/>\n");
         xml.push_str("    </listOfCompartments>\n\n");
 
-        // Species (mRNA and protein for each TU)
         xml.push_str("    <listOfSpecies>\n");
         for circuit in &program.circuits {
-            for (_i, tu) in circuit.transcription_units.iter().enumerate() {
+            for tu in &circuit.transcription_units {
                 let tu_id = Self::sanitize_id(&tu.name);
                 xml.push_str(&format!(
                     "      <species id=\"mRNA_{}\" name=\"mRNA {}\" compartment=\"cell\" initialAmount=\"0\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"false\" constant=\"false\"/>\n",
-                    tu_id, tu.cds.name));
+                    tu_id, Self::xml_escape(&tu.cds.name)));
                 xml.push_str(&format!(
                     "      <species id=\"protein_{}\" name=\"Protein {}\" compartment=\"cell\" initialAmount=\"0\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"false\" constant=\"false\"/>\n",
-                    tu_id, tu.cds.name));
+                    tu_id, Self::xml_escape(&tu.cds.name)));
             }
-
-            // Regulatory molecules
-            for link in &circuit.regulatory_links {
-                let reg_id = Self::sanitize_id(&link.from);
-                xml.push_str(&format!(
-                    "      <species id=\"regulator_{}\" name=\"{}\" compartment=\"cell\" initialAmount=\"100\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"true\" constant=\"false\"/>\n",
-                    reg_id, link.from));
+            for tu in &circuit.transcription_units {
+                if let Some(signal) = Self::signal_species(circuit, tu) {
+                    if !signals.iter().any(|id| id == &signal) {
+                        signals.push(signal);
+                    }
+                }
             }
+        }
+        for signal in &signals {
+            xml.push_str(&format!(
+                "      <species id=\"{signal}\" compartment=\"cell\" initialAmount=\"0\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"true\" constant=\"false\"/>\n"));
         }
         xml.push_str("    </listOfSpecies>\n\n");
 
-        // Parameters
         xml.push_str("    <listOfParameters>\n");
         xml.push_str("      <parameter id=\"k_mRNA_deg\" name=\"mRNA degradation rate\" value=\"0.0023\" constant=\"true\"/>\n");
         xml.push_str("      <parameter id=\"k_prot_deg\" name=\"Protein degradation rate\" value=\"0.00019\" constant=\"true\"/>\n");
-
+        xml.push_str("      <parameter id=\"K_hill\" name=\"Hill threshold\" value=\"10\" constant=\"true\"/>\n");
         for circuit in &program.circuits {
-            for (_i, tu) in circuit.transcription_units.iter().enumerate() {
+            for tu in &circuit.transcription_units {
                 let tu_id = Self::sanitize_id(&tu.name);
                 xml.push_str(&format!(
                     "      <parameter id=\"k_txn_{}\" name=\"Transcription rate {}\" value=\"{:.6}\" constant=\"true\"/>\n",
-                    tu_id, tu.name, tu.promoter.strength));
+                    tu_id, Self::xml_escape(&tu.name), tu.promoter.strength));
                 xml.push_str(&format!(
                     "      <parameter id=\"k_tln_{}\" name=\"Translation rate {}\" value=\"{:.6}\" constant=\"true\"/>\n",
-                    tu_id, tu.name, tu.rbs.translation_rate));
+                    tu_id, Self::xml_escape(&tu.name), tu.rbs.translation_rate));
             }
         }
         xml.push_str("    </listOfParameters>\n\n");
 
-        // Reactions
         xml.push_str("    <listOfReactions>\n");
         for circuit in &program.circuits {
-            for (_i, tu) in circuit.transcription_units.iter().enumerate() {
+            for tu in &circuit.transcription_units {
                 let tu_id = Self::sanitize_id(&tu.name);
+                let mrna = format!("mRNA_{tu_id}");
+                let protein = format!("protein_{tu_id}");
+                let txn_math = match Self::transcription_law(circuit, tu) {
+                    TxnLaw::Constitutive => {
+                        format!("<apply><times/><ci>k_txn_{tu_id}</ci><ci>cell</ci></apply>")
+                    }
+                    TxnLaw::Repress { species } => {
+                        Self::hill_math("repress", &format!("k_txn_{tu_id}"), &species)
+                    }
+                    TxnLaw::Activate { species } => {
+                        Self::hill_math("activate", &format!("k_txn_{tu_id}"), &species)
+                    }
+                };
 
-                // Transcription reaction: ∅ → mRNA
-                xml.push_str(&format!("      <reaction id=\"txn_{}\" name=\"Transcription of {}\" reversible=\"false\">\n", tu_id, tu.cds.name));
+                xml.push_str(&format!("      <reaction id=\"txn_{tu_id}\" name=\"Transcription of {}\" reversible=\"false\">\n", Self::xml_escape(&tu.cds.name)));
                 xml.push_str("        <listOfProducts>\n");
-                xml.push_str(&format!("          <speciesReference species=\"mRNA_{}\" stoichiometry=\"1\"/>\n", tu_id));
+                xml.push_str(&format!("          {}\n", Self::species_ref(&mrna)));
+                xml.push_str("        </listOfProducts>\n");
+                if let Some(signal) = Self::signal_species(circuit, tu) {
+                    xml.push_str("        <listOfModifiers>\n");
+                    xml.push_str(&format!(
+                        "          <modifierSpeciesReference species=\"{signal}\"/>\n"
+                    ));
+                    xml.push_str("        </listOfModifiers>\n");
+                }
+                xml.push_str("        <kineticLaw>\n");
+                xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n");
+                xml.push_str(&format!("            {txn_math}\n"));
+                xml.push_str("          </math>\n");
+                xml.push_str("        </kineticLaw>\n");
+                xml.push_str("      </reaction>\n\n");
+
+                xml.push_str(&format!("      <reaction id=\"tln_{tu_id}\" name=\"Translation of {}\" reversible=\"false\">\n", Self::xml_escape(&tu.cds.name)));
+                xml.push_str("        <listOfReactants>\n");
+                xml.push_str(&format!("          {}\n", Self::species_ref(&mrna)));
+                xml.push_str("        </listOfReactants>\n");
+                xml.push_str("        <listOfProducts>\n");
+                xml.push_str(&format!("          {}\n", Self::species_ref(&mrna)));
+                xml.push_str(&format!("          {}\n", Self::species_ref(&protein)));
                 xml.push_str("        </listOfProducts>\n");
                 xml.push_str("        <kineticLaw>\n");
-                xml.push_str(&format!("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n"));
-                xml.push_str("            <apply><times/>\n");
-                xml.push_str(&format!("              <ci>k_txn_{}</ci>\n", tu_id));
-                xml.push_str("              <ci>cell</ci>\n");
-                xml.push_str("            </apply>\n");
+                xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n");
+                xml.push_str(&format!(
+                    "            <apply><times/><ci>k_tln_{tu_id}</ci><ci>{mrna}</ci></apply>\n"
+                ));
                 xml.push_str("          </math>\n");
                 xml.push_str("        </kineticLaw>\n");
                 xml.push_str("      </reaction>\n\n");
 
-                // Translation reaction: mRNA → mRNA + Protein
-                xml.push_str(&format!("      <reaction id=\"tln_{}\" name=\"Translation of {}\" reversible=\"false\">\n", tu_id, tu.cds.name));
+                xml.push_str(&format!(
+                    "      <reaction id=\"mrna_deg_{tu_id}\" reversible=\"false\">\n"
+                ));
                 xml.push_str("        <listOfReactants>\n");
-                xml.push_str(&format!("          <speciesReference species=\"mRNA_{}\" stoichiometry=\"1\"/>\n", tu_id));
+                xml.push_str(&format!("          {}\n", Self::species_ref(&mrna)));
                 xml.push_str("        </listOfReactants>\n");
-                xml.push_str("        <listOfProducts>\n");
-                xml.push_str(&format!("          <speciesReference species=\"mRNA_{}\" stoichiometry=\"1\"/>\n", tu_id));
-                xml.push_str(&format!("          <speciesReference species=\"protein_{}\" stoichiometry=\"1\"/>\n", tu_id));
-                xml.push_str("        </listOfProducts>\n");
                 xml.push_str("        <kineticLaw>\n");
                 xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n");
-                xml.push_str("            <apply><times/>\n");
-                xml.push_str(&format!("              <ci>k_tln_{}</ci>\n", tu_id));
-                xml.push_str(&format!("              <ci>mRNA_{}</ci>\n", tu_id));
-                xml.push_str("            </apply>\n");
+                xml.push_str(&format!(
+                    "            <apply><times/><ci>k_mRNA_deg</ci><ci>{mrna}</ci></apply>\n"
+                ));
                 xml.push_str("          </math>\n");
                 xml.push_str("        </kineticLaw>\n");
                 xml.push_str("      </reaction>\n\n");
 
-                // mRNA degradation
-                xml.push_str(&format!("      <reaction id=\"mrna_deg_{}\" name=\"mRNA {} degradation\" reversible=\"false\">\n", tu_id, tu.cds.name));
+                xml.push_str(&format!(
+                    "      <reaction id=\"prot_deg_{tu_id}\" reversible=\"false\">\n"
+                ));
                 xml.push_str("        <listOfReactants>\n");
-                xml.push_str(&format!("          <speciesReference species=\"mRNA_{}\" stoichiometry=\"1\"/>\n", tu_id));
+                xml.push_str(&format!("          {}\n", Self::species_ref(&protein)));
                 xml.push_str("        </listOfReactants>\n");
                 xml.push_str("        <kineticLaw>\n");
                 xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n");
-                xml.push_str("            <apply><times/>\n");
-                xml.push_str("              <ci>k_mRNA_deg</ci>\n");
-                xml.push_str(&format!("              <ci>mRNA_{}</ci>\n", tu_id));
-                xml.push_str("            </apply>\n");
-                xml.push_str("          </math>\n");
-                xml.push_str("        </kineticLaw>\n");
-                xml.push_str("      </reaction>\n\n");
-
-                // Protein degradation
-                xml.push_str(&format!("      <reaction id=\"prot_deg_{}\" name=\"Protein {} degradation\" reversible=\"false\">\n", tu_id, tu.cds.name));
-                xml.push_str("        <listOfReactants>\n");
-                xml.push_str(&format!("          <speciesReference species=\"protein_{}\" stoichiometry=\"1\"/>\n", tu_id));
-                xml.push_str("        </listOfReactants>\n");
-                xml.push_str("        <kineticLaw>\n");
-                xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n");
-                xml.push_str("            <apply><times/>\n");
-                xml.push_str("              <ci>k_prot_deg</ci>\n");
-                xml.push_str(&format!("              <ci>protein_{}</ci>\n", tu_id));
-                xml.push_str("            </apply>\n");
+                xml.push_str(&format!(
+                    "            <apply><times/><ci>k_prot_deg</ci><ci>{protein}</ci></apply>\n"
+                ));
                 xml.push_str("          </math>\n");
                 xml.push_str("        </kineticLaw>\n");
                 xml.push_str("      </reaction>\n\n");
@@ -290,15 +349,102 @@ impl SbmlGenerator {
         }
         xml.push_str("    </listOfReactions>\n");
 
+        let stepped: Vec<&String> = signals
+            .iter()
+            .filter(|id| id.as_str() == "input" || id.as_str() == "IPTG")
+            .collect();
+        if !stepped.is_empty() {
+            xml.push_str("    <listOfEvents>\n");
+            xml.push_str("      <event id=\"step_signal\" useValuesFromTriggerTime=\"true\">\n");
+            xml.push_str("        <trigger initialValue=\"false\" persistent=\"true\">\n");
+            xml.push_str("          <math xmlns=\"http://www.w3.org/1998/Math/MathML\"><apply><gt/><csymbol encoding=\"text\" definitionURL=\"http://www.sbml.org/sbml/symbols/time\">time</csymbol><cn>300</cn></apply></math>\n");
+            xml.push_str("        </trigger>\n");
+            xml.push_str("        <listOfEventAssignments>\n");
+            for id in stepped {
+                xml.push_str(&format!("          <eventAssignment variable=\"{id}\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><cn>100</cn></math></eventAssignment>\n"));
+            }
+            xml.push_str("        </listOfEventAssignments>\n");
+            xml.push_str("      </event>\n");
+            xml.push_str("    </listOfEvents>\n");
+        }
+
         xml.push_str("  </model>\n");
         xml.push_str("</sbml>\n");
-
         xml
+    }
+
+    fn species_ref(species: &str) -> String {
+        format!("<speciesReference species=\"{species}\" stoichiometry=\"1\" constant=\"true\"/>")
+    }
+
+    fn hill_math(kind: &str, rate: &str, signal: &str) -> String {
+        let numerator = if kind == "repress" {
+            "<apply><power/><ci>K_hill</ci><cn type=\"integer\">2</cn></apply>".to_string()
+        } else {
+            format!("<apply><power/><ci>{signal}</ci><cn type=\"integer\">2</cn></apply>")
+        };
+        format!(
+            "<apply><times/><ci>{rate}</ci><ci>cell</ci><apply><divide/>{numerator}<apply><plus/><apply><power/><ci>K_hill</ci><cn type=\"integer\">2</cn></apply><apply><power/><ci>{signal}</ci><cn type=\"integer\">2</cn></apply></apply></apply></apply>"
+        )
+    }
+
+    fn signal_species(circuit: &GeneticCircuit, tu: &TranscriptionUnit) -> Option<String> {
+        match Self::transcription_law(circuit, tu) {
+            TxnLaw::Constitutive => None,
+            TxnLaw::Repress { species } | TxnLaw::Activate { species } => Some(species),
+        }
+    }
+
+    fn transcription_law(circuit: &GeneticCircuit, tu: &TranscriptionUnit) -> TxnLaw {
+        let promoter = tu.promoter.name.to_lowercase();
+        let cds = tu.cds.name.to_lowercase();
+        let name = circuit.name.to_lowercase();
+        if promoter.contains("plac")
+            && (cds.contains("gfp") || name.contains("gfp") || name.contains("cassette"))
+        {
+            return TxnLaw::Activate {
+                species: "IPTG".to_string(),
+            };
+        }
+        let tet_inverter = cds.contains("tetr")
+            && !promoter.contains("ptet")
+            && !promoter.contains("plac")
+            && !promoter.contains("pbad");
+        if name.contains("inverter") || tet_inverter {
+            return TxnLaw::Repress {
+                species: "input".to_string(),
+            };
+        }
+        if let Some(link) = circuit
+            .regulatory_links
+            .iter()
+            .find(|link| link.to.eq_ignore_ascii_case(&tu.promoter.name))
+        {
+            let species = format!("regulator_{}", Self::sanitize_id(&link.from));
+            return match link.regulation_type {
+                LinkType::Activation => TxnLaw::Activate { species },
+                LinkType::Repression | LinkType::Dual => TxnLaw::Repress { species },
+            };
+        }
+        TxnLaw::Constitutive
+    }
+
+    fn xml_escape(value: &str) -> String {
+        value
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
     }
 
     fn sanitize_id(name: &str) -> String {
         name.chars()
-            .map(|c| if c.is_alphanumeric() || c == '_' { c } else { '_' })
+            .map(|c| {
+                if c.is_alphanumeric() || c == '_' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect()
     }
 }
@@ -355,7 +501,9 @@ impl CostEstimator {
                 }
                 // Count parts
                 num_parts += 3; // promoter + RBS + CDS
-                if tu.terminator.is_some() { num_parts += 1; }
+                if tu.terminator.is_some() {
+                    num_parts += 1;
+                }
                 num_parts += tu.coding_sequences.len().saturating_sub(1); // extra CDS in polycistronic
             }
 
@@ -375,7 +523,10 @@ impl CostEstimator {
 
         let gc_high = program.circuits.iter().any(|c| {
             c.transcription_units.iter().any(|tu| {
-                let gc: usize = tu.cds.dna_sequence.chars()
+                let gc: usize = tu
+                    .cds
+                    .dna_sequence
+                    .chars()
                     .filter(|c| matches!(c, 'G' | 'C' | 'g' | 'c'))
                     .count();
                 let len = tu.cds.dna_sequence.len().max(1);
@@ -417,7 +568,11 @@ impl CostEstimator {
         ];
 
         let assembly_cost = per_circuit.iter().map(|c| c.assembly_cost).sum();
-        let total_cost = providers.iter().map(|p| p.total_price).min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(0.0)
+        let total_cost = providers
+            .iter()
+            .map(|p| p.total_price)
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap_or(0.0)
             + assembly_cost;
 
         CostEstimate {
@@ -437,25 +592,34 @@ impl CostEstimator {
         report.push_str("╠══════════════════════════════════════════════════════╣\n\n");
 
         report.push_str(&format!("Total construct size: {} bp\n", estimate.total_bp));
-        report.push_str(&format!("Assembly reactions: {}\n\n", estimate.per_circuit.len()));
+        report.push_str(&format!(
+            "Assembly reactions: {}\n\n",
+            estimate.per_circuit.len()
+        ));
 
         report.push_str("┌─────────────────────────┬──────────┬──────────┬────────┐\n");
         report.push_str("│ Provider                │ $/bp     │ Total    │ Days   │\n");
         report.push_str("├─────────────────────────┼──────────┼──────────┼────────┤\n");
         for p in &estimate.providers {
-            report.push_str(&format!("│ {:<23} │ ${:.3}   │ ${:>7.2} │ {:>4}   │\n",
-                p.provider, p.price_per_bp, p.total_price, p.turnaround_days));
+            report.push_str(&format!(
+                "│ {:<23} │ ${:.3}   │ ${:>7.2} │ {:>4}   │\n",
+                p.provider, p.price_per_bp, p.total_price, p.turnaround_days
+            ));
         }
         report.push_str("└─────────────────────────┴──────────┴──────────┴────────┘\n\n");
 
         report.push_str("Per-circuit breakdown:\n");
         for c in &estimate.per_circuit {
-            report.push_str(&format!("  • {}: {} bp, {} parts → synthesis ${:.2} + assembly ${:.2}\n",
-                c.name, c.total_bp, c.num_parts, c.synthesis_cost, c.assembly_cost));
+            report.push_str(&format!(
+                "  • {}: {} bp, {} parts → synthesis ${:.2} + assembly ${:.2}\n",
+                c.name, c.total_bp, c.num_parts, c.synthesis_cost, c.assembly_cost
+            ));
         }
 
-        report.push_str(&format!("\nEstimated total (cheapest synthesis + assembly): ${:.2}\n",
-            estimate.total_cost_usd));
+        report.push_str(&format!(
+            "\nEstimated total (cheapest synthesis + assembly): ${:.2}\n",
+            estimate.total_cost_usd
+        ));
 
         report
     }
@@ -476,7 +640,10 @@ impl ProtocolGenerator {
         md.push_str("*Auto-generated by SynBio-LLVM Compiler*\n\n");
 
         if let Some(ref host) = program.host {
-            md.push_str(&format!("**Host organism:** {} ({})\n\n", host.name, host.strain));
+            md.push_str(&format!(
+                "**Host organism:** {} ({})\n\n",
+                host.name, host.strain
+            ));
         }
 
         md.push_str("## Materials\n\n");
@@ -496,17 +663,31 @@ impl ProtocolGenerator {
         md.push_str("|------|------|-------------|----------------|\n");
         for circuit in &program.circuits {
             for tu in &circuit.transcription_units {
-                md.push_str(&format!("| {} | Promoter | {} | {} bp |\n",
-                    tu.promoter.name, tu.promoter.id, tu.promoter.sequence.len()));
-                md.push_str(&format!("| {} | RBS | {} | {} bp |\n",
-                    tu.rbs.name, tu.rbs.id, tu.rbs.sequence.len()));
-                md.push_str(&format!("| {} | CDS | {} | {} bp |\n",
-                    tu.cds.name, tu.cds.id, tu.cds.dna_sequence.len()));
+                md.push_str(&format!(
+                    "| {} | Promoter | {} | {} bp |\n",
+                    tu.promoter.name,
+                    tu.promoter.id,
+                    tu.promoter.sequence.len()
+                ));
+                md.push_str(&format!(
+                    "| {} | RBS | {} | {} bp |\n",
+                    tu.rbs.name,
+                    tu.rbs.id,
+                    tu.rbs.sequence.len()
+                ));
+                md.push_str(&format!(
+                    "| {} | CDS | {} | {} bp |\n",
+                    tu.cds.name,
+                    tu.cds.id,
+                    tu.cds.dna_sequence.len()
+                ));
                 if let Some(ref term) = tu.terminator {
-                    md.push_str(&format!("| {} | Terminator | {} | {} bp |\n",
+                    md.push_str(&format!(
+                        "| {} | Terminator | {} | {} bp |\n",
                         term.name,
                         term.registry_id.as_deref().unwrap_or("-"),
-                        term.sequence.len()));
+                        term.sequence.len()
+                    ));
                 }
             }
         }
@@ -555,7 +736,9 @@ impl ProtocolGenerator {
             md.push_str("## ⚠️ Safety Notes\n\n");
             md.push_str("This construct contains a **kill switch** for biocontainment.\n");
             md.push_str("Handle according to institutional biosafety guidelines.\n");
-            md.push_str("The kill switch requires the presence of inducer to maintain viability.\n\n");
+            md.push_str(
+                "The kill switch requires the presence of inducer to maintain viability.\n\n",
+            );
         }
 
         md.push_str("---\n");

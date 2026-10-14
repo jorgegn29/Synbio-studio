@@ -10,8 +10,8 @@
 //!
 //! Pipeline: AST → [Semantic Analysis] → HIR → MIR → BioIR
 
+use crate::compiler::ast::{self, BioPart, ConnectionType, GeneType, Span};
 use std::collections::HashMap;
-use crate::compiler::ast::{self, Span, BioPart, GeneType, ConnectionType};
 
 // ─── HIR Types ────────────────────────────────────────────────────────────────
 
@@ -99,7 +99,7 @@ pub struct HirRegulation {
 pub enum HirRegulationKind {
     Repression,
     Activation,
-    Inferred,   // Let the compiler figure out from part types
+    Inferred, // Let the compiler figure out from part types
 }
 
 /// Transform pipeline from `|>` operator
@@ -140,9 +140,9 @@ pub struct HirTrigger {
 /// An action inside a trigger
 #[derive(Debug, Clone)]
 pub enum HirAction {
-    Express(String),        // express(gene)
-    Repress(String),        // repress(gene)
-    Activate(String),       // activate(promoter)
+    Express(String),             // express(gene)
+    Repress(String),             // repress(gene)
+    Activate(String),            // activate(promoter)
     Call(String, Vec<HirValue>), // generic function call
 }
 
@@ -177,7 +177,11 @@ pub struct HirFunction {
 pub enum HirStatement {
     Binding(HirBinding),
     Return(Option<HirValue>),
-    If { condition: HirValue, then_body: Vec<HirStatement>, else_body: Vec<HirStatement> },
+    If {
+        condition: HirValue,
+        then_body: Vec<HirStatement>,
+        else_body: Vec<HirStatement>,
+    },
     Call(String, Vec<HirValue>),
 }
 
@@ -233,7 +237,10 @@ impl HirLowering {
         for name in &["rbs_strong", "rbs_medium", "rbs_weak", "B0034", "B0032"] {
             known_parts.insert(name.to_string(), HirPartType::RBS);
         }
-        for name in &["GFP", "RFP", "BFP", "mCherry", "sfGFP", "LacI", "TetR", "CI", "AraC", "Cas9", "dCas9", "CcdB", "MazF"] {
+        for name in &[
+            "GFP", "RFP", "BFP", "mCherry", "sfGFP", "LacI", "TetR", "CI", "AraC", "Cas9", "dCas9",
+            "CcdB", "MazF",
+        ] {
             known_parts.insert(name.to_string(), HirPartType::CDS);
         }
         for name in &["term_T1", "term_T7", "T1", "T7", "B0010", "B0015"] {
@@ -242,7 +249,10 @@ impl HirLowering {
         for name in &["gRNA"] {
             known_parts.insert(name.to_string(), HirPartType::Gene); // RNA gene
         }
-        Self { tu_counter: 0, known_parts }
+        Self {
+            tu_counter: 0,
+            known_parts,
+        }
     }
 
     /// Lower an entire AST program to HIR
@@ -281,9 +291,11 @@ impl HirLowering {
                 ast::Item::Struct(s) => {
                     let st = HirStruct {
                         name: s.name.name.clone(),
-                        fields: s.fields.iter().map(|f| {
-                            (f.name.name.clone(), self.type_ann_to_string(&f.field_type))
-                        }).collect(),
+                        fields: s
+                            .fields
+                            .iter()
+                            .map(|f| (f.name.name.clone(), self.type_ann_to_string(&f.field_type)))
+                            .collect(),
                     };
                     hir.structs.insert(s.name.name.clone(), st);
                 }
@@ -327,13 +339,11 @@ impl HirLowering {
             hir_circuit.kill_switch = Some(HirKillSwitch {
                 trigger_condition: self.lower_expr(&ks.trigger),
                 mechanism: ks.mechanism.name.clone(),
-                delay_hours: ks.delay.as_ref().map(|d| {
-                    match d.unit {
-                        ast::Unit::Hours => d.value,
-                        ast::Unit::Minutes => d.value / 60.0,
-                        ast::Unit::Seconds => d.value / 3600.0,
-                        _ => d.value,
-                    }
+                delay_hours: ks.delay.as_ref().map(|d| match d.unit {
+                    ast::Unit::Hours => d.value,
+                    ast::Unit::Minutes => d.value / 60.0,
+                    ast::Unit::Seconds => d.value / 3600.0,
+                    _ => d.value,
                 }),
                 span: ks.span.clone(),
             });
@@ -360,7 +370,11 @@ impl HirLowering {
                 // Flatten into a HirTranscriptionUnit
                 self.tu_counter += 1;
                 let id = format!("TU_{}", self.tu_counter);
-                let parts: Vec<HirPart> = conn.parts.iter().map(|p| self.lower_genetic_part(p, &conn.span)).collect();
+                let parts: Vec<HirPart> = conn
+                    .parts
+                    .iter()
+                    .map(|p| self.lower_genetic_part(p, &conn.span))
+                    .collect();
                 circuit.transcription_units.push(HirTranscriptionUnit {
                     id,
                     parts,
@@ -390,7 +404,8 @@ impl HirLowering {
                 if conn.parts.len() >= 2 {
                     let input = self.part_name(&conn.parts[0]);
                     let func = self.part_name(&conn.parts[1]);
-                    let args = conn.parts[2..].iter()
+                    let args = conn.parts[2..]
+                        .iter()
                         .map(|p| HirValue::Identifier(self.part_name(p)))
                         .collect();
                     circuit.transforms.push(HirTransform {
@@ -446,12 +461,22 @@ impl HirLowering {
         }
         // Convention-based inference
         let lower = name.to_lowercase();
-        if lower.starts_with('p') && name.chars().nth(1).map_or(false, |c| c.is_uppercase()) {
+        if lower.starts_with("j23")
+            || (lower.starts_with('p') && name.chars().nth(1).map_or(false, |c| c.is_uppercase()))
+        {
             HirPartType::Promoter
-        } else if lower.starts_with("rbs") {
+        } else if lower.starts_with("rbs") || lower.starts_with("b003") {
             HirPartType::RBS
-        } else if lower.starts_with("term") || lower.starts_with("t_") {
+        } else if lower.starts_with("term") || lower.starts_with("t_") || lower.starts_with("b001")
+        {
             HirPartType::Terminator
+        } else if lower.contains("tetr")
+            || lower.contains("gfp")
+            || lower.contains("laci")
+            || lower.contains("rfp")
+            || lower == "ci"
+        {
+            HirPartType::CDS
         } else {
             HirPartType::Unknown
         }
@@ -526,14 +551,15 @@ impl HirLowering {
             }
             ast::Statement::When(ws) => {
                 let condition = self.lower_expr(&ws.condition);
-                let actions = ws.body.statements.iter().filter_map(|s| {
-                    match s {
-                        ast::Statement::Expression(expr) => {
-                            self.lower_to_action(expr)
-                        }
+                let actions = ws
+                    .body
+                    .statements
+                    .iter()
+                    .filter_map(|s| match s {
+                        ast::Statement::Expression(expr) => self.lower_to_action(expr),
                         _ => None,
-                    }
-                }).collect();
+                    })
+                    .collect();
                 circuit.triggers.push(HirTrigger {
                     condition,
                     actions,
@@ -551,24 +577,29 @@ impl HirLowering {
         match expr {
             ast::Expr::Call(fc) => {
                 if let ast::Expr::Identifier(ref id) = *fc.function {
-                    let args: Vec<HirValue> = fc.arguments.iter()
-                        .map(|a| self.lower_expr(a))
-                        .collect();
+                    let args: Vec<HirValue> =
+                        fc.arguments.iter().map(|a| self.lower_expr(a)).collect();
                     match id.name.as_str() {
                         "express" => {
-                            let gene = fc.arguments.first()
+                            let gene = fc
+                                .arguments
+                                .first()
                                 .map(|a| self.expr_to_string(a))
                                 .unwrap_or_default();
                             Some(HirAction::Express(gene))
                         }
                         "repress" => {
-                            let gene = fc.arguments.first()
+                            let gene = fc
+                                .arguments
+                                .first()
                                 .map(|a| self.expr_to_string(a))
                                 .unwrap_or_default();
                             Some(HirAction::Repress(gene))
                         }
                         "activate" => {
-                            let gene = fc.arguments.first()
+                            let gene = fc
+                                .arguments
+                                .first()
                                 .map(|a| self.expr_to_string(a))
                                 .unwrap_or_default();
                             Some(HirAction::Activate(gene))
@@ -601,18 +632,26 @@ impl HirLowering {
     }
 
     fn lower_function(&self, func: &ast::FunctionDecl) -> HirFunction {
-        let params = func.params.iter().map(|p| {
-            (p.name.name.clone(), self.type_ann_to_string(&p.param_type))
-        }).collect();
+        let params = func
+            .params
+            .iter()
+            .map(|p| (p.name.name.clone(), self.type_ann_to_string(&p.param_type)))
+            .collect();
 
-        let body = func.body.statements.iter()
+        let body = func
+            .body
+            .statements
+            .iter()
             .map(|s| self.lower_func_statement(s))
             .collect();
 
         HirFunction {
             name: func.name.name.clone(),
             params,
-            return_type: func.return_type.as_ref().map(|t| self.type_ann_to_string(t)),
+            return_type: func
+                .return_type
+                .as_ref()
+                .map(|t| self.type_ann_to_string(t)),
             body,
             span: func.span.clone(),
         }
@@ -631,11 +670,21 @@ impl HirLowering {
             }
             ast::Statement::If(ifs) => HirStatement::If {
                 condition: self.lower_expr(&ifs.condition),
-                then_body: ifs.then_branch.statements.iter()
+                then_body: ifs
+                    .then_branch
+                    .statements
+                    .iter()
                     .map(|s| self.lower_func_statement(s))
                     .collect(),
-                else_body: ifs.else_branch.as_ref()
-                    .map(|b| b.statements.iter().map(|s| self.lower_func_statement(s)).collect())
+                else_body: ifs
+                    .else_branch
+                    .as_ref()
+                    .map(|b| {
+                        b.statements
+                            .iter()
+                            .map(|s| self.lower_func_statement(s))
+                            .collect()
+                    })
                     .unwrap_or_default(),
             },
             ast::Statement::Expression(expr) => {
@@ -719,7 +768,9 @@ impl HirLowering {
             ast::Expr::Call(fc) => {
                 let name = if let ast::Expr::Identifier(ref id) = *fc.function {
                     id.name.clone()
-                } else { "unknown".to_string() };
+                } else {
+                    "unknown".to_string()
+                };
                 let args = fc.arguments.iter().map(|a| self.lower_expr(a)).collect();
                 HirValue::Call(name, args)
             }
@@ -756,7 +807,11 @@ impl HirLowering {
                 ast::BioType::RNA => "RNA".to_string(),
             },
             ast::TypeAnnotation::Generic(id, args) => {
-                let arg_str = args.iter().map(|a| self.type_ann_to_string(a)).collect::<Vec<_>>().join(", ");
+                let arg_str = args
+                    .iter()
+                    .map(|a| self.type_ann_to_string(a))
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 format!("{}<{}>", id.name, arg_str)
             }
         }

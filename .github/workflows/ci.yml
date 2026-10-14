@@ -108,6 +108,10 @@ jobs:
       - name: Build release
         run: cd server && cargo build --release
 
+      - name: Install SBOL and SBML validators
+        if: runner.os == 'Linux'
+        run: python -m pip install 'sbol3==1.2' python-libsbml
+
       - name: Run tests
         run: cd server && cargo test
 
@@ -145,6 +149,19 @@ jobs:
 
       - name: Check syntax
         run: python -m py_compile python-engine/server.py
+
+      - name: Setup Node.js
+        if: matrix.python-version == '3.12'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate web demo SBOL3 and SBML exports
+        if: matrix.python-version == '3.12'
+        run: |
+          python -m pip install 'sbol3==1.2' python-libsbml
+          npx --yes tsx web-demo/scripts/export-fixtures.ts /tmp/synbio-web-exports
+          python scripts/validate_exports.py /tmp/synbio-web-exports
 
   # ─────────────────────────────────────────────
   # VS Code Extension Package

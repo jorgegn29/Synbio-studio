@@ -9,8 +9,8 @@
 //! 4. Kill switches are present for toxic constructs
 //! 5. Genetic connections follow promoter→RBS→CDS→terminator order
 
-use std::collections::HashMap;
 use crate::compiler::ast::*;
+use std::collections::HashMap;
 
 /// Result of semantic analysis
 pub type SemanticResult<T> = Result<T, Vec<SemanticError>>;
@@ -49,7 +49,7 @@ pub enum BioKind {
     String,
     Void,
 
-    // Sequence types  
+    // Sequence types
     DNA,
     RNA,
     AminoAcid,
@@ -88,7 +88,7 @@ pub enum BioKind {
 
     // Container
     Array(Box<BioKind>),
-    
+
     // Struct instance
     Struct(String),
 
@@ -108,7 +108,10 @@ pub enum UnitCategory {
 impl BioKind {
     /// Returns true if this type can appear as the source of a genetic flow (`->`)
     pub fn can_start_transcription(&self) -> bool {
-        matches!(self, BioKind::Promoter | BioKind::Insulator | BioKind::Unknown)
+        matches!(
+            self,
+            BioKind::Promoter | BioKind::Insulator | BioKind::Unknown
+        )
     }
 
     /// Returns true if this type can appear after a promoter in a TU
@@ -118,15 +121,28 @@ impl BioKind {
 
     /// Returns true if this type is numeric
     pub fn is_numeric(&self) -> bool {
-        matches!(self, BioKind::Int | BioKind::Float | BioKind::ValueWithUnit(_))
+        matches!(
+            self,
+            BioKind::Int | BioKind::Float | BioKind::ValueWithUnit(_)
+        )
     }
 
     /// Returns true if this is a biological part
     pub fn is_bio_part(&self) -> bool {
-        matches!(self,
-            BioKind::Promoter | BioKind::RBS | BioKind::CDS | BioKind::Terminator |
-            BioKind::Operator | BioKind::Insulator | BioKind::Gene | BioKind::Protein |
-            BioKind::Activator | BioKind::Repressor | BioKind::DNA | BioKind::RNA
+        matches!(
+            self,
+            BioKind::Promoter
+                | BioKind::RBS
+                | BioKind::CDS
+                | BioKind::Terminator
+                | BioKind::Operator
+                | BioKind::Insulator
+                | BioKind::Gene
+                | BioKind::Protein
+                | BioKind::Activator
+                | BioKind::Repressor
+                | BioKind::DNA
+                | BioKind::RNA
         )
     }
 }
@@ -183,7 +199,13 @@ impl SymbolTable {
         }
     }
 
-    fn define(&mut self, name: String, kind: BioKind, mutable: bool, span: Span) -> Result<(), SemanticError> {
+    fn define(
+        &mut self,
+        name: String,
+        kind: BioKind,
+        mutable: bool,
+        span: Span,
+    ) -> Result<(), SemanticError> {
         if self.scopes[self.current].symbols.contains_key(&name) {
             return Err(SemanticError {
                 message: format!("Variable '{}' ya está definida en este scope", name),
@@ -192,13 +214,16 @@ impl SymbolTable {
                 code: "E001",
             });
         }
-        self.scopes[self.current].symbols.insert(name.clone(), Symbol {
-            name,
-            kind,
-            mutable,
-            defined_at: span,
-            used: false,
-        });
+        self.scopes[self.current].symbols.insert(
+            name.clone(),
+            Symbol {
+                name,
+                kind,
+                mutable,
+                defined_at: span,
+                used: false,
+            },
+        );
         Ok(())
     }
 
@@ -307,6 +332,11 @@ impl SemanticAnalyzer {
             // Kill switch mechanisms
             ("CcdB", BioKind::CDS),
             ("MazF", BioKind::CDS),
+            ("CcdA", BioKind::CDS),
+            ("high", BioKind::Float),
+            ("low", BioKind::Float),
+            ("medium", BioKind::Float),
+            ("IPTG", BioKind::String),
         ];
 
         for (name, kind) in builtins {
@@ -334,16 +364,20 @@ impl SemanticAnalyzer {
                         GeneType::RNA => BioKind::RNA,
                         GeneType::Regulatory => BioKind::Gene,
                     };
-                    let _ = self.symbols.define(
-                        g.name.name.clone(),
-                        kind,
-                        false,
-                        g.name.span.clone(),
-                    );
+                    let _ =
+                        self.symbols
+                            .define(g.name.name.clone(), kind, false, g.name.span.clone());
                 }
                 Item::Struct(s) => {
-                    let fields: Vec<(String, BioKind)> = s.fields.iter()
-                        .map(|f| (f.name.name.clone(), self.resolve_type_annotation(&f.field_type)))
+                    let fields: Vec<(String, BioKind)> = s
+                        .fields
+                        .iter()
+                        .map(|f| {
+                            (
+                                f.name.name.clone(),
+                                self.resolve_type_annotation(&f.field_type),
+                            )
+                        })
                         .collect();
                     self.structs.insert(s.name.name.clone(), fields);
                     let _ = self.symbols.define(
@@ -355,23 +389,27 @@ impl SemanticAnalyzer {
                 }
                 Item::Const(c) => {
                     let kind = self.infer_expr_type(&c.value);
-                    let _ = self.symbols.define(
-                        c.name.name.clone(),
-                        kind,
-                        false,
-                        c.name.span.clone(),
-                    );
+                    let _ =
+                        self.symbols
+                            .define(c.name.name.clone(), kind, false, c.name.span.clone());
+                }
+                Item::Import(imp) => {
+                    for item in &imp.items {
+                        let kind = self.infer_part_type_from_name(&item.name);
+                        let _ =
+                            self.symbols
+                                .define(item.name.clone(), kind, false, item.span.clone());
+                    }
                 }
                 Item::Function(f) => {
-                    let ret = f.return_type.as_ref()
+                    let ret = f
+                        .return_type
+                        .as_ref()
                         .map(|t| self.resolve_type_annotation(t))
                         .unwrap_or(BioKind::Void);
-                    let _ = self.symbols.define(
-                        f.name.name.clone(),
-                        ret,
-                        false,
-                        f.name.span.clone(),
-                    );
+                    let _ =
+                        self.symbols
+                            .define(f.name.name.clone(), ret, false, f.name.span.clone());
                 }
                 _ => {}
             }
@@ -491,8 +529,14 @@ impl SemanticAnalyzer {
                 if part_types.len() >= 2 {
                     let (ref from_type, ref from_span) = part_types[0];
                     let (ref to_type, _) = part_types[part_types.len() - 1];
-                    if !matches!(from_type, BioKind::Repressor | BioKind::Activator |
-                                BioKind::CDS | BioKind::Gene | BioKind::Unknown) {
+                    if !matches!(
+                        from_type,
+                        BioKind::Repressor
+                            | BioKind::Activator
+                            | BioKind::CDS
+                            | BioKind::Gene
+                            | BioKind::Unknown
+                    ) {
                         self.errors.push(SemanticError {
                             message: format!(
                                 "El lado izquierdo de una regulación (~>) debe ser un regulador, no {:?}",
@@ -503,10 +547,14 @@ impl SemanticAnalyzer {
                             code: "E011",
                         });
                     }
-                    if !matches!(to_type, BioKind::Promoter | BioKind::Gene |
-                                BioKind::Circuit | BioKind::Unknown) {
+                    if !matches!(
+                        to_type,
+                        BioKind::Promoter | BioKind::Gene | BioKind::Circuit | BioKind::Unknown
+                    ) {
                         self.errors.push(SemanticError {
-                            message: "El objetivo de una regulación (~>) debe ser un promotor o gen".to_string(),
+                            message:
+                                "El objetivo de una regulación (~>) debe ser un promotor o gen"
+                                    .to_string(),
                             span: conn.span.clone(),
                             severity: Severity::Warning,
                             code: "W004",
@@ -619,8 +667,9 @@ impl SemanticAnalyzer {
                 // If explicit type annotation, verify compatibility
                 if let Some(ref ann) = ls.var_type {
                     let declared = self.resolve_type_annotation(ann);
-                    if declared != BioKind::Unknown && value_type != BioKind::Unknown
-                        && declared != value_type
+                    if declared != BioKind::Unknown
+                        && value_type != BioKind::Unknown
+                        && !Self::kinds_compatible(&declared, &value_type)
                     {
                         self.errors.push(SemanticError {
                             message: format!(
@@ -680,7 +729,8 @@ impl SemanticAnalyzer {
             Statement::When(ws) => {
                 if !self.in_circuit {
                     self.errors.push(SemanticError {
-                        message: "'when' triggers solo pueden usarse dentro de un circuit".to_string(),
+                        message: "'when' triggers solo pueden usarse dentro de un circuit"
+                            .to_string(),
                         span: ws.span.clone(),
                         severity: Severity::Error,
                         code: "E004",
@@ -701,34 +751,44 @@ impl SemanticAnalyzer {
                     self.check_expr(e);
                 }
             }
-            Statement::Loop(ls) => {
-                match ls {
-                    LoopStatement::For { var, iterable, body, .. } => {
-                        self.check_expr(iterable);
-                        self.symbols.enter_scope();
-                        let _ = self.symbols.define(var.name.clone(), BioKind::Unknown, false, var.span.clone());
-                        for s in &body.statements {
-                            self.check_statement(s);
-                        }
-                        self.symbols.exit_scope();
+            Statement::Loop(ls) => match ls {
+                LoopStatement::For {
+                    var,
+                    iterable,
+                    body,
+                    ..
+                } => {
+                    self.check_expr(iterable);
+                    self.symbols.enter_scope();
+                    let _ = self.symbols.define(
+                        var.name.clone(),
+                        BioKind::Unknown,
+                        false,
+                        var.span.clone(),
+                    );
+                    for s in &body.statements {
+                        self.check_statement(s);
                     }
-                    LoopStatement::While { condition, body, .. } => {
-                        self.check_expr(condition);
-                        self.symbols.enter_scope();
-                        for s in &body.statements {
-                            self.check_statement(s);
-                        }
-                        self.symbols.exit_scope();
-                    }
-                    LoopStatement::Loop { body, .. } => {
-                        self.symbols.enter_scope();
-                        for s in &body.statements {
-                            self.check_statement(s);
-                        }
-                        self.symbols.exit_scope();
-                    }
+                    self.symbols.exit_scope();
                 }
-            }
+                LoopStatement::While {
+                    condition, body, ..
+                } => {
+                    self.check_expr(condition);
+                    self.symbols.enter_scope();
+                    for s in &body.statements {
+                        self.check_statement(s);
+                    }
+                    self.symbols.exit_scope();
+                }
+                LoopStatement::Loop { body, .. } => {
+                    self.symbols.enter_scope();
+                    for s in &body.statements {
+                        self.check_statement(s);
+                    }
+                    self.symbols.exit_scope();
+                }
+            },
             Statement::Match(ms) => {
                 self.check_expr(&ms.expr);
                 for arm in &ms.arms {
@@ -755,11 +815,22 @@ impl SemanticAnalyzer {
                     // Try to infer part type from name
                     let inferred = self.infer_part_type_from_name(&id.name);
                     if inferred == BioKind::Unknown {
+                        let external = id
+                            .name
+                            .chars()
+                            .next()
+                            .map(|c| c.is_uppercase())
+                            .unwrap_or(false)
+                            || matches!(id.name.as_str(), "high" | "low" | "medium");
                         self.errors.push(SemanticError {
                             message: format!("Variable '{}' no definida", id.name),
                             span: id.span.clone(),
-                            severity: Severity::Error,
-                            code: "E005",
+                            severity: if external {
+                                Severity::Warning
+                            } else {
+                                Severity::Error
+                            },
+                            code: if external { "W003" } else { "E005" },
                         });
                     }
                     inferred
@@ -796,7 +867,9 @@ impl SemanticAnalyzer {
                 let cat = match &vwu.unit {
                     Unit::BasePairs | Unit::Kilobases => UnitCategory::Length,
                     Unit::KiloDaltons | Unit::Daltons => UnitCategory::Mass,
-                    Unit::NanoMolar | Unit::MicroMolar | Unit::MilliMolar | Unit::Molar => UnitCategory::Concentration,
+                    Unit::NanoMolar | Unit::MicroMolar | Unit::MilliMolar | Unit::Molar => {
+                        UnitCategory::Concentration
+                    }
                     Unit::Seconds | Unit::Minutes | Unit::Hours => UnitCategory::Time,
                     Unit::ArbitraryUnits | Unit::Percent => UnitCategory::Dimensionless,
                 };
@@ -814,7 +887,10 @@ impl SemanticAnalyzer {
                     BinaryOp::And | BinaryOp::Or => {
                         if left != BioKind::Bool && left != BioKind::Unknown {
                             self.errors.push(SemanticError {
-                                message: format!("Operando izquierdo de {:?} debe ser Bool", bin.operator),
+                                message: format!(
+                                    "Operando izquierdo de {:?} debe ser Bool",
+                                    bin.operator
+                                ),
                                 span: bin.span.clone(),
                                 severity: Severity::Error,
                                 code: "E007",
@@ -822,8 +898,12 @@ impl SemanticAnalyzer {
                         }
                         BioKind::Bool
                     }
-                    BinaryOp::Eq | BinaryOp::NotEq | BinaryOp::Lt | BinaryOp::LtEq |
-                    BinaryOp::Gt | BinaryOp::GtEq => BioKind::Bool,
+                    BinaryOp::Eq
+                    | BinaryOp::NotEq
+                    | BinaryOp::Lt
+                    | BinaryOp::LtEq
+                    | BinaryOp::Gt
+                    | BinaryOp::GtEq => BioKind::Bool,
                     _ => {
                         // Arithmetic operators
                         if left.is_numeric() && right.is_numeric() {
@@ -862,11 +942,11 @@ impl SemanticAnalyzer {
                         "translate" => BioKind::AminoAcid,
                         "transcribe" => BioKind::RNA,
                         "optimize_codons" => BioKind::DNA,
-                        _ => {
-                            self.symbols.resolve(&id.name)
-                                .map(|s| s.kind.clone())
-                                .unwrap_or(BioKind::Unknown)
-                        }
+                        _ => self
+                            .symbols
+                            .resolve(&id.name)
+                            .map(|s| s.kind.clone())
+                            .unwrap_or(BioKind::Unknown),
                     }
                 } else {
                     BioKind::Unknown
@@ -935,7 +1015,12 @@ impl SemanticAnalyzer {
         self.symbols.enter_scope();
         for param in &func.params {
             let kind = self.resolve_type_annotation(&param.param_type);
-            let _ = self.symbols.define(param.name.name.clone(), kind, false, param.name.span.clone());
+            let _ = self.symbols.define(
+                param.name.name.clone(),
+                kind,
+                false,
+                param.name.span.clone(),
+            );
         }
         for stmt in &func.body.statements {
             self.check_statement(stmt);
@@ -983,12 +1068,10 @@ impl SemanticAnalyzer {
                 BioType::DNA => BioKind::DNA,
                 BioType::RNA => BioKind::RNA,
             },
-            TypeAnnotation::Generic(id, _) => {
-                match id.name.as_str() {
-                    "Vec" | "Array" => BioKind::Array(Box::new(BioKind::Unknown)),
-                    _ => BioKind::Unknown,
-                }
-            }
+            TypeAnnotation::Generic(id, _) => match id.name.as_str() {
+                "Vec" | "Array" => BioKind::Array(Box::new(BioKind::Unknown)),
+                _ => BioKind::Unknown,
+            },
         }
     }
 
@@ -1032,6 +1115,10 @@ impl SemanticAnalyzer {
         } else {
             BioKind::Unknown
         }
+    }
+
+    fn kinds_compatible(declared: &BioKind, value: &BioKind) -> bool {
+        declared == value || (declared.is_bio_part() && value.is_bio_part())
     }
 
     fn warn_unused_variables(&mut self) {

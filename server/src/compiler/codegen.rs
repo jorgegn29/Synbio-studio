@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 //! Generador de código: Exporta Bio-IR a formatos estándar
-//! 
+//!
 //! Formatos soportados:
 //! - SBOL (Synthetic Biology Open Language)
 //! - FASTA (secuencias crudas)
@@ -8,6 +8,7 @@
 //! - LAMMPS (scripts de simulación molecular)
 
 use crate::compiler::bio_ir::*;
+use std::collections::HashMap;
 use std::fmt::Write;
 
 /// Generador de código para múltiples formatos
@@ -40,158 +41,272 @@ impl CodeGenerator {
     pub fn new(config: GeneratorConfig) -> Self {
         Self { config }
     }
-    
-    /// Genera SBOL 3.0 XML
+
+    /// SBOL 3 RDF/XML that pySBOL3 1.2 validates: absolute namespace URIs,
+    /// DNA type SBO:0000251, SO roles, sequences, SubComponents and precedes.
     pub fn generate_sbol(&self, program: &BioIRProgram) -> Result<String, CodeGenError> {
+        const NS: &str = "https://synbio.studio/sbol";
         let mut output = String::new();
-        
-        // Header XML
         writeln!(output, r#"<?xml version="1.0" encoding="UTF-8"?>"#)?;
-        writeln!(output, r#"<sbol xmlns="http://sbols.org/v3#""#)?;
-        writeln!(output, r#"      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#""#)?;
-        writeln!(output, r#"      xmlns:dcterms="http://purl.org/dc/terms/""#)?;
-        writeln!(output, r#"      xmlns:prov="http://www.w3.org/ns/prov#""#)?;
-        writeln!(output, r#"      xmlns:om="http://www.ontology-of-units-of-measure.org/resource/om-2/">"#)?;
-        writeln!(output)?;
-        
-        // Metadatos del programa
-        writeln!(output, r#"  <!-- Generado por SynBio-LLVM -->"#)?;
-        writeln!(output, r#"  <!-- Programa: {} -->"#, program.name)?;
-        if let Some(ref desc) = program.metadata.description {
-            writeln!(output, r#"  <!-- Descripción: {} -->"#, desc)?;
-        }
-        writeln!(output)?;
-        
-        // Generar cada circuito
+        writeln!(
+            output,
+            r#"<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#""#
+        )?;
+        writeln!(output, r#"         xmlns:sbol="http://sbols.org/v3#">"#)?;
+
         for circuit in &program.circuits {
-            self.generate_sbol_circuit(&mut output, circuit)?;
+            self.write_sbol_circuit(&mut output, circuit, NS)?;
         }
-        
-        // Cerrar documento
-        writeln!(output, r#"</sbol>"#)?;
-        
+
+        writeln!(output, "</rdf:RDF>")?;
         Ok(output)
     }
-    
-    fn generate_sbol_circuit(&self, output: &mut String, circuit: &GeneticCircuit) -> Result<(), CodeGenError> {
-        let circuit_uri = format!("https://synbio-llvm.org/{}", circuit.name);
-        
-        // Component principal (el circuito completo)
-        writeln!(output, r#"  <Component rdf:about="{}">"#, circuit_uri)?;
-        writeln!(output, r#"    <displayId>{}</displayId>"#, circuit.name)?;
-        writeln!(output, r#"    <name>{}</name>"#, circuit.name)?;
-        writeln!(output, r#"    <description>Circuito genético generado por SynBio-LLVM</description>"#)?;
-        writeln!(output, r#"    <type rdf:resource="https://identifiers.org/SBO:0000251"/>"#)?; // DNA
-        
-        // Generar SubComponents para cada unidad de transcripción
+
+    fn write_sbol_circuit(
+        &self,
+        output: &mut String,
+        circuit: &GeneticCircuit,
+        ns: &str,
+    ) -> Result<(), CodeGenError> {
+        let mut defined: HashMap<String, ()> = HashMap::new();
+        let mut definitions = String::new();
+        let mut features: Vec<(String, String)> = Vec::new();
+
         for tu in &circuit.transcription_units {
-            writeln!(output, r#"    <hasSubComponent>"#)?;
-            writeln!(output, r#"      <SubComponent rdf:about="{}/{}">"#, circuit_uri, tu.id)?;
-            writeln!(output, r#"        <displayId>{}</displayId>"#, tu.id)?;
-            writeln!(output, r#"        <instanceOf rdf:resource="{}/component/{}_def"/>"#, circuit_uri, tu.id)?;
-            writeln!(output, r#"      </SubComponent>"#)?;
-            writeln!(output, r#"    </hasSubComponent>"#)?;
+            self.collect_sbol_part(
+                &mut defined,
+                &mut definitions,
+                &mut features,
+                ns,
+                &tu.promoter.name,
+                "https://identifiers.org/SO:0000167",
+                &tu.promoter.sequence,
+            );
+            self.collect_sbol_part(
+                &mut defined,
+                &mut definitions,
+                &mut features,
+                ns,
+                &tu.rbs.name,
+                "https://identifiers.org/SO:0000139",
+                &tu.rbs.sequence,
+            );
+            let cds_seq = if tu.cds.dna_sequence.is_empty() {
+                tu.coding_sequences
+                    .first()
+                    .map(|c| c.dna_sequence.as_str())
+                    .unwrap_or("")
+            } else {
+                tu.cds.dna_sequence.as_str()
+            };
+            self.collect_sbol_part(
+                &mut defined,
+                &mut definitions,
+                &mut features,
+                ns,
+                &tu.cds.name,
+                "https://identifiers.org/SO:0000316",
+                cds_seq,
+            );
+            if let Some(term) = &tu.terminator {
+                self.collect_sbol_part(
+                    &mut defined,
+                    &mut definitions,
+                    &mut features,
+                    ns,
+                    &term.name,
+                    "https://identifiers.org/SO:0000141",
+                    &term.sequence,
+                );
+            }
         }
-        
-        writeln!(output, r#"  </Component>"#)?;
-        writeln!(output)?;
-        
-        // Generar definiciones de partes
-        for tu in &circuit.transcription_units {
-            self.generate_sbol_transcription_unit(output, tu, &circuit_uri)?;
+
+        let mut parent = sbol_display(&circuit.name);
+        if defined.contains_key(&parent) {
+            parent = format!("{parent}_circuit");
         }
-        
-        // Generar secuencia completa
-        let full_sequence = self.assemble_sequence(circuit);
-        writeln!(output, r#"  <Sequence rdf:about="{}/sequence">"#, circuit_uri)?;
-        writeln!(output, r#"    <displayId>{}_seq</displayId>"#, circuit.name)?;
-        writeln!(output, r#"    <elements>{}</elements>"#, full_sequence)?;
-        writeln!(output, r#"    <encoding rdf:resource="https://identifiers.org/edam:format_1207"/>"#)?; // IUPAC DNA
-        writeln!(output, r#"  </Sequence>"#)?;
-        writeln!(output)?;
-        
+
+        writeln!(output, r#"  <rdf:Description rdf:about="{ns}/{parent}">"#)?;
+        writeln!(output, r#"    <sbol:displayId>{parent}</sbol:displayId>"#)?;
+        writeln!(
+            output,
+            r#"    <rdf:type rdf:resource="http://sbols.org/v3#Component"/>"#
+        )?;
+        writeln!(output, r#"    <sbol:hasNamespace rdf:resource="{ns}"/>"#)?;
+        writeln!(
+            output,
+            r#"    <sbol:type rdf:resource="https://identifiers.org/SBO:0000251"/>"#
+        )?;
+        writeln!(
+            output,
+            r#"    <sbol:role rdf:resource="https://identifiers.org/SO:0000804"/>"#
+        )?;
+        for (feature, _) in &features {
+            writeln!(
+                output,
+                r#"    <sbol:hasFeature rdf:resource="{ns}/{parent}/{feature}"/>"#
+            )?;
+        }
+        for index in 0..features.len().saturating_sub(1) {
+            writeln!(
+                output,
+                r#"    <sbol:hasConstraint rdf:resource="{ns}/{parent}/order_{index}"/>"#
+            )?;
+        }
+        writeln!(output, "  </rdf:Description>")?;
+
+        for (feature, component) in &features {
+            writeln!(
+                output,
+                r#"  <rdf:Description rdf:about="{ns}/{parent}/{feature}">"#
+            )?;
+            writeln!(output, r#"    <sbol:displayId>{feature}</sbol:displayId>"#)?;
+            writeln!(
+                output,
+                r#"    <rdf:type rdf:resource="http://sbols.org/v3#SubComponent"/>"#
+            )?;
+            writeln!(
+                output,
+                r#"    <sbol:instanceOf rdf:resource="{ns}/{component}"/>"#
+            )?;
+            writeln!(output, "  </rdf:Description>")?;
+        }
+        for index in 0..features.len().saturating_sub(1) {
+            let subject = &features[index].0;
+            let object = &features[index + 1].0;
+            writeln!(
+                output,
+                r#"  <rdf:Description rdf:about="{ns}/{parent}/order_{index}">"#
+            )?;
+            writeln!(
+                output,
+                r#"    <sbol:displayId>order_{index}</sbol:displayId>"#
+            )?;
+            writeln!(
+                output,
+                r#"    <rdf:type rdf:resource="http://sbols.org/v3#Constraint"/>"#
+            )?;
+            writeln!(
+                output,
+                r#"    <sbol:restriction rdf:resource="http://sbols.org/v3#precedes"/>"#
+            )?;
+            writeln!(
+                output,
+                r#"    <sbol:subject rdf:resource="{ns}/{parent}/{subject}"/>"#
+            )?;
+            writeln!(
+                output,
+                r#"    <sbol:object rdf:resource="{ns}/{parent}/{object}"/>"#
+            )?;
+            writeln!(output, "  </rdf:Description>")?;
+        }
+        output.push_str(&definitions);
         Ok(())
     }
-    
-    fn generate_sbol_transcription_unit(&self, output: &mut String, tu: &TranscriptionUnit, base_uri: &str) -> Result<(), CodeGenError> {
-        let tu_uri = format!("{}/component/{}_def", base_uri, tu.id);
-        
-        writeln!(output, r#"  <Component rdf:about="{}">"#, tu_uri)?;
-        writeln!(output, r#"    <displayId>{}</displayId>"#, tu.id)?;
-        writeln!(output, r#"    <type rdf:resource="https://identifiers.org/SBO:0000251"/>"#)?;
-        
-        // Promotor
-        writeln!(output, r#"    <hasSubComponent>"#)?;
-        writeln!(output, r#"      <SubComponent>"#)?;
-        writeln!(output, r#"        <displayId>{}</displayId>"#, tu.promoter.id)?;
-        writeln!(output, r#"        <role rdf:resource="https://identifiers.org/SO:0000167"/>"#)?; // Promoter
-        writeln!(output, r#"      </SubComponent>"#)?;
-        writeln!(output, r#"    </hasSubComponent>"#)?;
-        
-        // RBS
-        writeln!(output, r#"    <hasSubComponent>"#)?;
-        writeln!(output, r#"      <SubComponent>"#)?;
-        writeln!(output, r#"        <displayId>{}</displayId>"#, tu.rbs.id)?;
-        writeln!(output, r#"        <role rdf:resource="https://identifiers.org/SO:0000139"/>"#)?; // RBS
-        writeln!(output, r#"      </SubComponent>"#)?;
-        writeln!(output, r#"    </hasSubComponent>"#)?;
-        
-        // CDS
-        for cds in &tu.coding_sequences {
-            writeln!(output, r#"    <hasSubComponent>"#)?;
-            writeln!(output, r#"      <SubComponent>"#)?;
-            writeln!(output, r#"        <displayId>{}</displayId>"#, cds.id)?;
-            writeln!(output, r#"        <role rdf:resource="https://identifiers.org/SO:0000316"/>"#)?; // CDS
-            writeln!(output, r#"      </SubComponent>"#)?;
-            writeln!(output, r#"    </hasSubComponent>"#)?;
+
+    fn collect_sbol_part(
+        &self,
+        defined: &mut HashMap<String, ()>,
+        definitions: &mut String,
+        features: &mut Vec<(String, String)>,
+        ns: &str,
+        name: &str,
+        role: &str,
+        sequence: &str,
+    ) {
+        let display = sbol_display(name);
+        let feature = format!("{display}_inst{}", features.len());
+        features.push((feature, display.clone()));
+        if defined.contains_key(&display) {
+            return;
         }
-        
-        // Terminator (si existe)
-        if let Some(ref term) = tu.terminator {
-            writeln!(output, r#"    <hasSubComponent>"#)?;
-            writeln!(output, r#"      <SubComponent>"#)?;
-            writeln!(output, r#"        <displayId>{}</displayId>"#, term.registry_id.as_deref().unwrap_or(&term.name))?;
-            writeln!(output, r#"        <role rdf:resource="https://identifiers.org/SO:0000141"/>"#)?; // Terminator
-            writeln!(output, r#"      </SubComponent>"#)?;
-            writeln!(output, r#"    </hasSubComponent>"#)?;
+        defined.insert(display.clone(), ());
+        let dna = dna_elements(sequence);
+        let _ = writeln!(
+            definitions,
+            r#"  <rdf:Description rdf:about="{ns}/{display}">"#
+        );
+        let _ = writeln!(
+            definitions,
+            r#"    <sbol:displayId>{display}</sbol:displayId>"#
+        );
+        let _ = writeln!(
+            definitions,
+            r#"    <rdf:type rdf:resource="http://sbols.org/v3#Component"/>"#
+        );
+        let _ = writeln!(
+            definitions,
+            r#"    <sbol:hasNamespace rdf:resource="{ns}"/>"#
+        );
+        let _ = writeln!(
+            definitions,
+            r#"    <sbol:type rdf:resource="https://identifiers.org/SBO:0000251"/>"#
+        );
+        let _ = writeln!(definitions, r#"    <sbol:role rdf:resource="{role}"/>"#);
+        if !dna.is_empty() {
+            let sequence_id = format!("seq_{display}");
+            let _ = writeln!(
+                definitions,
+                r#"    <sbol:hasSequence rdf:resource="{ns}/{sequence_id}"/>"#
+            );
+            let _ = writeln!(definitions, "  </rdf:Description>");
+            let _ = writeln!(
+                definitions,
+                r#"  <rdf:Description rdf:about="{ns}/{sequence_id}">"#
+            );
+            let _ = writeln!(
+                definitions,
+                r#"    <sbol:displayId>{sequence_id}</sbol:displayId>"#
+            );
+            let _ = writeln!(
+                definitions,
+                r#"    <rdf:type rdf:resource="http://sbols.org/v3#Sequence"/>"#
+            );
+            let _ = writeln!(
+                definitions,
+                r#"    <sbol:hasNamespace rdf:resource="{ns}"/>"#
+            );
+            let _ = writeln!(definitions, r#"    <sbol:elements>{dna}</sbol:elements>"#);
+            let _ = writeln!(
+                definitions,
+                r#"    <sbol:encoding rdf:resource="https://identifiers.org/edam:format_1207"/>"#
+            );
+            let _ = writeln!(definitions, "  </rdf:Description>");
+        } else {
+            let _ = writeln!(definitions, "  </rdf:Description>");
         }
-        
-        writeln!(output, r#"  </Component>"#)?;
-        writeln!(output)?;
-        
-        Ok(())
     }
-    
+
     /// Genera formato FASTA
     pub fn generate_fasta(&self, program: &BioIRProgram) -> Result<String, CodeGenError> {
         let mut output = String::new();
-        
+
         for circuit in &program.circuits {
             // Header FASTA
             writeln!(output, ">{} | Generated by SynBio-LLVM", circuit.name)?;
-            
+
             // Secuencia completa
             let sequence = self.assemble_sequence(circuit);
-            
+
             // Formatear a 80 caracteres por línea
             for chunk in sequence.as_bytes().chunks(80) {
                 writeln!(output, "{}", std::str::from_utf8(chunk).unwrap())?;
             }
-            
+
             writeln!(output)?;
-            
+
             // Secuencias individuales de cada parte
             for tu in &circuit.transcription_units {
                 // Promotor
                 writeln!(output, ">{}|promoter|{}", circuit.name, tu.promoter.name)?;
                 writeln!(output, "{}", tu.promoter.sequence)?;
                 writeln!(output)?;
-                
+
                 // RBS
                 writeln!(output, ">{}|rbs|{}", circuit.name, tu.rbs.name)?;
                 writeln!(output, "{}", tu.rbs.sequence)?;
                 writeln!(output)?;
-                
+
                 // CDS
                 for cds in &tu.coding_sequences {
                     writeln!(output, ">{}|cds|{}", circuit.name, cds.name)?;
@@ -199,13 +314,13 @@ impl CodeGenerator {
                         writeln!(output, "{}", std::str::from_utf8(chunk).unwrap())?;
                     }
                     writeln!(output)?;
-                    
+
                     // También exportar secuencia de aminoácidos
                     writeln!(output, ">{}|protein|{}", circuit.name, cds.name)?;
                     writeln!(output, "{}", cds.amino_sequence)?;
                     writeln!(output)?;
                 }
-                
+
                 // Terminator (si existe)
                 if let Some(ref term) = tu.terminator {
                     writeln!(output, ">{}|terminator|{}", circuit.name, term.name)?;
@@ -214,57 +329,85 @@ impl CodeGenerator {
                 }
             }
         }
-        
+
         Ok(output)
     }
-    
+
     /// Genera formato GenBank
     pub fn generate_genbank(&self, program: &BioIRProgram) -> Result<String, CodeGenError> {
         let mut output = String::new();
-        
+
         for circuit in &program.circuits {
             let sequence = self.assemble_sequence(circuit);
             let seq_len = sequence.len();
-            
+
             // Header
-            writeln!(output, "LOCUS       {:<16} {:>6} bp    DNA     circular SYN {:>11}",
-                circuit.name, seq_len, chrono_lite::date_string())?;
-            writeln!(output, "DEFINITION  {} genetic circuit, generated by SynBio-LLVM.",
-                circuit.name)?;
+            writeln!(
+                output,
+                "LOCUS       {:<16} {:>6} bp    DNA     circular SYN {:>11}",
+                circuit.name,
+                seq_len,
+                chrono_lite::date_string()
+            )?;
+            writeln!(
+                output,
+                "DEFINITION  {} genetic circuit, generated by SynBio-LLVM.",
+                circuit.name
+            )?;
             writeln!(output, "ACCESSION   SYNBIO_{}", circuit.name.to_uppercase())?;
-            writeln!(output, "VERSION     SYNBIO_{}.1", circuit.name.to_uppercase())?;
+            writeln!(
+                output,
+                "VERSION     SYNBIO_{}.1",
+                circuit.name.to_uppercase()
+            )?;
             writeln!(output, "KEYWORDS    synthetic biology; genetic circuit.")?;
             writeln!(output, "SOURCE      synthetic construct")?;
             writeln!(output, "  ORGANISM  synthetic construct")?;
             writeln!(output, "            other sequences; artificial sequences.")?;
             writeln!(output, "FEATURES             Location/Qualifiers")?;
-            
+
             // Features para cada parte
             let mut position = 1;
             for tu in &circuit.transcription_units {
                 // Promotor
                 let prom_end = position + tu.promoter.sequence.len() - 1;
                 writeln!(output, "     promoter        {}..{}", position, prom_end)?;
-                writeln!(output, r#"                     /label="{}""#, tu.promoter.name)?;
-                writeln!(output, r#"                     /note="strength={}""#, tu.promoter.strength)?;
+                writeln!(
+                    output,
+                    r#"                     /label="{}""#,
+                    tu.promoter.name
+                )?;
+                writeln!(
+                    output,
+                    r#"                     /note="strength={}""#,
+                    tu.promoter.strength
+                )?;
                 position = prom_end + 1;
-                
+
                 // RBS
                 let rbs_end = position + tu.rbs.sequence.len() - 1;
                 writeln!(output, "     RBS             {}..{}", position, rbs_end)?;
                 writeln!(output, r#"                     /label="{}""#, tu.rbs.name)?;
                 position = rbs_end + 1;
-                
+
                 // CDS
                 for cds in &tu.coding_sequences {
                     let cds_end = position + cds.dna_sequence.len() - 1;
                     writeln!(output, "     CDS             {}..{}", position, cds_end)?;
                     writeln!(output, r#"                     /label="{}""#, cds.name)?;
-                    writeln!(output, r#"                     /translation="{}""#, cds.amino_sequence)?;
-                    writeln!(output, r#"                     /product="{}""#, cds.protein.name)?;
+                    writeln!(
+                        output,
+                        r#"                     /translation="{}""#,
+                        cds.amino_sequence
+                    )?;
+                    writeln!(
+                        output,
+                        r#"                     /product="{}""#,
+                        cds.protein.name
+                    )?;
                     position = cds_end + 1;
                 }
-                
+
                 // Terminator (si existe)
                 if let Some(ref term) = tu.terminator {
                     let term_end = position + term.sequence.len() - 1;
@@ -273,32 +416,39 @@ impl CodeGenerator {
                     position = term_end + 1;
                 }
             }
-            
+
             // Origen de secuencia
             writeln!(output, "ORIGIN")?;
             for (i, chunk) in sequence.as_bytes().chunks(60).enumerate() {
                 write!(output, "{:>9}", i * 60 + 1)?;
                 for (_j, subchunk) in chunk.chunks(10).enumerate() {
-                    write!(output, " {}", std::str::from_utf8(subchunk).unwrap().to_lowercase())?;
+                    write!(
+                        output,
+                        " {}",
+                        std::str::from_utf8(subchunk).unwrap().to_lowercase()
+                    )?;
                 }
                 writeln!(output)?;
             }
             writeln!(output, "//")?;
         }
-        
+
         Ok(output)
     }
-    
+
     /// Genera script de LAMMPS para simulación molecular
     pub fn generate_lammps(&self, program: &BioIRProgram) -> Result<String, CodeGenError> {
         let mut output = String::new();
-        
+
         writeln!(output, "# LAMMPS input script generated by SynBio-LLVM")?;
-        writeln!(output, "# Simulación de dinámica molecular para circuito genético")?;
+        writeln!(
+            output,
+            "# Simulación de dinámica molecular para circuito genético"
+        )?;
         writeln!(output, "#")?;
         writeln!(output, "# Programa: {}", program.name)?;
         writeln!(output)?;
-        
+
         // Configuración inicial
         writeln!(output, "# ===== Inicialización =====")?;
         writeln!(output, "units real")?;
@@ -310,13 +460,13 @@ impl CodeGenerator {
         writeln!(output, "dihedral_style opls")?;
         writeln!(output, "special_bonds lj/coul 0.0 0.0 0.5")?;
         writeln!(output)?;
-        
+
         // Crear caja de simulación
         writeln!(output, "# ===== Caja de simulación =====")?;
         writeln!(output, "region box block -50 50 -50 50 -50 50")?;
         writeln!(output, "create_box 10 box bond/types 5 angle/types 5 dihedral/types 5 extra/bond/per/atom 5 extra/angle/per/atom 5 extra/dihedral/per/atom 5")?;
         writeln!(output)?;
-        
+
         // Definir tipos de átomos para ADN
         writeln!(output, "# ===== Tipos de átomos =====")?;
         writeln!(output, "# Tipo 1: Fósforo (backbone)")?;
@@ -327,7 +477,7 @@ impl CodeGenerator {
         writeln!(output, "# Tipo 6: Citosina")?;
         writeln!(output, "# Tipo 7-10: Proteínas (simplificado)")?;
         writeln!(output)?;
-        
+
         writeln!(output, "mass 1 31.0   # P")?;
         writeln!(output, "mass 2 83.0   # Sugar")?;
         writeln!(output, "mass 3 135.0  # A")?;
@@ -335,7 +485,7 @@ impl CodeGenerator {
         writeln!(output, "mass 5 151.0  # G")?;
         writeln!(output, "mass 6 111.0  # C")?;
         writeln!(output)?;
-        
+
         // Potenciales de interacción
         writeln!(output, "# ===== Potenciales =====")?;
         writeln!(output, "pair_coeff 1 1 0.5 3.5    # P-P")?;
@@ -343,24 +493,44 @@ impl CodeGenerator {
         writeln!(output, "pair_coeff 3 4 1.5 3.0    # A-T pairing")?;
         writeln!(output, "pair_coeff 5 6 2.0 3.0    # G-C pairing")?;
         writeln!(output)?;
-        
+
         // Insertar moléculas del circuito
         writeln!(output, "# ===== Moléculas del circuito =====")?;
         for circuit in &program.circuits {
             for tu in &circuit.transcription_units {
                 writeln!(output, "# Unidad de transcripción: {}", tu.id)?;
-                writeln!(output, "# Promotor: {} ({} bp)", tu.promoter.name, tu.promoter.sequence.len())?;
-                writeln!(output, "# RBS: {} ({} bp)", tu.rbs.name, tu.rbs.sequence.len())?;
+                writeln!(
+                    output,
+                    "# Promotor: {} ({} bp)",
+                    tu.promoter.name,
+                    tu.promoter.sequence.len()
+                )?;
+                writeln!(
+                    output,
+                    "# RBS: {} ({} bp)",
+                    tu.rbs.name,
+                    tu.rbs.sequence.len()
+                )?;
                 for cds in &tu.coding_sequences {
-                    writeln!(output, "# CDS: {} ({} bp)", cds.name, cds.dna_sequence.len())?;
+                    writeln!(
+                        output,
+                        "# CDS: {} ({} bp)",
+                        cds.name,
+                        cds.dna_sequence.len()
+                    )?;
                 }
                 if let Some(ref term) = tu.terminator {
-                    writeln!(output, "# Terminador: {} ({} bp)", term.name, term.sequence.len())?;
+                    writeln!(
+                        output,
+                        "# Terminador: {} ({} bp)",
+                        term.name,
+                        term.sequence.len()
+                    )?;
                 }
             }
         }
         writeln!(output)?;
-        
+
         // Configuración de dinámica
         writeln!(output, "# ===== Dinámica molecular =====")?;
         writeln!(output, "velocity all create 310.0 12345 mom yes rot yes")?;
@@ -373,31 +543,37 @@ impl CodeGenerator {
         writeln!(output, "timestep 2.0")?;
         writeln!(output, "thermo 1000")?;
         writeln!(output)?;
-        
+
         // Output
         writeln!(output, "# ===== Output =====")?;
-        writeln!(output, "dump 1 all custom 1000 circuit_trajectory.lammpstrj id type x y z")?;
+        writeln!(
+            output,
+            "dump 1 all custom 1000 circuit_trajectory.lammpstrj id type x y z"
+        )?;
         writeln!(output, "dump 2 all xyz 5000 circuit_trajectory.xyz")?;
         writeln!(output)?;
-        
+
         // Run
         writeln!(output, "# ===== Simulación =====")?;
         writeln!(output, "run 100000   # 200 ps de equilibración")?;
         writeln!(output)?;
         writeln!(output, "# ===== Producción =====")?;
         writeln!(output, "unfix 1")?;
-        writeln!(output, "fix 2 all npt temp 310.0 310.0 100.0 iso 1.0 1.0 1000.0")?;
+        writeln!(
+            output,
+            "fix 2 all npt temp 310.0 310.0 100.0 iso 1.0 1.0 1000.0"
+        )?;
         writeln!(output, "run 500000   # 1 ns de producción")?;
         writeln!(output)?;
         writeln!(output, "write_data circuit_final.data")?;
-        
+
         Ok(output)
     }
-    
+
     /// Ensambla la secuencia completa del circuito
     fn assemble_sequence(&self, circuit: &GeneticCircuit) -> String {
         let mut sequence = String::new();
-        
+
         for tu in &circuit.transcription_units {
             // Agregar aisladores upstream
             for insulator in &tu.insulators {
@@ -405,23 +581,23 @@ impl CodeGenerator {
                     sequence.push_str(&insulator.sequence);
                 }
             }
-            
+
             // Promotor
             sequence.push_str(&tu.promoter.sequence);
-            
+
             // RBS
             sequence.push_str(&tu.rbs.sequence);
-            
+
             // Secuencias codificantes
             for cds in &tu.coding_sequences {
                 sequence.push_str(&cds.dna_sequence);
             }
-            
+
             // Terminador
             if let Some(ref term) = tu.terminator {
                 sequence.push_str(&term.sequence);
             }
-            
+
             // Agregar aisladores downstream
             for insulator in &tu.insulators {
                 if matches!(insulator.position, InsulatorPosition::Downstream) {
@@ -429,7 +605,7 @@ impl CodeGenerator {
                 }
             }
         }
-        
+
         sequence
     }
 }
@@ -439,10 +615,10 @@ impl CodeGenerator {
 pub enum CodeGenError {
     #[error("Error de formato: {0}")]
     FormatError(#[from] std::fmt::Error),
-    
+
     #[error("Secuencia inválida: {0}")]
     InvalidSequence(String),
-    
+
     #[error("Parte no encontrada: {0}")]
     PartNotFound(String),
 }
@@ -455,10 +631,41 @@ mod chrono_lite {
     }
 }
 
+fn sbol_display(raw: &str) -> String {
+    let mut out: String = raw
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    while out.starts_with('_') {
+        out.remove(0);
+    }
+    if out.is_empty() {
+        out = "part".to_string();
+    }
+    if out.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+        out.insert_str(0, "p_");
+    }
+    out
+}
+
+fn dna_elements(sequence: &str) -> String {
+    sequence
+        .chars()
+        .filter(|c| matches!(c, 'A' | 'C' | 'G' | 'T' | 'a' | 'c' | 'g' | 't'))
+        .map(|c| c.to_ascii_uppercase())
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_fasta_generation() {
         let circuit = GeneticCircuit {
@@ -521,7 +728,7 @@ mod tests {
             toxicity_score: 0.0,
             metadata: std::collections::HashMap::new(),
         };
-        
+
         let program = BioIRProgram {
             name: "Test".to_string(),
             host: None,
@@ -529,10 +736,10 @@ mod tests {
             parts_library: PartsLibrary::default(),
             metadata: ProgramMetadata::default(),
         };
-        
+
         let gen = CodeGenerator::new(GeneratorConfig::default());
         let fasta = gen.generate_fasta(&program).unwrap();
-        
+
         assert!(fasta.contains(">TestCircuit"));
         assert!(fasta.contains("ATGCATGC"));
     }

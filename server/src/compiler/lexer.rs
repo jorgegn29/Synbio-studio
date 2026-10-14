@@ -7,15 +7,15 @@ use std::ops::Range;
 
 /// Tokens del lenguaje BioScript
 #[derive(Logos, Debug, Clone, PartialEq)]
-#[logos(skip r"[ \t\r\n\f]+")]  // Ignorar espacios en blanco
+#[logos(skip r"[ \t\r\n\f]+")] // Ignorar espacios en blanco
 pub enum Token {
     // ===== Comentarios =====
     #[regex(r"//[^\n]*", |_| ())]
     LineComment,
-    
+
     #[regex(r"///[^\n]*", |lex| lex.slice().to_string())]
     DocComment(String),
-    
+
     // ===== Palabras clave de control =====
     #[token("if")]
     If,
@@ -37,7 +37,7 @@ pub enum Token {
     Break,
     #[token("continue")]
     Continue,
-    
+
     // ===== Palabras clave de declaración =====
     #[token("let")]
     Let,
@@ -65,7 +65,7 @@ pub enum Token {
     Pub,
     #[token("use")]
     Use,
-    
+
     // ===== Palabras clave biológicas =====
     #[token("circuit")]
     Circuit,
@@ -93,7 +93,7 @@ pub enum Token {
     Sense,
     #[token("bind")]
     Bind,
-    
+
     // ===== Palabras clave de seguridad =====
     #[token("safe")]
     Safe,
@@ -103,7 +103,7 @@ pub enum Token {
     Contained,
     #[token("kill_switch")]
     KillSwitch,
-    
+
     // ===== Tipos biológicos =====
     #[token("Promoter")]
     TypePromoter,
@@ -125,7 +125,7 @@ pub enum Token {
     TypeRiboswitch,
     #[token("Aptamer")]
     TypeAptamer,
-    
+
     // ===== Tipos de circuito =====
     #[token("Circuit")]
     TypeCircuit,
@@ -143,7 +143,7 @@ pub enum Token {
     GateNand,
     #[token("XOR")]
     GateXor,
-    
+
     // ===== Tipos regulatorios =====
     #[token("Activator")]
     TypeActivator,
@@ -153,31 +153,31 @@ pub enum Token {
     TypeInducer,
     #[token("Operator")]
     TypeOperator,
-    
+
     // ===== Literales =====
     #[regex(r"[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f64>().ok())]
     Float(f64),
-    
+
     #[regex(r"[0-9]+", |lex| lex.slice().parse::<i64>().ok())]
     Integer(i64),
-    
+
     #[regex(r#""([^"\\]|\\.)*""#, |lex| {
         let s = lex.slice();
         s[1..s.len()-1].to_string()
     })]
     String(String),
-    
+
     // ===== Secuencias biológicas =====
     #[token("seq")]
     SeqKeyword,
-    
+
     #[token("aa")]
     AminoAcidKeyword,
-    
+
     // Secuencias de ADN (mínimo 10 bases para evitar conflicto con identificadores)
     #[regex(r"[ATGCatgc]{10,}", priority = 10, callback = |lex| lex.slice().to_uppercase())]
     DNASequence(String),
-    
+
     // ===== Unidades =====
     #[token("bp")]
     UnitBp,
@@ -197,7 +197,7 @@ pub enum Token {
     UnitMin,
     #[token("sec")]
     UnitSec,
-    
+
     // ===== Partes biológicas conocidas =====
     #[token("pLac")]
     PartPLac,
@@ -219,19 +219,19 @@ pub enum Token {
     PartCas9,
     #[token("gRNA")]
     PartGRNA,
-    
+
     // ===== Operadores =====
     #[token("->")]
     Arrow,
     #[token("=>")]
     FatArrow,
     #[token("~>")]
-    TildeArrow,  // Represión/regulación
+    TildeArrow, // Represión/regulación
     #[token("|>")]
     PipeRight,
     #[token("<|")]
     PipeLeft,
-    
+
     #[token("+")]
     Plus,
     #[token("-")]
@@ -242,7 +242,7 @@ pub enum Token {
     Slash,
     #[token("%")]
     Percent,
-    
+
     #[token("==")]
     EqEq,
     #[token("!=")]
@@ -255,21 +255,21 @@ pub enum Token {
     Lt,
     #[token(">")]
     Gt,
-    
+
     #[token("&&")]
     AndAnd,
     #[token("||")]
     OrOr,
     #[token("!")]
     Not,
-    
+
     #[token("=")]
     Eq,
     #[token("+=")]
     PlusEq,
     #[token("-=")]
     MinusEq,
-    
+
     // ===== Delimitadores =====
     #[token("(")]
     LParen,
@@ -283,7 +283,7 @@ pub enum Token {
     LBracket,
     #[token("]")]
     RBracket,
-    
+
     #[token(":")]
     Colon,
     #[token("::")]
@@ -294,7 +294,7 @@ pub enum Token {
     Comma,
     #[token(".")]
     Dot,
-    
+
     // ===== Identificadores =====
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", |lex| lex.slice().to_string())]
     Identifier(String),
@@ -326,38 +326,43 @@ impl<'source> Lexer<'source> {
             line_start: 0,
         }
     }
-    
+
     /// Tokeniza todo el código fuente
     pub fn tokenize(source: &str) -> Result<Vec<SpannedToken>, LexerError> {
         let mut lexer = Lexer::new(source);
         let mut tokens = Vec::new();
-        
+
         while let Some(spanned) = lexer.next_token()? {
-            // Ignorar comentarios de línea
-            if !matches!(spanned.token, Token::LineComment) {
+            // Line comments and `///` doc comments are not part of the grammar.
+            if !matches!(spanned.token, Token::LineComment | Token::DocComment(_)) {
                 tokens.push(spanned);
             }
         }
-        
+
         Ok(tokens)
     }
-    
+
     fn next_token(&mut self) -> Result<Option<SpannedToken>, LexerError> {
         // Actualizar línea y columna
         let scan_start = self.line_start;
         let scan_end = self.inner.span().start;
-        for (i, c) in self.source[scan_start..scan_end].chars().enumerate() {
-            if c == '\n' {
-                self.line += 1;
-                self.line_start = scan_start + i + 1;
+        // `i` from `chars().enumerate()` is a character index, not a byte
+        // offset. A multi-byte character such as '═' then makes the next
+        // slice panic. Walk byte offsets with `char_indices` instead.
+        if scan_end >= scan_start && scan_end <= self.source.len() {
+            for (offset, c) in self.source[scan_start..scan_end].char_indices() {
+                if c == '\n' {
+                    self.line += 1;
+                    self.line_start = scan_start + offset + c.len_utf8();
+                }
             }
         }
-        
+
         match self.inner.next() {
             Some(Ok(token)) => {
                 let span = self.inner.span();
                 let column = span.start - self.line_start + 1;
-                
+
                 Ok(Some(SpannedToken {
                     token,
                     span,
@@ -393,38 +398,52 @@ pub enum LexerError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_basic_tokens() {
         let source = "let x = 42;";
         let tokens = Lexer::tokenize(source).unwrap();
-        
+
         assert!(matches!(tokens[0].token, Token::Let));
         assert!(matches!(tokens[1].token, Token::Identifier(ref s) if s == "x"));
         assert!(matches!(tokens[2].token, Token::Eq));
         assert!(matches!(tokens[3].token, Token::Integer(42)));
         assert!(matches!(tokens[4].token, Token::Semicolon));
     }
-    
+
     #[test]
     fn test_circuit_tokens() {
         let source = "circuit MyCircuit { pLac -> GFP }";
         let tokens = Lexer::tokenize(source).unwrap();
-        
+
         assert!(matches!(tokens[0].token, Token::Circuit));
         assert!(matches!(tokens[2].token, Token::LBrace));
         assert!(matches!(tokens[3].token, Token::PartPLac));
         assert!(matches!(tokens[4].token, Token::Arrow));
         assert!(matches!(tokens[5].token, Token::PartGFP));
     }
-    
+
     #[test]
     fn test_biological_operators() {
         let source = "gene ~> repress(promoter)";
         let tokens = Lexer::tokenize(source).unwrap();
-        
+
         assert!(matches!(tokens[0].token, Token::Gene));
         assert!(matches!(tokens[1].token, Token::TildeArrow));
         assert!(matches!(tokens[2].token, Token::Repress));
+    }
+
+    #[test]
+    fn test_box_drawing_comment_does_not_panic() {
+        let source = "// ════ SynBio ════\ncircuit X { }\n";
+        let tokens = Lexer::tokenize(source).unwrap();
+        assert!(matches!(tokens[0].token, Token::Circuit));
+    }
+
+    #[test]
+    fn test_doc_comments_are_skipped() {
+        let source = "/// documented circuit\ncircuit X { }";
+        let tokens = Lexer::tokenize(source).unwrap();
+        assert!(matches!(tokens[0].token, Token::Circuit));
     }
 }
