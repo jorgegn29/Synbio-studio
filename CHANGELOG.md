@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Zenodo DOI badge and How to cite section for 10.5281/zenodo.23436206 (SynBio Studio v1.0.3), plus `CITATION.cff` and `.zenodo.json`.
+
 ## [1.0.1] - 2026-10-14
 
 ### Changed

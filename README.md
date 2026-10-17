@@ -6,6 +6,7 @@
 ![License](https://img.shields.io/badge/license-AGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-purple)
 ![Code](https://img.shields.io/badge/código-~240k%20LOC-orange)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23436206.svg)](https://doi.org/10.5281/zenodo.23436206)
 
 ---
 
@@ -302,6 +303,12 @@ SynBio-LLVM-Proyecto/
 ## Licencia
 
 Todo el proyecto (compilador, extensión VS Code, servidor Rust, motor Python, cliente y aplicación de escritorio SynBio Studio) se distribuye bajo [GNU AGPL-3.0](LICENSE).
+
+---
+
+## How to cite
+
+Guillem Najarro, J. SynBio Studio (v1.0.3). Zenodo, 2026. https://doi.org/10.5281/zenodo.23436206
 
 ---
 
