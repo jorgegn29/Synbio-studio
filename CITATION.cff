@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it using the metadata from this file.
+type: software
+title: SynBio Studio
+authors:
+  - family-names: Guillem Najarro
+    given-names: Jorge
+    orcid: https://orcid.org/0009-0001-7272-2817
+    affiliation: Independent Researcher
+license: AGPL-3.0
+repository-code: https://github.com/jorgegn29/Synbio-studio
+doi: 10.5281/zenodo.23436206
+version: 1.0.3
+date-released: 2026-10-17

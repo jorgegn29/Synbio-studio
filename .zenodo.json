@@ -1,0 +1,19 @@
+{
+  "creators": [
+    {
+      "name": "Guillem Najarro, Jorge",
+      "orcid": "0009-0001-7272-2817",
+      "affiliation": "Independent Researcher"
+    }
+  ],
+  "title": "SynBio Studio",
+  "upload_type": "software",
+  "license": "AGPL-3.0-only",
+  "keywords": [
+    "synthetic biology",
+    "bioinformatics",
+    "bio-design automation",
+    "SBOL",
+    "SBML"
+  ]
+}
