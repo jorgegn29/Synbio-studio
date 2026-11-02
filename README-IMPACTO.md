@@ -1,3 +1,5 @@
+> **Alcance.** La descripción del código público está en [README.md](README.md). Este documento es una nota de visión anterior. No es un inventario de funciones del repositorio, ni una validación de laboratorio.
+
 # SynBio-LLVM — Por Qué Este Proyecto Puede Cambiar el Mundo
 
 ## Una Herramienta que Convierte el ADN en Software Programable

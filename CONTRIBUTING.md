@@ -45,7 +45,7 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 ### Prerequisites
 
 - **Node.js** ≥ 18
-- **Rust** ≥ 1.70 (install via [rustup](https://rustup.rs/))
+- **Rust** 1.85 or newer (install via [rustup](https://rustup.rs/); `server/Cargo.lock` needs a toolchain that understands Cargo edition 2024)
 - **Python** ≥ 3.10
 - **VS Code** ≥ 1.85
 
@@ -53,8 +53,8 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/synbio-llvm.git
-cd synbio-llvm
+git clone https://github.com/jorgegn29/Synbio-studio.git
+cd Synbio-studio
 
 # Install Node dependencies
 npm install
@@ -83,39 +83,39 @@ pip install -r requirements.txt
 
 ### Running Tests
 
+From the repository root, after `npm ci` and `pip install -e "./python-engine[dev]"` (see the README):
+
 ```bash
-# TypeScript tests
-cd client && npm test
-
-# Rust tests
-cd server && cargo test
-
-# Python tests
-cd python-engine && python -m pytest
+npm test
 ```
+
+That runs the client Mocha suite, `cargo test` for `server/`, and `pytest` for `python-engine/`. Individual suites:
+
+```bash
+npm run test:client
+npm run test:rust
+npm run test:python
+```
+
+The VS Code extension-host suite is separate: `npm run test:e2e --workspace client`.
 
 ## Project Architecture
 
 ```
-synbio-llvm/
-├── client/              # VS Code extension (TypeScript)
-│   └── src/             # 27 source files, 15,730 lines
-│       ├── extension.ts            # Entry point + 27 commands
-│       ├── gillespie-simulator.ts  # Stochastic simulation
-│       ├── codon-optimizer.ts      # Codon optimization
-│       ├── parts-library.ts       # iGEM Registry browser
-│       ├── biosecurity-scanner.ts # CDC/NIH compliance
-│       └── ...                    # 22 more modules
-├── server/              # LSP server (Rust)
-│   └── src/             # 19 source files, 7,333 lines
-│       ├── compiler/    # Lexer → Parser → AST → IR → CodeGen
+Synbio-studio/
+├── client/              # TypeScript libraries and headless tests
+│   └── src/             # extension.ts is the VS Code entry point (currently empty)
+├── server/              # LSP server and compiler (Rust)
+│   └── src/
+│       ├── compiler/    # Lexer → Parser → AST → IR → emitters
 │       ├── lsp/         # Language Server Protocol implementation
-│       └── physics/     # Thermodynamics, FBA, RNA folding
-├── python-engine/       # ML engine (Python)
-│   └── server.py        # FastAPI + ONNX Runtime, 406 lines
-├── syntaxes/            # TextMate grammar for BioScript
-├── snippets/            # VS Code snippets
-└── examples/            # Example .bio files
+│       └── physics/     # Thermodynamics, FBA, RNA folding modules
+├── python-engine/       # Local FastAPI engine
+│   ├── server.py
+│   └── pyproject.toml
+├── web-demo/            # Next.js browser preview
+├── examples/            # Example .bio files
+└── paper/               # Draft JOSS paper
 ```
 
 ## Coding Guidelines

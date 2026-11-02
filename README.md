@@ -1,324 +1,197 @@
-# SynBio-LLVM — Ecosistema completo para biología sintética programable
+# SynBio Studio
 
-> **El IDE profesional de biología sintética**: diseña, compila, simula, revisa bioseguridad y prepara laboratorio en un solo flujo — desde BioScript hasta LLVM IR, SBOL, SBML y OpenTrons.
+Open-source toolkit for writing genetic-circuit designs in BioScript and compiling them to exchange formats. The license is [AGPL-3.0](LICENSE).
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-AGPL--3.0-green)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-purple)
-![Code](https://img.shields.io/badge/código-~240k%20LOC-orange)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23436206.svg)](https://doi.org/10.5281/zenodo.23436206)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-green)](LICENSE)
 
----
+This README describes the source in this repository. The Electron desktop tree referred to in older drafts (`synbio-studio/`) is not published here. Older notes in [TECHNICAL_README.md](TECHNICAL_README.md), [README-IMPACTO.md](README-IMPACTO.md), [README-GITHUB.md](README-GITHUB.md), and [client/README.md](client/README.md) are design notes. They are not a feature inventory, and this repository does not report laboratory validation.
 
-## Browser demo and the full Windows installer
+## Try it
 
-**English.** The GitHub Pages site is a browser demo. The full professional version is the Windows installer `SynBio-Studio-1.0.0-Windows-x64-Setup.exe` (Inno Setup). It includes everything: the 3D atlas, the LSP, the Python engine, and the lab integrations. Download it from the latest release: [github.com/jorgegn29/Synbio-studio/releases/latest](https://github.com/jorgegn29/Synbio-studio/releases/latest).
+**Windows installer (primary).** The packaged Windows application is the zip attached to the latest GitHub release:
 
-**Español.** El sitio de GitHub Pages es una demo en el navegador. La versión profesional completa es el instalador de Windows `SynBio-Studio-1.0.0-Windows-x64-Setup.exe` (Inno Setup). Incluye todo: el atlas 3D, el LSP, el motor Python y las integraciones de laboratorio. La descarga está en el release más reciente: [github.com/jorgegn29/Synbio-studio/releases/latest](https://github.com/jorgegn29/Synbio-studio/releases/latest).
+[github.com/jorgegn29/Synbio-studio/releases/latest](https://github.com/jorgegn29/Synbio-studio/releases/latest)
 
-**English.** The studio interface is available in English and Spanish. English is the default unless the browser language is Spanish. The ES/EN control is in the title bar and in Settings. The choice is saved in this browser.
+The asset name is `SynBio-Studio-1.0.0-Windows-x64-Setup.zip` (release v1.0.3). That file is the installer package. Its Electron sources are not in this repository, so the sections below describe only the code a reader can build from this tree.
 
-**Español.** La interfaz del estudio está disponible en inglés y en español. El inglés es el idioma por defecto, salvo que el idioma del navegador sea español. El control ES/EN está en la barra de título y en Ajustes. La elección se guarda en este navegador.
+**Browser preview (secondary).** A hosted preview of the interface is at <https://huggingface.co/spaces/jorgegn29/synbio-studio>. The same preview can be built locally from [`web-demo/`](web-demo/).
 
----
+## What is in this repository
 
-## Visión general
+| Path | Role |
+|------|------|
+| [`server/`](server/) | Rust language server and BioScript compiler (`synbio-lsp`) |
+| [`client/`](client/) | TypeScript libraries and headless tests aimed at a VS Code extension |
+| [`python-engine/`](python-engine/) | Local FastAPI service for simulation and optional models |
+| [`web-demo/`](web-demo/) | Next.js browser preview |
+| [`examples/`](examples/) | BioScript examples compiled by the Rust tests |
+| [`paper/`](paper/) | Draft Journal of Open Source Software paper |
 
-SynBio-LLVM trata los circuitos genéticos como **programas de software**. El ecosistema incluye:
+### Rust compiler and language server
 
-| Componente | Descripción |
-|------------|-------------|
-| **[SynBio Studio](synbio-studio/)** | Aplicación de escritorio (Electron) — producto principal |
-| **SynBio-LLVM Compiler** | BioScript → LLVM IR → SBOL / SBML / OpenTrons / protocolo |
-| **Servidor LSP (Rust)** | Autocompletado, diagnósticos y análisis en tiempo real |
-| **Motor Python / ML** | FastAPI local: FBA, Gillespie, CodonBERT, ESMFold, tutor IA |
-| **Extensión VS Code** | Cliente alternativo con 27 comandos (`client/`) |
+`server/` is a binary named `synbio-lsp`.
 
-**Escala del código propio:** ~223.000 líneas JavaScript, ~16.300 líneas Rust, 71 motores en `synbio-studio/src/panels/`, 54 herramientas interactivas, 17 paneles de actividad.
+- With no arguments it speaks the Language Server Protocol on stdin/stdout (completion, hover, diagnostics).
+- `synbio-lsp --compile-full` reads BioScript from stdin and writes one JSON object to stdout.
 
----
+The compiler parses BioScript, lowers it through its own intermediate representation, and can emit:
 
-## SynBio Studio — qué hace la plataforma
+- SBOL 3 RDF/XML
+- SBML
+- FASTA and GenBank
+- LLVM IR as text (the crate does not link against LLVM and does not run LLVM passes)
+- an OpenTrons Python protocol script generated from the circuit
+- a Markdown protocol
+- a synthesis cost figure computed from fixed per-base amounts in `server/src/compiler/targets.rs` (this is not a live vendor quote)
 
-SynBio Studio es un **IDE de escritorio offline-first** para biología sintética. Integra en una sola aplicación lo que hoy suele requerir SnapGene + Benchling + simuladores + scripts Python + documentos sueltos.
+Example files `examples/hello-biology.bio`, `examples/test-lsp-real.bio`, `examples/test-extension.bio`, and `examples/DEMO-complete-circuit.bioscript` are compiled by `cargo test`. When `sbol3` and `python-libsbml` import successfully, that test also runs [scripts/validate_exports.py](scripts/validate_exports.py). Without those packages the schema check is skipped. Continuous integration installs them.
 
-### 17 paneles de actividad
+### TypeScript client
 
-| Panel | Capacidades principales |
-|-------|-------------------------|
-| **SynBio Explorer** | Proyecto, workspace multi-proyecto, archivos, 54 herramientas, 31 organismos, 50 papers, 40 recursos externos, modos DBTL (Diseño / Construcción / Análisis) |
-| **Mapa Vivo** | Grafo operativo: hipótesis, constructos, variantes, evidencia, simulaciones, protocolos, riesgos, decisiones; conexión visual entre nodos |
-| **Workflows guiados** | 6 flujos: biosensor, optimizar CDS, validar circuito, CRISPRi, ingeniería metabólica, construcción de plásmido |
-| **Buscar** | Búsqueda semántica biológica (partes, circuitos, organismos, BSL, traits) |
-| **Biblioteca de Partes** | 56+ partes en 10 categorías, motor de decisiones, inserción en editor/canvas |
-| **Simulación** | ODE, Gillespie SSA, FBA, digital twin, GO/NO-GO, biological debugger, sensibilidad, ajuste a datos |
-| **Diseñador de Circuitos** | Canvas visual + BioCAD con 14 pestañas de investigación, Design Oracle |
-| **Lab Run Center** | Experimentos del día, DOE, inventario, protocolos |
-| **Resultados** | Import CSV/FCS, QC, ranking de variantes, pre-lab gates |
-| **Atlas Translacional** | Hipótesis, datasets, escenarios, ranking de candidatos, dossiers |
-| **Bioseguridad** | DURC, BSL, QMRA, fault trees, ISO 31000, 40+ módulos de compliance |
-| **Tutoriales** | Documentación integrada |
-| **Diff/Merge biológico** | Comparación de versiones de diseños |
-| **Bookmarks** | Navegación y marcadores |
-| **Outline biológico** | Workbench estructural del diseño BioScript |
-| **Git** | Control de versiones completo (status, commit, branch, stash, blame, diff) |
-| **Configuración** | Tema, BSL, telemetría opt-in, bóveda de secretos, extensiones |
+`client/src/` contains modules for codon optimisation, a design-rule checker, a biosecurity scanner, CRISPR guide design, cloning-strategy planning, nearest-neighbour thermodynamics, restriction sites, protein properties, and a small flux-balance solver, plus further modules that import the VS Code API.
 
-### 10 pestañas del panel inferior
+Headless Mocha tests cover the modules that do not need VS Code. The extension entry point [`client/src/extension.ts`](client/src/extension.ts) is empty, and [`client/package.json`](client/package.json) does not register a language, a grammar, or commands. Building the extension does not currently expose those modules inside the editor. The extension-host suite (`npm run test:e2e` in `client/`) is separate from the default tests and needs a VS Code test host.
 
-| Pestaña | Salida |
-|---------|--------|
-| Output | Logs de compilación y LSP |
-| Problems | Diagnósticos BioScript |
-| Terminal | Shell integrado (xterm + node-pty) |
-| Ports | Servicios locales |
-| **LLVM IR** | Representación intermedia del compilador |
-| **SBOL / SBML** | Estándares de intercambio biológico |
-| **OpenTrons** | Protocolo JSON para OT-2 |
-| **Cost** | Estimación de síntesis de ADN |
-| **Protocol** | Protocolo wet-lab en texto |
-| **Analysis** | Informe MIR de optimización |
+### Python engine
 
-### 54 herramientas del toolbox (8 familias)
+[`python-engine/server.py`](python-engine/server.py) is a FastAPI application. It listens on `127.0.0.1:8765` unless `--host` or `--port` is set. Interactive docs are at `http://127.0.0.1:8765/docs`.
 
-#### Diseño genético (8)
-Genetic Circuit Workbench · Codon Engineering Studio (CodonBERT) · Promoter Engineering · RBS Engineering · Restriction Mapping · Plasmid Map Viewer · Gibson Assembly · Golden Gate Planner
+Endpoints that run with the base install (NumPy and SciPy):
 
-#### Análisis de secuencias (7)
-BLAST Search · ORF Finder · GC Content Analyzer · Primer Designer · Sequence Aligner · Tm Calculator · Repeat Finder
+| Endpoint | Behaviour |
+|----------|-----------|
+| `POST /api/compile` | A Python parser in this file. It emits its own LLVM-like text and SBOL-like XML. It is not the Rust compiler, and this XML is not the document checked by pySBOL3. |
+| `POST /api/simulate/ode` | Deterministic integration with `scipy.integrate.solve_ivp`. |
+| `POST /api/simulate/ssa` | Gillespie simulation. Uses GillesPy2 when that package imports; otherwise a built-in stochastic simulation algorithm. |
 
-#### Simulación (7)
-Gillespie SSA · ODE Solver · FBA · CRISPR Simulator · Growth Predictor · Circuit Debugger · Pathway Analyzer
+Endpoints that need an extra program or Python extra:
 
-#### Seguridad (6)
-Biosecurity Scanner · BSL Classifier · Toxin Detector · Kill Switch Designer · Containment Checker · Export Compliance
+| Endpoint | Requirement |
+|----------|-------------|
+| `POST /api/fba` | COBRApy and a model file under `python-engine/models/` (the server can try to download a BiGG model) |
+| `POST /api/alignment/msa` | `muscle` or `clustalo` on `PATH` |
+| `POST /api/blast/local` | BLAST+ (`blastn` / `blastp`) on `PATH` |
+| `POST /api/structure/rnafold` | The ViennaRNA Python package, or the `RNAfold` executable. If neither is present, a Nussinov fold is returned and the response says so. The reported energy in that fallback is a pair-count approximation. |
+| `POST /api/structure/esmfold` | Optional local helper that sends the sequence to Meta's public ESMFold API |
+| `GET /api/databases/igem/{part_id}` | HTTP client; contacts the iGEM registry |
+| `POST /api/ml/promoter_strength`, `/api/ml/codon_optimize`, `/api/ml/crispr_offtarget`, `/api/ml/inverse_design`, `/api/ai/tutor/ask` | Optional Python modules and files under `python-engine/models/`. A missing import disables that route. |
 
-#### Laboratorio (7)
-Protocol Generator · ELN Manager · Parts Inventory · Plate Designer · Equipment Tracker · Opentrons Control · Hamilton STAR
+[`python-engine/pyproject.toml`](python-engine/pyproject.toml) is the install definition. `requirements.txt` and `python-engine/requirements.txt` still list a wider set, including PyTorch and TensorFlow, which are optional extras rather than requirements of the default engine.
 
-#### AI / ML (6)
-Scientific Copilot · Auto-Corrector · Design Rule Checker · Design Optimizer · Protein Predictor · Anomaly Detector
+### Browser preview
 
-#### Datos (8)
-Data Moat Manager · Experiment Logger · Statistics Dashboard · Export Manager · Import Wizard · Build System (`synbio.build.yaml`) · Benchling Sync · Extension Marketplace
+[`web-demo/`](web-demo/) is a Next.js application with an in-browser BioScript path. Build and hosting details are in [web-demo/README.md](web-demo/README.md). The Hugging Face Space above is the public preview.
 
-#### Registros (5)
-iGEM Registry · Addgene Browser · SynBioHub · NCBI GenBank · UniProt Search
+## Install from source (Linux and macOS)
 
-### Workbenches a pantalla completa
+These steps build the public source. They do not rebuild the Windows zip.
 
-- **Mapa Vivo del Programa** — grafo de decisiones y trazabilidad del programa biológico
-- **Atlas Translacional** — investigación traslacional e hipótesis clínicas
-- **Workbench de Bioseguridad** — ingeniería de riesgo cuantitativa
-- **Circuit Canvas + BioCAD** — diseño visual con 14 pestañas de análisis
-- **Outline biológico** — estructura del diseño
-- **Lab Notebook (ELN)** — protocolos, kanban, firmas, compliance
-- **Design Review** — revisión formal de diseños
-- **OpenTrons deck** — editor de deck y monitor de ejecución
-- **Python API Engine** — cliente del motor científico local (FastAPI @ :8765)
-- **Extension Marketplace** — extensiones `.synbio.vsix`
+Prerequisites:
 
-### Pipeline BioScript → laboratorio
-
-```
-BioScript (.bio)  →  Compilador  →  LLVM IR
-                         ↓
-              ┌──────────┼──────────┐
-              ↓          ↓          ↓
-           SBOL 3.0   SBML L3   OpenTrons JSON
-              ↓          ↓          ↓
-         Protocolo   Coste ADN   Análisis MIR
-```
-
-### Capacidades transversales
-
-- **Editor Monaco** con LSP (Rust), IntelliSense, snippets, diagnósticos, minimapa, multicursor
-- **Colaboración en tiempo real** (WebSocket + CRDT, presencia, chat)
-- **Seguridad:** CSP, bóveda de secretos, sandbox de extensiones, telemetría opt-in (Sentry)
-- **Instrumentos:** plate reader, FCS/citometría, NGS, import wizard
-- **Estándares:** SBOL visual, FASTA, GenBank, ISA export, BioBrick RFC[10]
-- **Distribución:** Windows (Inno + portable), Linux (AppImage/DEB/Snap)
-
----
-
-## Compilador SynBio-LLVM y extensión VS Code
-
-Además de SynBio Studio, el repositorio incluye el **compilador original** y una **extensión VS Code** con 27 comandos:
-
-### Comandos VS Code (27)
-
-| Fase | Comandos |
-|------|----------|
-| Core | `startServer`, `showDashboard`, `exportGenBank`, `exportFASTA`, `exportSBOL` |
-| Simulación | `runSimulation`, `optimizeCodons`, `thermodynamics`, `restrictionAnalysis`, `proteinAnalysis` |
-| Seguridad | `partsLibrary`, `biosecurityScan` |
-| Profesional | `generateProtocol`, `designRuleCheck`, `runBioTests`, `geneticDebugger` |
-| Avanzado | `aiAssistant`, `geneticVersionControl`, `autoDocumentation`, `pathwayDesigner` |
-
-### Precisión científica
-
-Todos los parámetros numéricos provienen de literatura publicada — **sin valores inventados**.
-
-| Área | Fuente |
-|------|--------|
-| Cinética Repressilator | Elowitz & Leibier (2000) Nature 403:335 |
-| Degradación mRNA/proteína | Bernstein et al. (2002); Andersen et al. (1998) |
-| Termodinámica ADN | SantaLucia (1998) PNAS 95:1460 |
-| Codones | Kazusa DB + CAI (Sharp & Li 1987) |
-| Enzimas metabólicas | BRENDA (Schomburg et al. 2017) |
-| Partes iGEM | Kelly et al. (2009) RPU standard |
-| Bioseguridad | NIH Guidelines, 42 CFR §73, EU 2009/41/EC |
-
-> Lista completa de 34+ referencias al final del documento original en [TECHNICAL_README.md](TECHNICAL_README.md).
-
----
-
-## Arquitectura
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     SynBio Studio (Electron)                         │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐ │
-│  │ Explorer │ │ Mapa     │ │ Canvas   │ │ Simulac. │ │ Bio-    │ │
-│  │ 54 tools │ │ Vivo     │ │ Circuit  │ │ + Twin   │ │ safety  │ │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬────┘ │
-│       └────────────┴────────────┴────────────┴──────────────┘       │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ 71 motores JS: tool-panels, sim, blast, opentrons, git, …   │   │
-│  └──────────────────────────┬───────────────────────────────────┘   │
-└─────────────────────────────┼───────────────────────────────────────┘
-                              │
-         ┌────────────────────┼────────────────────┐
-         │                    │                    │
-  ┌──────┴──────┐    ┌────────┴────────┐  ┌─────┴──────┐
-  │ Rust LSP    │    │ Compilador        │  │ Python ML  │
-  │ synbio-lsp  │    │ BioScript→LLVM IR │  │ FastAPI    │
-  │ ~16k LOC    │    │ SBOL/SBML/OT-2    │  │ CodonBERT  │
-  └─────────────┘    └───────────────────┘  │ ESMFold    │
-                                             └────────────┘
-```
-
----
-
-## Instalación
-
-### SynBio Studio (recomendado)
-
-El instalador de Windows `SynBio-Studio-1.0.0-Windows-x64-Setup.exe` está en [releases/latest](https://github.com/jorgegn29/Synbio-studio/releases/latest). Para compilar desde el código:
+- Git
+- Node.js 18 or newer
+- Rust, installed with [rustup](https://rustup.rs/). The crate is edition 2021, and `server/Cargo.lock` pulls a dependency that needs Rust 1.85 or newer (Cargo edition 2024). `rustup update stable` is the practical way to get it.
+- Python 3.10 or newer
+- A C toolchain only if pip has to build a wheel from source (NumPy and SciPy publish wheels for common Linux and macOS versions)
 
 ```bash
-cd synbio-studio
-npm install
-npm run build:lsp      # Compila servidor LSP (Rust)
-npm run build:python   # Empaqueta motor Python (opcional)
-npm start
+git clone https://github.com/jorgegn29/Synbio-studio.git
+cd Synbio-studio
+npm ci
+cargo build --release --manifest-path server/Cargo.toml
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -e "./python-engine[dev]"
 ```
 
-### Extensión VS Code
+Optional pieces:
 
 ```bash
-cd server && cargo build --release
-cd ../client && npm install && npm run build
-code --extensionDevelopmentPath=./client
+# Schema checks used by the Rust export test and by CI
+python -m pip install 'sbol3==1.2' python-libsbml
+
+# FBA, GillesPy2, Biopython, and the iGEM HTTP client
+python -m pip install -e "./python-engine[bio]"
+
+# Local model endpoints. This extra is large.
+python -m pip install -e "./python-engine[ml]"
+
+# Browser preview
+cd web-demo && npm ci && npm run dev
 ```
 
-### Tests automatizados
+Run the compiler and the engine from the repository root, with the virtual environment active:
 
 ```bash
-cd synbio-studio
-npm run test:program-map    # Mapa Vivo
-npm run test:explorer       # SynBio Explorer (todos los botones)
-npm run test:outline        # Outline biológico
-npm run test:platform-gauntlet
+./server/target/release/synbio-lsp --compile-full < examples/hello-biology.bio
+python python-engine/server.py
 ```
 
----
+On Windows, the packaged zip is the intended way to try the application. The same source commands work in PowerShell if `python` is on `PATH` and the virtual environment is activated with `.\.venv\Scripts\Activate.ps1`.
 
-## Estructura del repositorio
+## Running tests
 
-```
-SynBio-LLVM-Proyecto/
-├── synbio-studio/              # ★ Aplicación de escritorio principal
-│   ├── src/panels/             # 71 motores (app.js, program-map, biosafety…)
-│   ├── src/index.html          # Shell UI: 17 paneles + 10 bottom tabs
-│   ├── main.js                 # Proceso Electron: Git, compile, IPC, vault
-│   └── tests/                  # Gauntlets Electron automatizados
-├── server/                     # Servidor LSP en Rust
-├── client/                     # Extensión VS Code (TypeScript)
-├── python-engine/              # Motor científico FastAPI + ML
-├── README.md                   # Este archivo
-├── README-IMPACTO.md           # Visión de impacto social y científico
-├── TECHNICAL_README.md         # Documentación técnica detallada
-└── ROADMAP.md                  # Hoja de ruta pública
+From the repository root, after the install above:
+
+```bash
+npm test
 ```
 
----
+That command runs three suites, in order:
 
-## Comparación con herramientas existentes
+| Script | What it runs |
+|--------|----------------|
+| `npm run test:client` | Mocha in `client/`: unit, integration, performance, benchmark, and smoke tests. These do not launch VS Code. |
+| `npm run test:rust` | `cargo test --manifest-path server/Cargo.toml` |
+| `npm run test:python` | `python3 -m pytest python-engine` (the engine gauntlet: health, the Python compile endpoint, one ODE model, a seeded SSA pair, and rejection of an unsafe rate law) |
 
-| Capacidad | SynBio Studio | Benchling | SnapGene | Cello |
-|-----------|:-------------:|:---------:|:--------:|:-----:|
-| IDE de escritorio offline | ✅ | ❌ (cloud) | ✅ | ❌ |
-| Lenguaje propio (BioScript) | ✅ | ❌ | ❌ | Verilog |
-| Compilador → LLVM IR | ✅ | ❌ | ❌ | Parcial |
-| 54 herramientas integradas | ✅ | Parcial | ❌ | ❌ |
-| Simulación (ODE/SSA/FBA) | ✅ | ❌ | ❌ | Limitado |
-| Mapa Vivo / trazabilidad | ✅ | ❌ | ❌ | ❌ |
-| Bioseguridad cuantitativa | ✅ | ❌ | ❌ | ❌ |
-| OpenTrons OT-2 | ✅ | Parcial | ❌ | ❌ |
-| Git + colaboración RT | ✅ | Parcial | ❌ | ❌ |
-| ELN + Lab Run Center | ✅ | ✅ | ❌ | ❌ |
-| IA / ML integrada | ✅ | Parcial | ❌ | ❌ |
-| Open source | ✅ AGPL | ❌ | ❌ | ✅ |
-| Parámetros de 34+ papers | ✅ | N/A | N/A | Limitado |
+Run a single suite with `npm run test:client`, `npm run test:rust`, or `npm run test:python`.
 
----
+The extension-host suite is not part of `npm test`:
 
-## Catálogos integrados
+```bash
+npm run test:e2e --workspace client
+```
 
-| Catálogo | Cantidad |
-|----------|----------|
-| Herramientas del toolbox | 54 |
-| Partes genéticas | 56+ (10 categorías) |
-| Organismos / chassis | 31 (6 categorías) |
-| Papers curados | 50 |
-| Recursos externos | 40 |
-| Workflows guiados | 6 |
-| Motores / paneles JS | 71 |
+SBOL and SBML schema validation inside `cargo test` runs only when `python3 -c "import sbol3, libsbml"` succeeds. Install the packages shown above to include that check. Continuous integration installs them and treats a missing import as a failure.
 
----
+## Support
 
-## Documentación adicional
+The maintainer is **Jorge Guillem Najarro** ([ORCID 0009-0001-7272-2817](https://orcid.org/0009-0001-7272-2817)).
 
-| Archivo | Contenido |
-|---------|-----------|
-| [synbio-studio/README.md](synbio-studio/README.md) | Visión del producto y casos de uso |
-| [README-IMPACTO.md](README-IMPACTO.md) | Impacto en medicina, clima, educación, economía |
-| [TECHNICAL_README.md](TECHNICAL_README.md) | Arquitectura técnica y APIs |
-| [ROADMAP.md](ROADMAP.md) | Hoja de ruta |
-| [synbio-studio/docs/PRESENTACION-EJECUTIVA-SYNBIO-STUDIO-EMPRESAS.md](synbio-studio/docs/PRESENTACION-EJECUTIVA-SYNBIO-STUDIO-EMPRESAS.md) | Dossier corporativo |
+- Bug reports, scientific corrections, and feature requests: [GitHub Issues](https://github.com/jorgegn29/Synbio-studio/issues). Templates are in `.github/ISSUE_TEMPLATE/`.
+- Security reports: follow [SECURITY.md](SECURITY.md). Do not open a public issue for a vulnerability in the biosecurity checks.
+- There is one maintainer and no paid support. General issues are answered on a best-effort basis, with no promised turnaround.
 
----
+Please include a minimal `.bio` file, the command you ran, and the operating system when you report a compiler or engine bug.
 
-## Licencia
+## Governance
 
-Todo el proyecto (compilador, extensión VS Code, servidor Rust, motor Python, cliente y aplicación de escritorio SynBio Studio) se distribuye bajo [GNU AGPL-3.0](LICENSE).
+Jorge Guillem Najarro is the maintainer and the author recorded in [CITATION.cff](CITATION.cff). He reviews pull requests to this repository. The project has no other committers listed here and no institutional governance board.
 
----
+- License: [GNU AGPL-3.0](LICENSE). Contributions are accepted under that license.
+- Community standards: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+- How to contribute, including the rule that numerical constants need a primary citation: [CONTRIBUTING.md](CONTRIBUTING.md).
+- Scientific corrections have their own issue template (`.github/ISSUE_TEMPLATE/scientific_correction.md`).
+
+Outputs of the compiler and the engine are computational. This repository does not report a laboratory validation, a clinical use, or a certification against biosafety regulations.
 
 ## How to cite
 
-Guillem Najarro, J. SynBio Studio (v1.0.3). Zenodo, 2026. https://doi.org/10.5281/zenodo.23436206
-
----
-
-## Cita
+Guillem Najarro, J. (2026). SynBio Studio (v1.0.3). Zenodo. <https://doi.org/10.5281/zenodo.23436206>
 
 ```bibtex
-@software{synbio_llvm_2026,
-  title = {SynBio-LLVM: Compiler IDE and SynBio Studio for Genetic Circuit Design},
-  year = {2026},
-  url = {https://github.com/synbiostudio/synbio-studio},
-  note = {Desktop IDE with BioScript compiler, 54 tools, LLVM IR, SBOL/SBML, and 34+ published parameter sources}
+@software{GuillemNajarro2026,
+  author    = {Guillem Najarro, Jorge},
+  title     = {jorgegn29/Synbio-studio: SynBio Studio v1.0.3},
+  year      = {2026},
+  publisher = {Zenodo},
+  version   = {v1.0.3},
+  doi       = {10.5281/zenodo.23436206},
+  url       = {https://github.com/jorgegn29/Synbio-studio}
 }
 ```
+
+A draft paper for a future Journal of Open Source Software submission is in [paper/paper.md](paper/paper.md). The AI-usage disclosure in that draft is still a TODO for the author.

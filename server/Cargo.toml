@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["SynBio-LLVM Team"]
 description = "Language Server Protocol para BioScript - Compilador de Sistemas Genéticos"
 license = "AGPL-3.0-only"
-repository = "https://github.com/synbio-llvm/synbio-llvm"
+repository = "https://github.com/jorgegn29/Synbio-studio"
 
 [dependencies]
 # LSP Server

@@ -1,7 +1,7 @@
 {
   "name": "synbio-llvm",
   "version": "1.0.1",
-  "description": "Compilador de Sistemas Genéticos Dinámicos - IDE para biología sintética",
+  "description": "BioScript compiler, language server, and local simulation engine for genetic circuit design",
   "private": true,
   "workspaces": [
     "client"
@@ -10,11 +10,15 @@
     "build": "npm run build:client",
     "build:client": "cd client && npm run build",
     "watch": "cd client && npm run watch",
-    "lint": "cd client && npm run lint"
+    "lint": "cd client && npm run lint",
+    "test": "npm run test:client && npm run test:rust && npm run test:python",
+    "test:client": "npm test --workspace client",
+    "test:rust": "cargo test --manifest-path server/Cargo.toml",
+    "test:python": "python3 -m pytest python-engine"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/synbio-llvm/synbio-llvm"
+    "url": "https://github.com/jorgegn29/Synbio-studio"
   },
   "keywords": [
     "synthetic-biology",
@@ -24,7 +28,7 @@
     "llvm",
     "vscode-extension"
   ],
-  "author": "SynBio-LLVM Team",
+  "author": "Jorge Guillem Najarro",
   "license": "AGPL-3.0-only",
   "engines": {
     "node": ">=18.0.0"
