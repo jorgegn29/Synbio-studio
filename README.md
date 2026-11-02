@@ -163,9 +163,13 @@ The maintainer is **Jorge Guillem Najarro** ([ORCID 0009-0001-7272-2817](https:/
 
 - Bug reports, scientific corrections, and feature requests: [GitHub Issues](https://github.com/jorgegn29/Synbio-studio/issues). Templates are in `.github/ISSUE_TEMPLATE/`.
 - Security reports: follow [SECURITY.md](SECURITY.md). Do not open a public issue for a vulnerability in the biosecurity checks.
-- There is one maintainer and no paid support. General issues are answered on a best-effort basis, with no promised turnaround.
+- There is one maintainer. Issues filed on GitHub are answered on a best-effort basis, with no promised turnaround.
 
 Please include a minimal `.bio` file, the command you ran, and the operating system when you report a compiler or engine bug.
+
+## Services
+
+Need consulting, custom integration, training, or paid support? See [SERVICES.md](SERVICES.md).
 
 ## Governance
 
