@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - README describes the public source: the Rust compiler and language server, the TypeScript client, the Python engine, and the web demo. The Windows release zip remains the packaged way to try the desktop application, and the Hugging Face Space is the browser preview. Removed claims about an Electron tree, line counts, and laboratory validation that this repository does not support.
-- `package.json` `repository` points at https://github.com/jorgegn29/Synbio-studio.
+- `package.json` and `server/Cargo.toml` `repository` fields point at https://github.com/jorgegn29/Synbio-studio.
 
 ## [1.0.1] - 2026-10-14
 
