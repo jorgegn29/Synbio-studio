@@ -1,3 +1,5 @@
+> **Scope.** The description of this repository is [README.md](README.md). This file is an older technical narrative. Where it disagrees with the root README or with the source tree, the source and the root README are the ones to trust. It is not evidence of laboratory validation.
+
 # SynBio-LLVM — Documentación Técnica Completa
 
 ## Proceso de Creación, Arquitectura Interna e Implementación al Detalle

@@ -8,7 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Root `npm test` runs the client Mocha suite, `cargo test`, and the Python engine gauntlet. Linux and macOS install-from-source steps and `python-engine/pyproject.toml` describe that setup.
+- Support and Governance sections name the maintainer, Jorge Guillem Najarro (ORCID 0009-0001-7272-2817).
+- Draft paper at `paper/paper.md` and `paper/paper.bib`. The AI-usage disclosure is still a TODO for the author.
 - Zenodo DOI badge and How to cite section for 10.5281/zenodo.23436206 (SynBio Studio v1.0.3), plus `CITATION.cff` and `.zenodo.json`.
+
+### Changed
+- README describes the public source: the Rust compiler and language server, the TypeScript client, the Python engine, and the web demo. The Windows release zip remains the packaged way to try the desktop application, and the Hugging Face Space is the browser preview. Removed claims about an Electron tree, line counts, and laboratory validation that this repository does not support.
+- `package.json` `repository` points at https://github.com/jorgegn29/Synbio-studio.
 
 ## [1.0.1] - 2026-10-14
 

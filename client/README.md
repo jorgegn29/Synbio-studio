@@ -1,3 +1,5 @@
+> **Scope.** What this repository actually contains is described in the [root README](../README.md). This file is an older client note. `client/src/extension.ts` is empty, and this package manifest does not register commands or a language. It is not evidence of laboratory validation.
+
 # SynBio-LLVM — Compilador de Circuitos Genéticos
 
 <p align="center">

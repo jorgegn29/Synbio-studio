@@ -1,3 +1,5 @@
+> **Scope.** The description of this repository is [README.md](README.md). This file is an older pitch. It is not a feature list for the public source, and it is not evidence of laboratory validation.
+
 <div align="center">
 
 # 🧬 SynBio-LLVM
