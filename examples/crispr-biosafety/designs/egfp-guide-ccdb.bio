@@ -1,0 +1,9 @@
+circuit EgfpGuideCcdB {
+    host: "E_coli"
+    promoter: pLac
+    rbs: B0034
+    gene: GFP
+    terminator: B0015
+    product: "CcdB"
+    sequence target = "ATGGTGAGCAAGGGCGAGGAGCTGTTCACCGGGGTGGTGCCCATCCTGGTCGAGCTGGACGGCGACGTAAACGGCCACAAGTTCAGCGTGTCCGGCGAGGGCGAGGGCGATGCCACC"
+}
