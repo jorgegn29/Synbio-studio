@@ -17,6 +17,15 @@ The asset name is `SynBio-Studio-1.0.0-Windows-x64-Setup.zip` (release v1.0.3). 
 
 **Browser preview (secondary).** A hosted preview of the interface is at <https://huggingface.co/spaces/jorgegn29/synbio-studio>. The same preview can be built locally from [`web-demo/`](web-demo/).
 
+## Quick examples
+
+Two short tutorials use only code that is in this repository. Each README has the commands and a sample of the output.
+
+- [Repressilator](examples/repressilator/README.md): BioScript compiled with `synbio-lsp`, then an ODE repressilator and a seeded Gillespie cassette through the Python engine, with a plot.
+- [CRISPR guides and a biosafety scan](examples/crispr-biosafety/README.md): SpCas9 guide search on a 117 bp EGFP fragment, then the keyword scanner on two `.bio` files.
+
+GitHub Actions runs both scripts on Ubuntu. The repressilator script needs a local `synbio-lsp` binary (`cargo build --manifest-path server/Cargo.toml`), SciPy, and matplotlib. The CRISPR script needs Node and `npm ci`.
+
 ## What is in this repository
 
 | Path | Role |

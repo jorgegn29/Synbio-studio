@@ -16,6 +16,9 @@ Cargo.lock
 *.wasm
 wasm-modules/build/
 
+# Generated example plots
+examples/repressilator/output/
+
 # Python
 .venv/
 venv/

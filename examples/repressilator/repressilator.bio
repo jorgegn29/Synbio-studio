@@ -1,0 +1,12 @@
+// Three-repressor ring, the topology of the Elowitz repressilator.
+// Each line is one transcription unit. The ~> links are repression, not DNA order.
+// LacI represses pLac, TetR represses pTet, and cI represses the lambda promoter.
+
+circuit Repressilator {
+    pTet -> B0034 -> LacI -> B0015
+    pLac -> B0034 -> TetR -> B0015
+    pLambda -> B0034 -> cI -> B0015
+    LacI ~> pLac
+    TetR ~> pTet
+    cI ~> pLambda
+}

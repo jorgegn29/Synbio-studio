@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Runnable tutorials in `examples/repressilator/` and `examples/crispr-biosafety/`, linked from the README under Quick examples. Ubuntu CI runs both scripts.
+- `docs/blog-post.md`, a technical introduction suitable for Dev.to and Hashnode.
 - [SERVICES.md](SERVICES.md) describes consulting, integration, training, and paid support. The README links to it. Community issues stay best-effort.
 - Root `npm test` runs the client Mocha suite, `cargo test`, and the Python engine gauntlet. Linux and macOS install-from-source steps and `python-engine/pyproject.toml` describe that setup.
 - Support and Governance sections name the maintainer, Jorge Guillem Najarro (ORCID 0009-0001-7272-2817).

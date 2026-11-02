@@ -120,6 +120,31 @@ jobs:
       - name: Run tests
         run: cd server && cargo test
 
+      - name: Setup Python for documented examples
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Repressilator example
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          python -m pip install fastapi 'uvicorn[standard]' pydantic python-multipart numpy scipy matplotlib
+          python examples/repressilator/run.py
+
+      - name: Setup Node for the CRISPR example
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: CRISPR guide and biosafety example
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          npm ci
+          cd client && npx tsx ../examples/crispr-biosafety/run.ts
+
       - name: Upload binary artifact
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
