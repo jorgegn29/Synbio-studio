@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Static project page in `docs/` (GitHub Pages workflow `.github/workflows/pages.yml`). The Windows release is the primary action. The Hugging Face Space is the secondary preview. The Next.js demo workflow no longer publishes over that page.
+- `paper/preprint.md`, a bioRxiv-style draft. The AI-usage disclosure is still a TODO for the author.
 - [SERVICES.md](SERVICES.md) describes consulting, integration, training, and paid support. The README links to it. Community issues stay best-effort.
 - Root `npm test` runs the client Mocha suite, `cargo test`, and the Python engine gauntlet. Linux and macOS install-from-source steps and `python-engine/pyproject.toml` describe that setup.
 - Support and Governance sections name the maintainer, Jorge Guillem Najarro (ORCID 0009-0001-7272-2817).

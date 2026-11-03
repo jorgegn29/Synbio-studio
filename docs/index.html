@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SynBio Studio — synthetic biology IDE for genetic circuit design in BioScript</title>
+  <meta name="description" content="SynBio Studio is an open-source synthetic biology IDE toolkit: a BioScript compiler and language server that emits SBOL and SBML, plus a local ODE and Gillespie engine for genetic circuit design.">
+  <meta name="keywords" content="synthetic biology IDE, genetic circuit design, BioScript, SBOL, SBML, genetic circuits, language server, Gillespie, CRISPR">
+  <meta name="author" content="Jorge Guillem Najarro">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://jorgegn29.github.io/Synbio-studio/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="SynBio Studio — synthetic biology IDE for genetic circuit design">
+  <meta property="og:description" content="Open-source BioScript compiler, SBOL and SBML export, and a local simulation engine. AGPL-3.0.">
+  <meta property="og:url" content="https://jorgegn29.github.io/Synbio-studio/">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="SynBio Studio — synthetic biology IDE for genetic circuit design">
+  <meta name="twitter:description" content="BioScript compiler, SBOL and SBML export, and local ODE and Gillespie simulation.">
+  <link rel="stylesheet" href="styles.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareSourceCode",
+    "name": "SynBio Studio",
+    "description": "Open-source BioScript compiler, language server, and local simulation engine for genetic circuit design.",
+    "codeRepository": "https://github.com/jorgegn29/Synbio-studio",
+    "url": "https://jorgegn29.github.io/Synbio-studio/",
+    "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+    "programmingLanguage": ["Rust", "TypeScript", "Python"],
+    "keywords": "synthetic biology IDE, genetic circuit design, BioScript, SBOL, SBML",
+    "author": {
+      "@type": "Person",
+      "name": "Jorge Guillem Najarro",
+      "identifier": "https://orcid.org/0009-0001-7272-2817"
+    },
+    "citation": "https://doi.org/10.5281/zenodo.23436206"
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <p class="eyebrow">AGPL-3.0 · source at GitHub</p>
+    <h1>SynBio Studio</h1>
+    <p class="lede">A synthetic biology IDE toolkit for genetic circuit design. Write a circuit in BioScript, compile it to SBOL and SBML, and run ODE or Gillespie simulation on your own machine.</p>
+    <div class="actions">
+      <a class="button primary" href="https://github.com/jorgegn29/Synbio-studio/releases/latest">Download the Windows release</a>
+      <a class="button secondary" href="https://huggingface.co/spaces/jorgegn29/synbio-studio">Browser preview on Hugging Face</a>
+    </div>
+    <p class="note">The download is the zip attached to the latest GitHub release (<code>SynBio-Studio-1.0.0-Windows-x64-Setup.zip</code> on v1.0.3). The Hugging Face Space is a secondary preview, not the packaged application. Linux and macOS builds are from source.</p>
+  </header>
+
+  <main>
+    <section id="what">
+      <h2>What it is</h2>
+      <p>SynBio Studio treats a genetic design as a program. The public repository contains a Rust compiler and language server, TypeScript libraries aimed at an editor, a local Python engine, and a small browser demo. The author is Jorge Guillem Najarro, an independent developer in Catarroja, Valencia.</p>
+      <p>The Electron sources of the Windows package are not in the repository. The VS Code extension entry point is empty, so cloning the tree and pressing F5 does not open a working editor. Headless tests cover the TypeScript functions that do not need VS Code. This page describes that public source.</p>
+    </section>
+
+    <section id="features">
+      <h2>What the public code does</h2>
+      <ul>
+        <li><strong>BioScript compiler</strong> (<code>synbio-lsp --compile-full</code>). Parses a circuit and can emit SBOL, SBML, FASTA, GenBank, LLVM IR as text, an OpenTrons protocol script, and a Markdown protocol. The crate does not link against LLVM.</li>
+        <li><strong>Language server.</strong> Completion, hover, and diagnostics over standard input and output.</li>
+        <li><strong>SBOL and SBML checks.</strong> When pySBOL3 and libSBML are installed, the Rust tests validate those exports. Continuous integration installs the validators.</li>
+        <li><strong>Local simulation.</strong> A FastAPI engine on <code>127.0.0.1</code> integrates ODEs with SciPy and runs Gillespie’s direct method. Gillespie propensities are constants, so Hill functions belong on the ODE route. GillesPy2 is used when that package is installed.</li>
+        <li><strong>Optional scientific routes.</strong> Flux balance analysis needs COBRApy and a model file. Alignment needs MUSCLE or Clustal Omega. RNA folding uses ViennaRNA, or a Nussinov approximation. BLAST needs BLAST+ on the path. Promoter, codon, and CRISPR off-target models load only with their files.</li>
+        <li><strong>TypeScript libraries.</strong> Codon optimisation, design-rule checks, a keyword biosafety scan, CRISPR guide search, cloning-strategy planning, thermodynamics, restriction sites, and a small flux-balance solver. The guide search is a short heuristic, not a genome-wide off-target screen. The biosafety scan matches substrings. It does not align DNA to a pathogen database.</li>
+      </ul>
+      <p>ESMFold and the iGEM lookup call public web services. They are not offline. No laboratory validation is reported in this repository.</p>
+    </section>
+
+    <section id="examples">
+      <h2>Examples</h2>
+      <p>Two tutorials in the repository have exact commands and sample output.</p>
+      <ul>
+        <li><a href="https://github.com/jorgegn29/Synbio-studio/blob/main/examples/repressilator/README.md">Repressilator</a>. BioScript for a LacI–TetR–cI ring, compiled with <code>synbio-lsp</code>, then an ODE repressilator and a seeded Gillespie cassette through the Python engine, with a plot.</li>
+        <li><a href="https://github.com/jorgegn29/Synbio-studio/blob/main/examples/crispr-biosafety/README.md">CRISPR guides and a biosafety scan</a>. SpCas9 guide search on a 117 bp EGFP fragment, then the keyword scanner on two BioScript files, including the <code>cat</code> substring hit inside the DNA.</li>
+      </ul>
+    </section>
+
+    <section id="services">
+      <h2>Services</h2>
+      <p>The software stays AGPL-3.0. Consulting, custom integration, training, and paid support are offered separately by the maintainer.</p>
+      <p><a href="https://github.com/jorgegn29/Synbio-studio/blob/main/SERVICES.md">SERVICES.md</a> · <a href="mailto:guillemjorge94@gmail.com">guillemjorge94@gmail.com</a></p>
+    </section>
+
+    <section id="citation">
+      <h2>Citation</h2>
+      <p>Guillem Najarro, J. (2026). SynBio Studio (v1.0.3). Zenodo. <a href="https://doi.org/10.5281/zenodo.23436206">https://doi.org/10.5281/zenodo.23436206</a></p>
+      <pre><code>@software{GuillemNajarro2026,
+  author    = {Guillem Najarro, Jorge},
+  title     = {SynBio Studio},
+  year      = {2026},
+  publisher = {Zenodo},
+  version   = {v1.0.3},
+  doi       = {10.5281/zenodo.23436206},
+  url       = {https://github.com/jorgegn29/Synbio-studio}
+}</code></pre>
+    </section>
+  </main>
+
+  <footer>
+    <p><a href="https://github.com/jorgegn29/Synbio-studio">Source</a> · <a href="https://orcid.org/0009-0001-7272-2817">ORCID 0009-0001-7272-2817</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL-3.0</a></p>
+    <p>Issues on GitHub are best-effort. There is one maintainer.</p>
+  </footer>
+</body>
+</html>

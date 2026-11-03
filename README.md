@@ -17,6 +17,8 @@ The asset name is `SynBio-Studio-1.0.0-Windows-x64-Setup.zip` (release v1.0.3). 
 
 **Browser preview (secondary).** A hosted preview of the interface is at <https://huggingface.co/spaces/jorgegn29/synbio-studio>. The same preview can be built locally from [`web-demo/`](web-demo/).
 
+A short project page is published from [`docs/`](docs/index.html) to GitHub Pages: <https://jorgegn29.github.io/Synbio-studio/>.
+
 ## What is in this repository
 
 | Path | Role |
