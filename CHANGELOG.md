@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- [docs/desktop-current-build.md](docs/desktop-current-build.md) records Jorge Guillem Najarro's 9 November 2026 description of Fold Studio Core, Protein Design Studio, and Construct Forensics in the desktop build he is currently working on. The page states that those desks were not found in the Windows installer attached to release v1.0.3.
+- [docs/desktop-current-build.md](docs/desktop-current-build.md) records Jorge Guillem Najarro's 9 November 2026 description of Fold Studio Core, Protein Design Studio, and Construct Forensics in his current desktop application. The page states that those workbenches were not found in the Windows installer attached to release v1.0.3.
 - Runnable tutorials in `examples/repressilator/` and `examples/crispr-biosafety/`, linked from the README under Quick examples. Ubuntu CI runs both scripts.
 - `docs/blog-post.md`, a technical introduction suitable for Dev.to and Hashnode.
 - [SERVICES.md](SERVICES.md) describes consulting, integration, training, and paid support. The README links to it. Community issues stay best-effort.
