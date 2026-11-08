@@ -15,6 +15,8 @@ This README describes the source in this repository. The Electron desktop tree r
 
 The asset name is `SynBio-Studio-1.0.0-Windows-x64-Setup.zip` (release v1.0.3). That file is the installer package. Its Electron sources are not in this repository, so the sections below describe only the code a reader can build from this tree.
 
+**Author's current desktop application.** On 9 November 2026 Jorge Guillem Najarro described three workbenches in his current desktop build: Fold Studio Core, Protein Design Studio, and Construct Forensics. [docs/desktop-current-build.md](docs/desktop-current-build.md) records that account, including the inputs, the included 1BRS and synthetic forensic examples, and the limits he stated. A static inspection of the v1.0.3 zip did not find those three workbenches, so the published download does not provide them.
+
 **Browser preview (secondary).** A hosted preview of the interface is at <https://huggingface.co/spaces/jorgegn29/synbio-studio>. The same preview can be built locally from [`web-demo/`](web-demo/).
 
 ## Quick examples
