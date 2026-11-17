@@ -16,7 +16,7 @@ Other routes need extra software or the network. Flux balance analysis needs COB
 
 `client/` is a TypeScript tree aimed at a VS Code extension: codon tables, thermodynamics, restriction sites, a small flux-balance solver, a design-rule checker, a CRISPR guide panel, a biosafety scanner, and more. Headless Mocha tests cover the modules that do not need VS Code. The extension entry point, `client/src/extension.ts`, is empty, and the manifest registers no language and no commands. Opening the folder does not load the panels. Their pure functions can still be imported. The second tutorial does that.
 
-`web-demo/` is a Next.js preview, also hosted at [huggingface.co/spaces/jorgegn29/synbio-studio](https://huggingface.co/spaces/jorgegn29/synbio-studio). People who want an installer rather than a compiler can download `SynBio-Studio-1.0.0-Windows-x64-Setup.zip` from the latest GitHub release. The Electron sources of that zip are not in this repository.
+`web-demo/` is a Next.js preview, also hosted at [huggingface.co/spaces/jorgegn29/synbio-studio](https://huggingface.co/spaces/jorgegn29/synbio-studio). People who want an installer rather than a compiler can download `SynBio-Studio-1.1.0-Windows-x64-Setup.exe` from the latest GitHub release (v1.1.0). The Electron sources of that installer are not in this repository. Release v1.0.3 remains archived.
 
 ## A repressilator, compiled and then integrated
 

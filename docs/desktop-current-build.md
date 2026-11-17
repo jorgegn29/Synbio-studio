@@ -1,17 +1,18 @@
 # Fold Studio, Protein Design, and Construct Forensics
 
-On 9 November 2026 Jorge Guillem Najarro described three workbenches in his current desktop application, and asked for that description to be published on GitHub. This page follows that account. It describes that current desktop build. It does not describe a numbered release, and it is not an independent test of that build.
+On 9 November 2026 Jorge Guillem Najarro described three workbenches in his current desktop application, and asked for that description to be published on GitHub. This page follows that account. The walkthrough below is his description. The download table is a static inspection of release v1.1.0, not a run of the installer and not a laboratory test.
 
-The Electron sources are not in this repository. The Windows file on the latest GitHub release is still the installer from 13 October 2026, attached again to [release v1.0.3](https://github.com/jorgegn29/Synbio-studio/releases/tag/v1.0.3) (published 17 October 2026):
+The Electron sources are not in this repository. The current Windows download is [release v1.1.0](https://github.com/jorgegn29/Synbio-studio/releases/tag/v1.1.0). Release [v1.0.3](https://github.com/jorgegn29/Synbio-studio/releases/tag/v1.0.3) stays archived: its asset is the 13 October 2026 installer, published again on 17 October 2026 as `SynBio-Studio-1.0.0-Windows-x64-Setup.zip`, and that package contains application 1.0.0.
 
 | Item | Value |
 |------|--------|
-| Asset | `SynBio-Studio-1.0.0-Windows-x64-Setup.zip` |
-| SHA-256 | `175344bd6f1788d5f4e9ff1bf29680185a334c90d8cc0287cbf6c512c5493e55` |
-| Installer header | SynBio Studio 1.0.0 (Inno Setup 6.7.0) |
-| `package.json` inside `app.asar` | version 1.0.0 |
+| Asset | `SynBio-Studio-1.1.0-Windows-x64-Setup.exe` |
+| Size | 289,743,361 bytes |
+| SHA-256 | `b5777836a49c4860b84362fcc12f996aa2cb3221bddc31fa670a007146180ea9` |
+| Installer header | SynBio Studio 1.1.0 (Inno Setup 6.7.0) |
+| `package.json` inside `app.asar` | version 1.1.0 |
 
-A static reading of that `app.asar` did not contain Fold Studio Core, Protein Design Studio, Construct Forensics, a bundled 1BRS structure, ProteinMPNN model files, or a `.synprotein.json` project. Downloading release v1.0.3 does not install these three workbenches. No later public release asset was available when this page was written.
+A static inspection of that installer, without running it, found Fold Studio Core (`src/panels/fold-studio-core.js`), Protein Design Studio (`src/panels/protein-design-workbench.js`), and Construct Forensics (`src/panels/construct-forensics-core.js`). Protein Design Studio includes the ProteinMPNN weights `v_48_020.pt` at `src/vendor/proteinmpnn/vanilla_model_weights/v_48_020.pt`. ProteinMPNN needs the user's own Python with PyTorch and NumPy. On Windows the packaged application looks for the system `python`, and the installer does not ship that interpreter. ESMFold depends on the configured external service. The archived v1.0.3 package does not contain these three workbenches.
 
 The three workbenches belong to the desktop application. They are not part of the sibling VS Code extension in [`client/`](../client/). That extension's entry point does not register commands.
 
@@ -46,7 +47,7 @@ ProteinMPNN generates 1 to 32 candidate sequences. Temperature and seed are conf
 
 Exports are FASTA, CSV, or JSON. A project is saved as `.synprotein.json`.
 
-The author states that ProteinMPNN runs on the computer and that its code and weights are included with his application. Running it requires Python, PyTorch, and NumPy, and each computer needs a compatible Python environment. Designed sequences need experimental validation.
+The author states that ProteinMPNN runs on the computer and that its code and weights are included with his application. The v1.1.0 installer includes that code and the weights `v_48_020.pt`. Running it requires the user's own Python with PyTorch and NumPy. The packaged Windows application looks for the system `python`. Designed sequences need experimental validation.
 
 ## Construct Forensics
 
@@ -70,8 +71,8 @@ Those neighboring names are present as panels in the inspected v1.0.0 installer.
 
 The workbenches organize and review computational results.
 
-- A prediction requested from Fold Studio for a designed sequence depends on the ESMFold service.
-- ProteinMPNN needs Python, PyTorch, and NumPy on that computer, even though the author says the model code and weights are included with his application.
+- A prediction requested from Fold Studio for a designed sequence depends on the configured external ESMFold service.
+- ProteinMPNN needs the user's own Python with PyTorch and NumPy. The packaged Windows application looks for the system `python`. The v1.1.0 installer includes the model code and the `v_48_020.pt` weights, and it does not include that Python environment.
 - AB1 base calls are partial reads.
 - Ambiguous or repetitive regions may stay unresolved.
 - Inversions and duplications are marked as candidates.
@@ -80,10 +81,10 @@ The workbenches organize and review computational results.
 
 This repository does not report a laboratory confirmation of those sequences, a biosafety certification, or a measured economic result.
 
-## What the public tree and the published installer do contain
+## What this repository contains, and what v1.0.0 contained
 
-These are separate surfaces. They are not the three workbenches above.
+The source tree in this repository is not the three workbenches above. Release v1.1.0 is the installer that contains them. Release v1.0.3 remains the archived copy of the v1.0.0 package.
 
 In this repository, [`POST /api/structure/esmfold`](../python-engine/server.py) is an optional helper that sends a protein sequence to Meta's public ESMFold API. The helper accepts 10 to 400 amino acids and needs the optional `httpx` install. It does not load 1BRS, overlay a design on a template, or run ProteinMPNN. [`python-engine/models/`](../python-engine/models/) does not contain ProteinMPNN weights. [`client/src/real-protein-analysis.ts`](../client/src/real-protein-analysis.ts) calculates ProtParam-style properties. [`client/src/sequence-alignment.ts`](../client/src/sequence-alignment.ts) implements pairwise alignment; the extension entry point does not register it.
 
-In the inspected v1.0.0 installer, the protein-structure panel fetches models from AlphaFold DB or RCSB. Its ESMFold tab calls the public API through the packaged Python engine. The name ProteinMPNN appears there only as a link to <https://github.com/dauparas/ProteinMPNN>. The AB1 importer reads one chromatogram and can align it to one expected sequence; it does not run the batch comparison described above.
+In the archived v1.0.0 installer, the protein-structure panel fetches models from AlphaFold DB or RCSB. Its ESMFold tab calls the public API through the packaged Python engine. The name ProteinMPNN appears there only as a link to <https://github.com/dauparas/ProteinMPNN>. The AB1 importer reads one chromatogram and can align it to one expected sequence; it does not run the batch comparison described above.
