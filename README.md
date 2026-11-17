@@ -9,13 +9,13 @@ This README describes the source in this repository. The Electron desktop tree r
 
 ## Try it
 
-**Windows installer (primary).** The packaged Windows application is the zip attached to the latest GitHub release:
+**Windows installer (primary).** The packaged Windows application is the installer attached to the latest GitHub release:
 
 [github.com/jorgegn29/Synbio-studio/releases/latest](https://github.com/jorgegn29/Synbio-studio/releases/latest)
 
-The asset name is `SynBio-Studio-1.0.0-Windows-x64-Setup.zip` (release v1.0.3). That file is the installer package. Its Electron sources are not in this repository, so the sections below describe only the code a reader can build from this tree.
+The asset is `SynBio-Studio-1.1.0-Windows-x64-Setup.exe` (release v1.1.0, 289,743,361 bytes). SHA-256: `b5777836a49c4860b84362fcc12f996aa2cb3221bddc31fa670a007146180ea9`. Its Electron sources are not in this repository, so the sections below describe only the code a reader can build from this tree. Release [v1.0.3](https://github.com/jorgegn29/Synbio-studio/releases/tag/v1.0.3) stays archived. Its asset is `SynBio-Studio-1.0.0-Windows-x64-Setup.zip`, and that package contains application 1.0.0.
 
-**Author's current desktop application.** On 9 November 2026 Jorge Guillem Najarro described three workbenches in his current desktop build: Fold Studio Core, Protein Design Studio, and Construct Forensics. [docs/desktop-current-build.md](docs/desktop-current-build.md) records that account, including the inputs, the included 1BRS and synthetic forensic examples, and the limits he stated. A static inspection of the v1.0.3 zip did not find those three workbenches, so the published download does not provide them.
+**Author's current desktop application.** A static inspection of the v1.1.0 installer, without running it, confirms application version 1.1.0 and the presence of Fold Studio Core, Protein Design Studio, and Construct Forensics. Protein Design Studio includes the ProteinMPNN weights `v_48_020.pt`. ProteinMPNN needs the user's own Python with PyTorch and NumPy; the packaged application looks for the system `python`. ESMFold depends on the configured external service. [docs/desktop-current-build.md](docs/desktop-current-build.md) records Jorge Guillem Najarro's 9 November 2026 account of those workbenches, including the inputs, the included 1BRS and synthetic forensic examples, and the limits he stated.
 
 **Browser preview (secondary).** A hosted preview of the interface is at <https://huggingface.co/spaces/jorgegn29/synbio-studio>. The same preview can be built locally from [`web-demo/`](web-demo/).
 

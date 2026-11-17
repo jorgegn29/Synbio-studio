@@ -27,8 +27,8 @@ source published at
 That tree contains a Rust language server and compiler (`server/`), a
 TypeScript client (`client/`), a local Python engine (`python-engine/`,
 FastAPI), and a Next.js browser preview (`web-demo/`). A packaged Windows
-application is distributed as `SynBio-Studio-1.0.0-Windows-x64-Setup.zip` on
-the GitHub release. The Electron sources for that package are not in this
+application is distributed as `SynBio-Studio-1.1.0-Windows-x64-Setup.exe` on
+GitHub release v1.1.0. The Electron sources for that package are not in this
 repository. A browser preview is hosted at
 [huggingface.co/spaces/jorgegn29/synbio-studio](https://huggingface.co/spaces/jorgegn29/synbio-studio).
 Archived releases are on Zenodo [@GuillemNajarro2026].

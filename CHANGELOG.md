@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- [docs/desktop-current-build.md](docs/desktop-current-build.md) records Jorge Guillem Najarro's 9 November 2026 description of Fold Studio Core, Protein Design Studio, and Construct Forensics in his current desktop application. The page states that those workbenches were not found in the Windows installer attached to release v1.0.3.
+- [docs/desktop-current-build.md](docs/desktop-current-build.md) records Jorge Guillem Najarro's 9 November 2026 description of Fold Studio Core, Protein Design Studio, and Construct Forensics. A static inspection of the v1.1.0 Windows installer found those workbenches and the ProteinMPNN weights `v_48_020.pt`. Release v1.0.3 remains archived and does not include them.
 - Runnable tutorials in `examples/repressilator/` and `examples/crispr-biosafety/`, linked from the README under Quick examples. Ubuntu CI runs both scripts.
 - `docs/blog-post.md`, a technical introduction suitable for Dev.to and Hashnode.
 - [SERVICES.md](SERVICES.md) describes consulting, integration, training, and paid support. The README links to it. Community issues stay best-effort.
@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Zenodo DOI badge and How to cite section for 10.5281/zenodo.23436206 (SynBio Studio v1.0.3), plus `CITATION.cff` and `.zenodo.json`.
 
 ### Changed
-- README describes the public source: the Rust compiler and language server, the TypeScript client, the Python engine, and the web demo. The Windows release zip remains the packaged way to try the desktop application, and the Hugging Face Space is the browser preview. Removed claims about an Electron tree, line counts, and laboratory validation that this repository does not support.
+- The README, [docs/desktop-current-build.md](docs/desktop-current-build.md), [docs/blog-post.md](docs/blog-post.md), and the draft paper name `SynBio-Studio-1.1.0-Windows-x64-Setup.exe` on release v1.1.0 as the current Windows download. The browser demo banner uses that installer name. Release v1.0.3 stays archived.
+- README describes the public source: the Rust compiler and language server, the TypeScript client, the Python engine, and the web demo. The Windows release installer remains the packaged way to try the desktop application, and the Hugging Face Space is the browser preview. Removed claims about an Electron tree, line counts, and laboratory validation that this repository does not support.
 - `package.json` and `server/Cargo.toml` `repository` fields point at https://github.com/jorgegn29/Synbio-studio.
 
 ## [1.0.1] - 2026-10-14

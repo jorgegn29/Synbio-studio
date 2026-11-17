@@ -1,5 +1,5 @@
 const RELEASE_URL = 'https://github.com/jorgegn29/Synbio-studio/releases/latest';
-const INSTALLER = 'SynBio-Studio-1.0.0-Windows-x64-Setup.exe';
+const INSTALLER = 'SynBio-Studio-1.1.0-Windows-x64-Setup.exe';
 
 export function ReleaseTitleLink() {
   return (
