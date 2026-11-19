@@ -2,7 +2,7 @@
 
 Open-source toolkit for writing genetic-circuit designs in BioScript and compiling them to exchange formats. The license is [AGPL-3.0](LICENSE).
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23436206.svg)](https://doi.org/10.5281/zenodo.23436206)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24319986.svg)](https://doi.org/10.5281/zenodo.24319986)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-green)](LICENSE)
 
 This README describes the source in this repository. The Electron desktop tree referred to in older drafts (`synbio-studio/`) is not published here. Older notes in [TECHNICAL_README.md](TECHNICAL_README.md), [README-IMPACTO.md](README-IMPACTO.md), [README-GITHUB.md](README-GITHUB.md), and [client/README.md](client/README.md) are design notes. They are not a feature inventory, and this repository does not report laboratory validation.
@@ -195,16 +195,16 @@ Outputs of the compiler and the engine are computational. This repository does n
 
 ## How to cite
 
-Guillem Najarro, J. (2026). SynBio Studio (v1.0.3). Zenodo. <https://doi.org/10.5281/zenodo.23436206>
+Guillem Najarro, J. (2026). SynBio Studio (v1.1.0). Zenodo. <https://doi.org/10.5281/zenodo.24319986>
 
 ```bibtex
 @software{GuillemNajarro2026,
   author    = {Guillem Najarro, Jorge},
-  title     = {jorgegn29/Synbio-studio: SynBio Studio v1.0.3},
+  title     = {jorgegn29/Synbio-studio: SynBio Studio v1.1.0},
   year      = {2026},
   publisher = {Zenodo},
-  version   = {v1.0.3},
-  doi       = {10.5281/zenodo.23436206},
+  version   = {v1.1.0},
+  doi       = {10.5281/zenodo.24319986},
   url       = {https://github.com/jorgegn29/Synbio-studio}
 }
 ```
