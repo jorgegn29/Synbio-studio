@@ -38,6 +38,9 @@ function sequenceOf(part: GeneticPart | undefined): string {
 }
 
 export function regulatoryLinks(circuit: Circuit): { from: string; to: string; kind: 'repression' | 'activation' }[] {
+  if (circuit.regulations && circuit.regulations.length > 0) {
+    return circuit.regulations.map(link => ({ from: link.from, to: link.to, kind: 'repression' as const }));
+  }
   const names = new Set(circuit.transcriptionUnits.flatMap(tu => tu.parts.map(part => part.name)));
   const rules: { from: string[]; to: string; kind: 'repression' | 'activation' }[] = [
     { from: ['TetR', 'tetR'], to: 'pTet', kind: 'repression' },
@@ -191,8 +194,20 @@ type TranscriptionLaw =
 /**
  * TetR inverters are Hill repression of an external input.
  * A pLac GFP cassette is Hill activation by IPTG.
- * Other regulatory links use the matching regulator species.
+ * Other regulatory links use the protein produced by the unit that expresses
+ * the regulator. An external regulator stays a boundary species.
  */
+function producedProtein(circuit: Circuit, regulator: string): string | null {
+  const needle = regulator.toLowerCase();
+  for (let index = 0; index < circuit.transcriptionUnits.length; index++) {
+    const cds = cdsOf(circuit.transcriptionUnits[index]);
+    if (cds && cds.name.toLowerCase() === needle) {
+      return `protein_${ident(`${cds.name}_${index}`)}`;
+    }
+  }
+  return null;
+}
+
 function transcriptionLaw(circuit: Circuit, tu: TranscriptionUnit): TranscriptionLaw {
   const promoter = partOf(tu, 'promoter')?.name || '';
   const cds = (cdsOf(tu)?.name || '').toLowerCase();
@@ -209,7 +224,7 @@ function transcriptionLaw(circuit: Circuit, tu: TranscriptionUnit): Transcriptio
   if (link) {
     return {
       kind: link.kind === 'repression' ? 'repress' : 'activate',
-      species: `regulator_${ident(link.from)}`,
+      species: producedProtein(circuit, link.from) ?? `regulator_${ident(link.from)}`,
     };
   }
   return { kind: 'constitutive' };
@@ -284,7 +299,9 @@ export function generateSbml(circuit: Circuit): string {
     const txnMath = law.kind === 'constitutive'
       ? `<apply><times/><ci>k_txn_${id}</ci><ci>cell</ci></apply>`
       : hillMath(law.kind, `k_txn_${id}`, law.species);
-    if (law.kind !== 'constitutive') signals.add(law.species);
+    if (law.kind !== 'constitutive' && !species.some(line => line.includes(`id="${law.species}"`))) {
+      signals.add(law.species);
+    }
     const modifiers = law.kind === 'constitutive'
       ? ''
       : `<listOfModifiers><modifierSpeciesReference species="${law.species}"/></listOfModifiers>`;
@@ -295,6 +312,7 @@ export function generateSbml(circuit: Circuit): string {
     reactions.push(`      <reaction id="prot_deg_${id}" reversible="false"><listOfReactants>${ref(`protein_${id}`)}</listOfReactants>${math(scaledMassAction('k_prot_deg', `protein_${id}`))}</reaction>`);
   });
   for (const signal of signals) {
+    if (species.some(line => line.includes(`id="${signal}"`))) continue;
     species.push(speciesEl(signal, true));
   }
   const stepped = [...signals].filter(id => id === 'input' || id === 'IPTG');
@@ -526,4 +544,82 @@ export function buildConstruct(circuit: Circuit, source: string): { nodes: Const
     edges.push({ from: nodes[nodes.length - 1].id, to: nodes[0].id, kind: 'circular' });
   }
   return { nodes, edges };
+}
+
+interface SbolFeatureRef {
+  id: string;
+  of: string;
+}
+
+/**
+ * SBOL3 interactions for genetic production and for each regulatory link.
+ * Participations point at SubComponent features. pySBOL3 1.2 accepts this shape.
+ */
+export function sbolInteractionRdf(
+  circuit: Circuit,
+  namespace: string,
+  parentId: string,
+  features: SbolFeatureRef[],
+): { links: string[]; blocks: string } {
+  const plans: { id: string; sbo: string; parts: { id: string; role: string; feature: string }[] }[] = [];
+  let cursor = 0;
+  circuit.transcriptionUnits.forEach((tu, index) => {
+    const slice = features.slice(cursor, cursor + tu.parts.length);
+    cursor += tu.parts.length;
+    const promoter = slice.find((_, partIndex) => tu.parts[partIndex]?.type === 'promoter');
+    const product = slice.find((_, partIndex) => {
+      const kind = tu.parts[partIndex]?.type;
+      return kind === 'cds' || kind === 'reporter';
+    });
+    if (!promoter || !product) return;
+    plans.push({
+      id: `production_${index}`,
+      sbo: 'https://identifiers.org/SBO:0000589',
+      parts: [
+        { id: 'template', role: 'https://identifiers.org/SBO:0000645', feature: promoter.id },
+        { id: 'product', role: 'https://identifiers.org/SBO:0000011', feature: product.id },
+      ],
+    });
+  });
+  regulatoryLinks(circuit).forEach((link, index) => {
+    const from = features.find(feature => feature.of.toLowerCase() === link.from.toLowerCase());
+    const to = features.find(feature => feature.of.toLowerCase() === link.to.toLowerCase());
+    if (!from || !to) return;
+    const inhibition = link.kind !== 'activation';
+    plans.push({
+      id: inhibition ? `inhibition_${index}` : `stimulation_${index}`,
+      sbo: inhibition ? 'https://identifiers.org/SBO:0000169' : 'https://identifiers.org/SBO:0000170',
+      parts: [
+        {
+          id: inhibition ? 'inhibitor' : 'stimulator',
+          role: inhibition ? 'https://identifiers.org/SBO:0000020' : 'https://identifiers.org/SBO:0000459',
+          feature: from.id,
+        },
+        {
+          id: inhibition ? 'inhibited' : 'stimulated',
+          role: inhibition ? 'https://identifiers.org/SBO:0000642' : 'https://identifiers.org/SBO:0000643',
+          feature: to.id,
+        },
+      ],
+    });
+  });
+  const links = plans.map(plan => `    <sbol:hasInteraction rdf:resource="${namespace}/${parentId}/${plan.id}"/>`);
+  const blocks = plans.map(plan => {
+    const participations = plan.parts.map(part => `    <sbol:hasParticipation rdf:resource="${namespace}/${parentId}/${plan.id}/${part.id}"/>`).join('\n');
+    const bodies = plan.parts.map(part => `
+  <rdf:Description rdf:about="${namespace}/${parentId}/${plan.id}/${part.id}">
+    <sbol:displayId>${part.id}</sbol:displayId>
+    <rdf:type rdf:resource="http://sbols.org/v3#Participation"/>
+    <sbol:role rdf:resource="${part.role}"/>
+    <sbol:participant rdf:resource="${namespace}/${parentId}/${part.feature}"/>
+  </rdf:Description>`).join('');
+    return `
+  <rdf:Description rdf:about="${namespace}/${parentId}/${plan.id}">
+    <sbol:displayId>${plan.id}</sbol:displayId>
+    <rdf:type rdf:resource="http://sbols.org/v3#Interaction"/>
+    <sbol:type rdf:resource="${plan.sbo}"/>
+${participations}
+  </rdf:Description>${bodies}`;
+  }).join('');
+  return { links, blocks };
 }

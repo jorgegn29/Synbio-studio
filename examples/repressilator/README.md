@@ -2,8 +2,8 @@
 
 This tutorial uses two programs that are actually in the repository.
 
-1. `synbio-lsp --compile-full` compiles [`repressilator.bio`](repressilator.bio) and emits SBOL and SBML.
-2. The Python engine integrates an explicit model. The compiler does not build that model for you.
+1. `synbio-lsp --compile-full` compiles [`repressilator.bio`](repressilator.bio) and emits SBOL and SBML. The file is the Elowitz ring: pLambda drives LacI, pLac drives TetR, and pTet drives cI. LacI represses pLac, TetR represses pTet, and cI represses pLambda. The SBML repressor for each unit is the protein that unit's regulator produces. The SBOL document contains inhibition and genetic-production interactions.
+2. The Python engine integrates an explicit dimensionless model. That model is written in this script. It is not loaded from the SBML file.
 
 The ODE is the symmetric repressilator from Elowitz and Leibler (Nature, 2000), in dimensionless form:
 
@@ -30,13 +30,11 @@ python examples/repressilator/run.py
 
 ## Expected output
 
-The script prints one JSON object and writes `examples/repressilator/output/repressilator.png`. On SciPy 1.18.1, NumPy 2.5.4, and the built-in SSA solver (`gillespy2` not installed), that JSON was:
+The script prints one JSON object and writes `examples/repressilator/output/repressilator.png`. Compiling the current `repressilator.bio` with `synbio-lsp --compile-full` produces 33623 SBOL characters and 12381 SBML characters. Those sizes change when the export changes. On SciPy 1.18.1, NumPy 2.5.4, and the built-in SSA solver (`gillespy2` not installed), the simulation fields were:
 
 ```json
 {
   "compiler": "synbio-lsp --compile-full",
-  "sbol_characters": 25393,
-  "sbml_characters": 12214,
   "ode_peaks_p_laci": [14.2, 44.6, 83.0],
   "ode_p_laci_max": 51.37,
   "ode_p_laci_final": 29.57,

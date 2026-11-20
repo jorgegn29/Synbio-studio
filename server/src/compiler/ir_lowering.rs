@@ -5,9 +5,10 @@
 //!
 //! Pipeline: AST → HIR → MIR → [IR Lowering] → BioIR → CodeGen
 
-use std::collections::HashMap;
 use crate::compiler::bio_ir::*;
+use crate::compiler::kinetics::{first_or, KineticParams};
 use crate::compiler::mir;
+use std::collections::HashMap;
 
 /// Lowers a MIR program into a BioIR program
 pub struct IrLowering {
@@ -23,11 +24,15 @@ impl IrLowering {
 
     /// Lower MIR → BioIR
     pub fn lower(&self, mir_program: &mir::MirProgram) -> BioIRProgram {
-        let host = mir_program.chassis.as_ref()
+        let host = mir_program
+            .chassis
+            .as_ref()
             .map(|ch| self.lower_chassis(ch))
             .or_else(|| Some(HostOrganism::default()));
 
-        let circuits: Vec<GeneticCircuit> = mir_program.circuits.iter()
+        let circuits: Vec<GeneticCircuit> = mir_program
+            .circuits
+            .iter()
             .map(|c| self.lower_circuit(c))
             .collect();
 
@@ -75,18 +80,27 @@ impl IrLowering {
     }
 
     fn lower_circuit(&self, mir_circuit: &mir::MirCircuit) -> GeneticCircuit {
-        let transcription_units: Vec<TranscriptionUnit> = mir_circuit.transcription_units.iter()
+        let transcription_units: Vec<TranscriptionUnit> = mir_circuit
+            .transcription_units
+            .iter()
             .map(|tu| self.lower_tu(tu))
             .collect();
 
-        let regulatory_links: Vec<RegulatoryLink> = mir_circuit.regulations.iter()
-            .map(|r| self.lower_regulation(r))
+        let regulatory_links: Vec<RegulatoryLink> = mir_circuit
+            .regulations
+            .iter()
+            .map(|r| self.lower_regulation(r, &mir_circuit.kinetics))
             .collect();
 
-        let kill_switch = mir_circuit.kill_switch.as_ref().map(|ks| self.lower_kill_switch(ks));
+        let kill_switch = mir_circuit
+            .kill_switch
+            .as_ref()
+            .map(|ks| self.lower_kill_switch(ks));
 
         let atp_cost = mir_circuit.estimated_burden.atp_consumption;
-        let toxicity_score = mir_circuit.transcription_units.iter()
+        let toxicity_score = mir_circuit
+            .transcription_units
+            .iter()
             .flat_map(|tu| tu.coding_sequences.iter())
             .map(|cds| match cds.toxicity {
                 mir::MirToxicity::None => 0.0,
@@ -98,13 +112,22 @@ impl IrLowering {
             .sum::<f64>();
 
         let mut metadata = HashMap::new();
-        metadata.insert("total_tus".to_string(), transcription_units.len().to_string());
-        metadata.insert("estimated_construct_bp".to_string(),
-            mir_circuit.resources.estimated_construct_size.to_string());
-        metadata.insert("burden_category".to_string(),
-            format!("{:?}", mir_circuit.estimated_burden.category));
-        metadata.insert("resource_fraction".to_string(),
-            format!("{:.4}", mir_circuit.estimated_burden.resource_fraction));
+        metadata.insert(
+            "total_tus".to_string(),
+            transcription_units.len().to_string(),
+        );
+        metadata.insert(
+            "estimated_construct_bp".to_string(),
+            mir_circuit.resources.estimated_construct_size.to_string(),
+        );
+        metadata.insert(
+            "burden_category".to_string(),
+            format!("{:?}", mir_circuit.estimated_burden.category),
+        );
+        metadata.insert(
+            "resource_fraction".to_string(),
+            format!("{:.4}", mir_circuit.estimated_burden.resource_fraction),
+        );
 
         GeneticCircuit {
             name: mir_circuit.name.clone(),
@@ -112,6 +135,7 @@ impl IrLowering {
             kill_switch,
             transcription_units,
             regulatory_links,
+            kinetics: mir_circuit.kinetics.clone(),
             estimated_atp_cost: atp_cost,
             toxicity_score,
             metadata,
@@ -120,7 +144,10 @@ impl IrLowering {
 
     fn lower_tu(&self, mir_tu: &mir::MirTranscriptionUnit) -> TranscriptionUnit {
         // Resolve promoter from parts library or create from MIR
-        let promoter = self.parts_library.promoters.get(&mir_tu.promoter.name)
+        let promoter = self
+            .parts_library
+            .promoters
+            .get(&mir_tu.promoter.name)
             .cloned()
             .unwrap_or_else(|| PromoterIR {
                 id: format!("custom_{}", mir_tu.promoter.name),
@@ -144,7 +171,10 @@ impl IrLowering {
             });
 
         // Resolve RBS
-        let rbs = self.parts_library.rbs.get(&mir_tu.rbs.name)
+        let rbs = self
+            .parts_library
+            .rbs
+            .get(&mir_tu.rbs.name)
             .cloned()
             .unwrap_or_else(|| RbsIR {
                 id: format!("custom_{}", mir_tu.rbs.name),
@@ -180,26 +210,31 @@ impl IrLowering {
         };
 
         // All coding sequences (for polycistronic TUs)
-        let coding_sequences: Vec<CodingSequenceIR> = mir_tu.coding_sequences.iter()
+        let coding_sequences: Vec<CodingSequenceIR> = mir_tu
+            .coding_sequences
+            .iter()
             .map(|cds| self.lower_cds(cds))
             .collect();
 
         // Terminator
-        let terminator = mir_tu.terminator.as_ref().map(|t| {
-            Terminator {
-                name: t.name.clone(),
-                sequence: self.get_default_terminator_sequence(&t.name),
-                efficiency: t.efficiency,
-                bidirectional: t.bidirectional,
-                registry_id: self.get_terminator_registry_id(&t.name),
-            }
+        let terminator = mir_tu.terminator.as_ref().map(|t| Terminator {
+            name: t.name.clone(),
+            sequence: self.get_default_terminator_sequence(&t.name),
+            efficiency: t.efficiency,
+            bidirectional: t.bidirectional,
+            registry_id: self.get_terminator_registry_id(&t.name),
         });
 
         TranscriptionUnit {
             id: mir_tu.id.clone(),
-            name: format!("{}_{}",
+            name: format!(
+                "{}_{}",
                 mir_tu.promoter.name,
-                mir_tu.coding_sequences.first().map(|c| c.name.as_str()).unwrap_or("empty")
+                mir_tu
+                    .coding_sequences
+                    .first()
+                    .map(|c| c.name.as_str())
+                    .unwrap_or("empty")
             ),
             promoter,
             rbs,
@@ -211,11 +246,15 @@ impl IrLowering {
             downstream_spacer: None,
             ribozyme_insulator: None,
             metadata: HashMap::new(),
+            kinetics: mir_tu.kinetics.clone(),
         }
     }
 
     fn lower_cds(&self, mir_cds: &mir::MirCDS) -> CodingSequenceIR {
-        let protein = self.parts_library.proteins.get(&mir_cds.name)
+        let protein = self
+            .parts_library
+            .proteins
+            .get(&mir_cds.name)
             .cloned()
             .unwrap_or_else(|| ProteinIR {
                 name: mir_cds.name.clone(),
@@ -224,9 +263,15 @@ impl IrLowering {
                 half_life_minutes: 60.0,
                 function: match mir_cds.protein_function {
                     mir::MirProteinFunction::Reporter => ProteinFunction::Reporter,
-                    mir::MirProteinFunction::Repressor => ProteinFunction::Regulator(RegulatorType::Repressor),
-                    mir::MirProteinFunction::Activator => ProteinFunction::Regulator(RegulatorType::Activator),
-                    mir::MirProteinFunction::Enzyme => ProteinFunction::Enzyme { ec_number: "unknown".to_string() },
+                    mir::MirProteinFunction::Repressor => {
+                        ProteinFunction::Regulator(RegulatorType::Repressor)
+                    }
+                    mir::MirProteinFunction::Activator => {
+                        ProteinFunction::Regulator(RegulatorType::Activator)
+                    }
+                    mir::MirProteinFunction::Enzyme => ProteinFunction::Enzyme {
+                        ec_number: "unknown".to_string(),
+                    },
                     mir::MirProteinFunction::Structural => ProteinFunction::Structural,
                     mir::MirProteinFunction::Toxic => ProteinFunction::Custom("toxin".to_string()),
                     mir::MirProteinFunction::Other(ref s) => ProteinFunction::Custom(s.clone()),
@@ -255,7 +300,16 @@ impl IrLowering {
         }
     }
 
-    fn lower_regulation(&self, mir_reg: &mir::MirRegulation) -> RegulatoryLink {
+    fn lower_regulation(
+        &self,
+        mir_reg: &mir::MirRegulation,
+        circuit: &KineticParams,
+    ) -> RegulatoryLink {
+        // Hill stays 2 unless BioScript sets it. k_half stays 0.1 for the LLVM
+        // helper unless BioScript sets K; the SBML exporter does not read k_half
+        // and keeps its own default of 10.
+        let hill = first_or(&[mir_reg.kinetics.hill, circuit.hill], 2.0);
+        let k_half = first_or(&[mir_reg.kinetics.k, circuit.k], 0.1);
         RegulatoryLink {
             from: mir_reg.from.clone(),
             to: mir_reg.to.clone(),
@@ -265,8 +319,9 @@ impl IrLowering {
                 mir::MirRegulationKind::Unknown => LinkType::Repression, // Default assumption
             },
             strength: mir_reg.estimated_strength,
-            hill_coefficient: 2.0, // Typical for transcription factors
-            k_half: 0.1,
+            hill_coefficient: hill,
+            k_half,
+            kinetics: mir_reg.kinetics.clone(),
         }
     }
 
@@ -320,8 +375,10 @@ impl IrLowering {
     /// Generate a placeholder DNA sequence that's codon-plausible
     fn generate_placeholder_sequence(&self, length_bp: usize) -> String {
         // Use a repeating codon pattern that would produce a real protein
-        let codons = ["ATG", "GAA", "GCT", "AAA", "GAT", "CTG", "ACC", "GTT",
-                       "CAG", "TCC", "CGT", "TAT", "GGC", "TTC", "ATC", "CAA"];
+        let codons = [
+            "ATG", "GAA", "GCT", "AAA", "GAT", "CTG", "ACC", "GTT", "CAG", "TCC", "CGT", "TAT",
+            "GGC", "TTC", "ATC", "CAA",
+        ];
         let mut seq = String::with_capacity(length_bp);
         let mut i = 0;
         while seq.len() < length_bp {

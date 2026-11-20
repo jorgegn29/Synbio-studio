@@ -8,6 +8,7 @@
 //! 4. **Protocol** — Human-readable lab protocol (Markdown)
 
 use crate::compiler::bio_ir::*;
+use crate::compiler::kinetics::{first_or, KineticParams};
 use serde::{Deserialize, Serialize};
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -192,10 +193,24 @@ impl OpenTronsGenerator {
 // SBML Generator
 // ═══════════════════════════════════════════════════════════════════════
 
-enum TxnLaw {
+const DEFAULT_HILL: f64 = 2.0;
+const DEFAULT_K: f64 = 10.0;
+const DEFAULT_MRNA_DEG: f64 = 0.0023;
+const DEFAULT_PROT_DEG: f64 = 0.00019;
+
+enum TxnKind {
     Constitutive,
-    Repress { species: String },
-    Activate { species: String },
+    Repress,
+    Activate,
+}
+
+struct ResolvedTxn {
+    kind: TxnKind,
+    /// Regulator species. `None` for constitutive transcription.
+    species: Option<String>,
+    hill: f64,
+    k: f64,
+    leak: f64,
 }
 
 pub struct SbmlGenerator;
@@ -223,43 +238,129 @@ impl SbmlGenerator {
         xml.push_str("    </listOfCompartments>\n\n");
 
         xml.push_str("    <listOfSpecies>\n");
+        let mut declared: Vec<String> = Vec::new();
         for circuit in &program.circuits {
             for tu in &circuit.transcription_units {
                 let tu_id = Self::sanitize_id(&tu.name);
-                xml.push_str(&format!(
-                    "      <species id=\"mRNA_{}\" name=\"mRNA {}\" compartment=\"cell\" initialAmount=\"0\" substanceUnits=\"mole\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"false\" constant=\"false\"/>\n",
-                    tu_id, Self::xml_escape(&tu.cds.name)));
-                xml.push_str(&format!(
-                    "      <species id=\"protein_{}\" name=\"Protein {}\" compartment=\"cell\" initialAmount=\"0\" substanceUnits=\"mole\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"false\" constant=\"false\"/>\n",
-                    tu_id, Self::xml_escape(&tu.cds.name)));
+                let mrna = format!("mRNA_{tu_id}");
+                let protein = format!("protein_{tu_id}");
+                xml.push_str(&Self::species_xml(
+                    &mrna,
+                    &format!("mRNA {}", tu.cds.name),
+                    tu.kinetics.initial_mrna,
+                    false,
+                ));
+                xml.push_str(&Self::species_xml(
+                    &protein,
+                    &format!("Protein {}", tu.cds.name),
+                    tu.kinetics.initial_protein,
+                    false,
+                ));
+                declared.push(mrna);
+                declared.push(protein);
             }
             for tu in &circuit.transcription_units {
-                if let Some(signal) = Self::signal_species(circuit, tu) {
-                    if !signals.iter().any(|id| id == &signal) {
+                if let Some(signal) = Self::resolve_txn(circuit, tu).species {
+                    if !declared.iter().any(|id| id == &signal)
+                        && !signals.iter().any(|id| id == &signal)
+                    {
                         signals.push(signal);
                     }
                 }
             }
         }
         for signal in &signals {
-            xml.push_str(&format!(
-                "      <species id=\"{signal}\" compartment=\"cell\" initialAmount=\"0\" substanceUnits=\"mole\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"true\" constant=\"false\"/>\n"));
+            xml.push_str(&Self::species_xml(signal, "", None, true));
+            declared.push(signal.clone());
         }
         xml.push_str("    </listOfSpecies>\n\n");
 
+        let global_mrna = program
+            .circuits
+            .first()
+            .and_then(|circuit| circuit.kinetics.k_mrna_deg)
+            .unwrap_or(DEFAULT_MRNA_DEG);
+        let global_prot = program
+            .circuits
+            .first()
+            .and_then(|circuit| circuit.kinetics.k_prot_deg)
+            .unwrap_or(DEFAULT_PROT_DEG);
+        let global_k = program
+            .circuits
+            .first()
+            .and_then(|circuit| circuit.kinetics.k)
+            .unwrap_or(DEFAULT_K);
+
         xml.push_str("    <listOfParameters>\n");
-        xml.push_str("      <parameter id=\"k_mRNA_deg\" name=\"mRNA degradation rate\" value=\"0.0023\" units=\"per_second\" constant=\"true\"/>\n");
-        xml.push_str("      <parameter id=\"k_prot_deg\" name=\"Protein degradation rate\" value=\"0.00019\" units=\"per_second\" constant=\"true\"/>\n");
-        xml.push_str("      <parameter id=\"K_hill\" name=\"Hill threshold\" value=\"10\" units=\"mole_per_litre\" constant=\"true\"/>\n");
+        xml.push_str(&format!(
+            "      <parameter id=\"k_mRNA_deg\" name=\"mRNA degradation rate\" value=\"{}\" units=\"per_second\" constant=\"true\"/>\n",
+            Self::format_default(global_mrna, DEFAULT_MRNA_DEG, "0.0023")
+        ));
+        xml.push_str(&format!(
+            "      <parameter id=\"k_prot_deg\" name=\"Protein degradation rate\" value=\"{}\" units=\"per_second\" constant=\"true\"/>\n",
+            Self::format_default(global_prot, DEFAULT_PROT_DEG, "0.00019")
+        ));
+        xml.push_str(&format!(
+            "      <parameter id=\"K_hill\" name=\"Hill threshold\" value=\"{}\" units=\"mole_per_litre\" constant=\"true\"/>\n",
+            Self::format_default(global_k, DEFAULT_K, "10")
+        ));
         for circuit in &program.circuits {
             for tu in &circuit.transcription_units {
                 let tu_id = Self::sanitize_id(&tu.name);
+                let law = Self::resolve_txn(circuit, tu);
+                let txn = Self::txn_rate(circuit, tu);
+                let tln = Self::tln_rate(circuit, tu);
                 xml.push_str(&format!(
-                    "      <parameter id=\"k_txn_{}\" name=\"Transcription rate {}\" value=\"{:.6}\" units=\"mole_per_litre_per_second\" constant=\"true\"/>\n",
-                    tu_id, Self::xml_escape(&tu.name), tu.promoter.strength));
+                    "      <parameter id=\"k_txn_{}\" name=\"Transcription rate {}\" value=\"{}\" units=\"mole_per_litre_per_second\" constant=\"true\"/>\n",
+                    tu_id,
+                    Self::xml_escape(&tu.name),
+                    Self::format_real(txn)
+                ));
                 xml.push_str(&format!(
-                    "      <parameter id=\"k_tln_{}\" name=\"Translation rate {}\" value=\"{:.6}\" units=\"per_second\" constant=\"true\"/>\n",
-                    tu_id, Self::xml_escape(&tu.name), tu.rbs.translation_rate));
+                    "      <parameter id=\"k_tln_{}\" name=\"Translation rate {}\" value=\"{}\" units=\"per_second\" constant=\"true\"/>\n",
+                    tu_id,
+                    Self::xml_escape(&tu.name),
+                    Self::format_real(tln)
+                ));
+                if !matches!(law.kind, TxnKind::Constitutive) || law.leak != 0.0 {
+                    xml.push_str(&format!(
+                        "      <parameter id=\"k_leak_{}\" name=\"Basal transcription rate {}\" value=\"{}\" units=\"mole_per_litre_per_second\" constant=\"true\"/>\n",
+                        tu_id,
+                        Self::xml_escape(&tu.name),
+                        Self::format_real(law.leak)
+                    ));
+                }
+                let mrna_deg = Self::deg_rate(
+                    tu.kinetics.k_mrna_deg,
+                    circuit.kinetics.k_mrna_deg,
+                    global_mrna,
+                );
+                if !Self::same_number(mrna_deg, global_mrna) {
+                    xml.push_str(&format!(
+                        "      <parameter id=\"k_mRNA_deg_{tu_id}\" name=\"mRNA degradation rate {}\" value=\"{}\" units=\"per_second\" constant=\"true\"/>\n",
+                        Self::xml_escape(&tu.name),
+                        Self::format_real(mrna_deg)
+                    ));
+                }
+                let prot_deg = Self::deg_rate(
+                    tu.kinetics.k_prot_deg,
+                    circuit.kinetics.k_prot_deg,
+                    global_prot,
+                );
+                if !Self::same_number(prot_deg, global_prot) {
+                    xml.push_str(&format!(
+                        "      <parameter id=\"k_prot_deg_{tu_id}\" name=\"Protein degradation rate {}\" value=\"{}\" units=\"per_second\" constant=\"true\"/>\n",
+                        Self::xml_escape(&tu.name),
+                        Self::format_real(prot_deg)
+                    ));
+                }
+                if !Self::same_number(law.k, global_k) {
+                    xml.push_str(&format!(
+                        "      <parameter id=\"K_hill_{tu_id}\" name=\"Hill threshold {}\" value=\"{}\" units=\"mole_per_litre\" constant=\"true\"/>\n",
+                        Self::xml_escape(&tu.name),
+                        Self::format_real(law.k)
+                    ));
+                }
             }
         }
         xml.push_str("    </listOfParameters>\n\n");
@@ -270,23 +371,40 @@ impl SbmlGenerator {
                 let tu_id = Self::sanitize_id(&tu.name);
                 let mrna = format!("mRNA_{tu_id}");
                 let protein = format!("protein_{tu_id}");
-                let txn_math = match Self::transcription_law(circuit, tu) {
-                    TxnLaw::Constitutive => {
-                        format!("<apply><times/><ci>k_txn_{tu_id}</ci><ci>cell</ci></apply>")
+                let law = Self::resolve_txn(circuit, tu);
+                let k_id = if Self::same_number(law.k, global_k) {
+                    "K_hill".to_string()
+                } else {
+                    format!("K_hill_{tu_id}")
+                };
+                let constitutive =
+                    format!("<apply><times/><ci>k_txn_{tu_id}</ci><ci>cell</ci></apply>");
+                let txn_math = match (&law.kind, &law.species) {
+                    (TxnKind::Constitutive, _) => {
+                        if law.leak == 0.0 {
+                            constitutive
+                        } else {
+                            format!(
+                                "<apply><plus/>{constitutive}<apply><times/><ci>k_leak_{tu_id}</ci><ci>cell</ci></apply></apply>"
+                            )
+                        }
                     }
-                    TxnLaw::Repress { species } => {
-                        Self::hill_math("repress", &format!("k_txn_{tu_id}"), &species)
-                    }
-                    TxnLaw::Activate { species } => {
-                        Self::hill_math("activate", &format!("k_txn_{tu_id}"), &species)
-                    }
+                    (TxnKind::Repress, Some(species)) => format!(
+                        "<apply><plus/>{}<apply><times/><ci>k_leak_{tu_id}</ci><ci>cell</ci></apply></apply>",
+                        Self::hill_math("repress", &format!("k_txn_{tu_id}"), species, law.hill, &k_id)
+                    ),
+                    (TxnKind::Activate, Some(species)) => format!(
+                        "<apply><plus/>{}<apply><times/><ci>k_leak_{tu_id}</ci><ci>cell</ci></apply></apply>",
+                        Self::hill_math("activate", &format!("k_txn_{tu_id}"), species, law.hill, &k_id)
+                    ),
+                    _ => constitutive,
                 };
 
                 xml.push_str(&format!("      <reaction id=\"txn_{tu_id}\" name=\"Transcription of {}\" reversible=\"false\">\n", Self::xml_escape(&tu.cds.name)));
                 xml.push_str("        <listOfProducts>\n");
                 xml.push_str(&format!("          {}\n", Self::species_ref(&mrna)));
                 xml.push_str("        </listOfProducts>\n");
-                if let Some(signal) = Self::signal_species(circuit, tu) {
+                if let Some(signal) = &law.species {
                     xml.push_str("        <listOfModifiers>\n");
                     xml.push_str(&format!(
                         "          <modifierSpeciesReference species=\"{signal}\"/>\n"
@@ -326,9 +444,19 @@ impl SbmlGenerator {
                 xml.push_str("        </listOfReactants>\n");
                 xml.push_str("        <kineticLaw>\n");
                 xml.push_str(&format!("          {}\n", Self::math_open()));
+                let mrna_deg_id = Self::deg_id(
+                    "k_mRNA_deg",
+                    &tu_id,
+                    Self::deg_rate(
+                        tu.kinetics.k_mrna_deg,
+                        circuit.kinetics.k_mrna_deg,
+                        global_mrna,
+                    ),
+                    global_mrna,
+                );
                 xml.push_str(&format!(
                     "            {}\n",
-                    Self::scaled_mass_action("k_mRNA_deg", &mrna)
+                    Self::scaled_mass_action(&mrna_deg_id, &mrna)
                 ));
                 xml.push_str("          </math>\n");
                 xml.push_str("        </kineticLaw>\n");
@@ -342,9 +470,19 @@ impl SbmlGenerator {
                 xml.push_str("        </listOfReactants>\n");
                 xml.push_str("        <kineticLaw>\n");
                 xml.push_str(&format!("          {}\n", Self::math_open()));
+                let prot_deg_id = Self::deg_id(
+                    "k_prot_deg",
+                    &tu_id,
+                    Self::deg_rate(
+                        tu.kinetics.k_prot_deg,
+                        circuit.kinetics.k_prot_deg,
+                        global_prot,
+                    ),
+                    global_prot,
+                );
                 xml.push_str(&format!(
                     "            {}\n",
-                    Self::scaled_mass_action("k_prot_deg", &protein)
+                    Self::scaled_mass_action(&prot_deg_id, &protein)
                 ));
                 xml.push_str("          </math>\n");
                 xml.push_str("        </kineticLaw>\n");
@@ -391,13 +529,71 @@ impl SbmlGenerator {
         format!("<apply><times/><ci>{rate}</ci><ci>{species}</ci><ci>cell</ci></apply>")
     }
 
-    fn hill_exponent() -> &'static str {
-        "<cn type=\"integer\" sbml:units=\"dimensionless\">2</cn>"
+    fn species_xml(id: &str, name: &str, concentration: Option<f64>, boundary: bool) -> String {
+        let name_attr = if name.is_empty() {
+            String::new()
+        } else {
+            format!(" name=\"{}\"", Self::xml_escape(name))
+        };
+        let initial = match concentration {
+            Some(value) => format!("initialConcentration=\"{}\"", Self::format_real(value)),
+            None => "initialAmount=\"0\"".to_string(),
+        };
+        format!(
+            "      <species id=\"{id}\"{name_attr} compartment=\"cell\" {initial} substanceUnits=\"mole\" hasOnlySubstanceUnits=\"false\" boundaryCondition=\"{boundary}\" constant=\"false\"/>\n"
+        )
     }
 
-    fn hill_math(kind: &str, rate: &str, signal: &str) -> String {
-        let exponent = Self::hill_exponent();
-        let k_pow = format!("<apply><power/><ci>K_hill</ci>{exponent}</apply>");
+    fn format_real(value: f64) -> String {
+        if value == 0.0 {
+            return "0".to_string();
+        }
+        let mut text = format!("{value:.12}");
+        if text.contains('.') {
+            while text.ends_with('0') {
+                text.pop();
+            }
+            if text.ends_with('.') {
+                text.pop();
+            }
+        }
+        if text.is_empty() || text == "-" {
+            "0".to_string()
+        } else {
+            text
+        }
+    }
+
+    /// Keep the historical literal when the value is still the default.
+    fn format_default(value: f64, default_value: f64, literal: &str) -> String {
+        if Self::same_number(value, default_value) {
+            literal.to_string()
+        } else {
+            Self::format_real(value)
+        }
+    }
+
+    fn same_number(left: f64, right: f64) -> bool {
+        (left - right).abs() <= 1e-12 * (1.0 + left.abs())
+    }
+
+    fn hill_exponent_cn(hill: f64) -> String {
+        if (hill - hill.round()).abs() < 1e-9 && (0.0..1.0e6).contains(&hill) {
+            format!(
+                "<cn type=\"integer\" sbml:units=\"dimensionless\">{}</cn>",
+                hill.round() as i64
+            )
+        } else {
+            format!(
+                "<cn type=\"real\" sbml:units=\"dimensionless\">{}</cn>",
+                Self::format_real(hill)
+            )
+        }
+    }
+
+    fn hill_math(kind: &str, rate: &str, signal: &str, hill: f64, k_id: &str) -> String {
+        let exponent = Self::hill_exponent_cn(hill);
+        let k_pow = format!("<apply><power/><ci>{k_id}</ci>{exponent}</apply>");
         let s_pow = format!("<apply><power/><ci>{signal}</ci>{exponent}</apply>");
         let numerator = if kind == "repress" {
             k_pow.clone()
@@ -433,22 +629,102 @@ impl SbmlGenerator {
 "#
     }
 
-    fn signal_species(circuit: &GeneticCircuit, tu: &TranscriptionUnit) -> Option<String> {
-        match Self::transcription_law(circuit, tu) {
-            TxnLaw::Constitutive => None,
-            TxnLaw::Repress { species } | TxnLaw::Activate { species } => Some(species),
+    fn txn_rate(circuit: &GeneticCircuit, tu: &TranscriptionUnit) -> f64 {
+        first_or(
+            &[tu.kinetics.k_txn, circuit.kinetics.k_txn],
+            tu.promoter.strength,
+        )
+    }
+
+    fn tln_rate(circuit: &GeneticCircuit, tu: &TranscriptionUnit) -> f64 {
+        first_or(
+            &[tu.kinetics.k_tln, circuit.kinetics.k_tln],
+            tu.rbs.translation_rate,
+        )
+    }
+
+    fn deg_rate(tu_value: Option<f64>, circuit_value: Option<f64>, global: f64) -> f64 {
+        first_or(&[tu_value, circuit_value], global)
+    }
+
+    fn deg_id(global_id: &str, tu_id: &str, value: f64, global: f64) -> String {
+        if Self::same_number(value, global) {
+            global_id.to_string()
+        } else {
+            format!("{global_id}_{tu_id}")
         }
     }
 
-    fn transcription_law(circuit: &GeneticCircuit, tu: &TranscriptionUnit) -> TxnLaw {
+    /// Protein species of the transcription unit that expresses `regulator`.
+    /// An external regulator that no unit produces stays a boundary species.
+    fn produced_protein(circuit: &GeneticCircuit, regulator: &str) -> Option<String> {
+        circuit
+            .transcription_units
+            .iter()
+            .find(|other| Self::expresses(other, regulator))
+            .map(|other| format!("protein_{}", Self::sanitize_id(&other.name)))
+    }
+
+    fn expresses(tu: &TranscriptionUnit, regulator: &str) -> bool {
+        tu.cds.name.eq_ignore_ascii_case(regulator)
+            || tu.cds.protein.name.eq_ignore_ascii_case(regulator)
+            || tu.coding_sequences.iter().any(|cds| {
+                cds.name.eq_ignore_ascii_case(regulator)
+                    || cds.protein.name.eq_ignore_ascii_case(regulator)
+            })
+    }
+
+    fn link_for<'a>(
+        circuit: &'a GeneticCircuit,
+        tu: &TranscriptionUnit,
+    ) -> Option<&'a RegulatoryLink> {
+        circuit
+            .regulatory_links
+            .iter()
+            .find(|link| link.to.eq_ignore_ascii_case(&tu.promoter.name))
+    }
+
+    fn kinetic_triple(
+        circuit: &GeneticCircuit,
+        tu: &TranscriptionUnit,
+        link: Option<&RegulatoryLink>,
+    ) -> (f64, f64, f64) {
+        let empty = KineticParams::default();
+        let link_kinetics = link.map(|item| &item.kinetics).unwrap_or(&empty);
+        let hill = first_or(
+            &[link_kinetics.hill, tu.kinetics.hill, circuit.kinetics.hill],
+            DEFAULT_HILL,
+        );
+        let k = first_or(
+            &[link_kinetics.k, tu.kinetics.k, circuit.kinetics.k],
+            DEFAULT_K,
+        );
+        let leak = first_or(
+            &[
+                tu.kinetics.k_leak,
+                link_kinetics.k_leak,
+                circuit.kinetics.k_leak,
+            ],
+            0.0,
+        );
+        (hill, k, leak)
+    }
+
+    fn resolve_txn(circuit: &GeneticCircuit, tu: &TranscriptionUnit) -> ResolvedTxn {
         let promoter = tu.promoter.name.to_lowercase();
         let cds = tu.cds.name.to_lowercase();
         let name = circuit.name.to_lowercase();
+        let link = Self::link_for(circuit, tu);
+        let (hill, k, leak) = Self::kinetic_triple(circuit, tu, link);
         if promoter.contains("plac")
             && (cds.contains("gfp") || name.contains("gfp") || name.contains("cassette"))
         {
-            return TxnLaw::Activate {
-                species: "IPTG".to_string(),
+            return ResolvedTxn {
+                kind: TxnKind::Activate,
+                species: Some("IPTG".to_string()),
+                hill,
+                k,
+                leak,
             };
         }
         let tet_inverter = cds.contains("tetr")
@@ -456,22 +732,36 @@ impl SbmlGenerator {
             && !promoter.contains("plac")
             && !promoter.contains("pbad");
         if name.contains("inverter") || tet_inverter {
-            return TxnLaw::Repress {
-                species: "input".to_string(),
+            return ResolvedTxn {
+                kind: TxnKind::Repress,
+                species: Some("input".to_string()),
+                hill,
+                k,
+                leak,
             };
         }
-        if let Some(link) = circuit
-            .regulatory_links
-            .iter()
-            .find(|link| link.to.eq_ignore_ascii_case(&tu.promoter.name))
-        {
-            let species = format!("regulator_{}", Self::sanitize_id(&link.from));
-            return match link.regulation_type {
-                LinkType::Activation => TxnLaw::Activate { species },
-                LinkType::Repression | LinkType::Dual => TxnLaw::Repress { species },
+        if let Some(link) = link {
+            let species = Self::produced_protein(circuit, &link.from)
+                .unwrap_or_else(|| format!("regulator_{}", Self::sanitize_id(&link.from)));
+            let kind = match link.regulation_type {
+                LinkType::Activation => TxnKind::Activate,
+                LinkType::Repression | LinkType::Dual => TxnKind::Repress,
+            };
+            return ResolvedTxn {
+                kind,
+                species: Some(species),
+                hill,
+                k,
+                leak,
             };
         }
-        TxnLaw::Constitutive
+        ResolvedTxn {
+            kind: TxnKind::Constitutive,
+            species: None,
+            hill,
+            k,
+            leak,
+        }
     }
 
     fn xml_escape(value: &str) -> String {

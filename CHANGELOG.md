@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- SBML export closes regulatory feedback. A repressor in `LacI ~> pLac` is the protein species of the transcription unit that expresses LacI. It is no longer a separate boundary species fixed at 0. A regulator that no unit produces is still an external boundary species named `regulator_<name>`. Repressed and activated transcription laws include a basal term `k_leak_<unit>` whose default value is 0, so an export that does not set it matches the previous Hill term numerically.
+- `examples/repressilator/repressilator.bio` is the Elowitz ring: pLambda drives LacI, pLac drives TetR, pTet drives cI, and each protein represses the next promoter. The previous file was a LacI–TetR pair plus a self-repressed cI.
+
 ### Added
+- BioScript `kinetics` blocks set the values written into SBML. Circuit-wide keys are `hill` (alias `n`), `K` (aliases `k`, `k_half`, `K_hill`), `k_txn`, `k_tln`, `k_leak` (aliases `basal`, `a0`), `k_mRNA_deg`, `k_prot_deg`, `initial_mRNA`, and `initial_protein`. A named section such as `LacI: { k_txn: 0.5, initial_mRNA: 20 }` or `pLac: { hill: 2.5, K: 40 }` overrides one unit or one link. Omitted values keep the previous defaults: Hill coefficient 2, Hill threshold 10, basal transcription 0, mRNA degradation 0.0023 s⁻¹, protein degradation 0.00019 s⁻¹, transcription rate equal to the promoter strength, and translation rate equal to the RBS rate. The first `~>` that targets a promoter is the link used in that unit's rate law. The LLVM text still uses Hill 2 and `k_half` 0.1 unless the source sets `hill` or `K`.
+- SBOL3 export writes an Interaction for each transcription unit (genetic production, SBO:0000589, template and product participations) and for each regulatory link (inhibition SBO:0000169 or stimulation SBO:0000170, with participations). pySBOL3 1.2 accepts these documents. The in-browser compiler reads `~>` and writes the same protein link and interactions. It does not apply `kinetics` blocks.
+- `scripts/repressilator_biomd12.py` compiles a repressilator with BIOMD0000000012 parameter values and compares a pure-Python integration of the export with those equations. `cargo test` runs the same check. The script is not a required CI step.
 - [docs/desktop-current-build.md](docs/desktop-current-build.md) records Jorge Guillem Najarro's 9 November 2026 description of Fold Studio Core, Protein Design Studio, and Construct Forensics. A static inspection of the v1.1.0 Windows installer found those workbenches and the ProteinMPNN weights `v_48_020.pt`. Release v1.0.3 remains archived and does not include them.
 - Runnable tutorials in `examples/repressilator/` and `examples/crispr-biosafety/`, linked from the README under Quick examples. Ubuntu CI runs both scripts.
 - `docs/blog-post.md`, a technical introduction suitable for Dev.to and Hashnode.
@@ -18,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Zenodo DOI badge and How to cite section for 10.5281/zenodo.23436206 (SynBio Studio v1.0.3), plus `CITATION.cff` and `.zenodo.json`.
 
 ### Changed
+- Source package versions stay at 1.0.1. They were not advanced when the Windows installer was numbered 1.1.0, so this fix does not set them to 1.1.1. The Zenodo citation remains v1.1.0. No Git tag or GitHub release is part of this change.
 - The README, [docs/desktop-current-build.md](docs/desktop-current-build.md), [docs/blog-post.md](docs/blog-post.md), and the draft paper name `SynBio-Studio-1.1.0-Windows-x64-Setup.exe` on release v1.1.0 as the current Windows download. The browser demo banner uses that installer name. Release v1.0.3 stays archived.
 - README describes the public source: the Rust compiler and language server, the TypeScript client, the Python engine, and the web demo. The Windows release installer remains the packaged way to try the desktop application, and the Hugging Face Space is the browser preview. Removed claims about an Electron tree, line counts, and laboratory validation that this repository does not support.
 - `package.json` and `server/Cargo.toml` `repository` fields point at https://github.com/jorgegn29/Synbio-studio.
