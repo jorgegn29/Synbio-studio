@@ -6,6 +6,7 @@
 //! - Validación de compatibilidad
 //! - Generación de código (SBOL, FASTA, LAMMPS)
 
+use crate::compiler::kinetics::KineticParams;
 use std::collections::HashMap;
 
 /// Programa en Bio-IR
@@ -117,6 +118,8 @@ pub struct GeneticCircuit {
     pub kill_switch: Option<KillSwitchIR>,
     pub transcription_units: Vec<TranscriptionUnit>,
     pub regulatory_links: Vec<RegulatoryLink>,
+    /// Circuit-wide kinetic defaults. Unset fields keep the SBML defaults.
+    pub kinetics: KineticParams,
     pub estimated_atp_cost: f64,
     pub toxicity_score: f64,
     /// Metadatos del circuito (incluye info de aislamiento)
@@ -167,6 +170,8 @@ pub struct TranscriptionUnit {
     pub ribozyme_insulator: Option<String>,
     /// Metadatos adicionales
     pub metadata: HashMap<String, String>,
+    /// Per-unit rate and initial-condition overrides.
+    pub kinetics: KineticParams,
 }
 
 /// Terminador simple para inyección de aislamiento
@@ -303,6 +308,8 @@ pub struct RegulatoryLink {
     pub strength: f64,          // Fuerza de la regulación
     pub hill_coefficient: f64,  // Cooperatividad
     pub k_half: f64,            // Concentración de media activación
+    /// Values declared on this regulatory link. SBML reads these.
+    pub kinetics: KineticParams,
 }
 
 #[derive(Debug, Clone)]

@@ -77,4 +77,5 @@ web-demo/
 - **7 tipos de diagnósticos** del compilador
 - **6 ejemplos** con papers científicos reales citados
 - **3 formatos de exportación** (SBOL 3.0, FASTA, GenBank)
+- The in-browser SBOL and SBML writers follow `~>` links and emit SBOL3 interactions. A `kinetics` block is read by `synbio-lsp` only; this parser ignores it.
 - **0 dependencias de servidor** — 100% estático

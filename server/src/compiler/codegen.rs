@@ -70,14 +70,16 @@ impl CodeGenerator {
     ) -> Result<(), CodeGenError> {
         let mut defined: HashMap<String, ()> = HashMap::new();
         let mut definitions = String::new();
-        let mut features: Vec<(String, String)> = Vec::new();
+        let mut features: Vec<SbolFeature> = Vec::new();
 
-        for tu in &circuit.transcription_units {
+        for (tu_index, tu) in circuit.transcription_units.iter().enumerate() {
             self.collect_sbol_part(
                 &mut defined,
                 &mut definitions,
                 &mut features,
                 ns,
+                tu_index,
+                "promoter",
                 &tu.promoter.name,
                 "https://identifiers.org/SO:0000167",
                 &tu.promoter.sequence,
@@ -87,6 +89,8 @@ impl CodeGenerator {
                 &mut definitions,
                 &mut features,
                 ns,
+                tu_index,
+                "rbs",
                 &tu.rbs.name,
                 "https://identifiers.org/SO:0000139",
                 &tu.rbs.sequence,
@@ -104,6 +108,8 @@ impl CodeGenerator {
                 &mut definitions,
                 &mut features,
                 ns,
+                tu_index,
+                "cds",
                 &tu.cds.name,
                 "https://identifiers.org/SO:0000316",
                 cds_seq,
@@ -114,6 +120,8 @@ impl CodeGenerator {
                     &mut definitions,
                     &mut features,
                     ns,
+                    tu_index,
+                    "terminator",
                     &term.name,
                     "https://identifiers.org/SO:0000141",
                     &term.sequence,
@@ -141,10 +149,11 @@ impl CodeGenerator {
             output,
             r#"    <sbol:role rdf:resource="https://identifiers.org/SO:0000804"/>"#
         )?;
-        for (feature, _) in &features {
+        for feature in &features {
             writeln!(
                 output,
-                r#"    <sbol:hasFeature rdf:resource="{ns}/{parent}/{feature}"/>"#
+                r#"    <sbol:hasFeature rdf:resource="{ns}/{parent}/{}"/>"#,
+                feature.id
             )?;
         }
         for index in 0..features.len().saturating_sub(1) {
@@ -153,14 +162,27 @@ impl CodeGenerator {
                 r#"    <sbol:hasConstraint rdf:resource="{ns}/{parent}/order_{index}"/>"#
             )?;
         }
-        writeln!(output, "  </rdf:Description>")?;
-
-        for (feature, component) in &features {
+        let interactions = sbol_interaction_plan(circuit, &features);
+        for interaction in &interactions {
             writeln!(
                 output,
-                r#"  <rdf:Description rdf:about="{ns}/{parent}/{feature}">"#
+                r#"    <sbol:hasInteraction rdf:resource="{ns}/{parent}/{}"/>"#,
+                interaction.id
             )?;
-            writeln!(output, r#"    <sbol:displayId>{feature}</sbol:displayId>"#)?;
+        }
+        writeln!(output, "  </rdf:Description>")?;
+
+        for feature in &features {
+            let feature_id = &feature.id;
+            let component = &feature.component;
+            writeln!(
+                output,
+                r#"  <rdf:Description rdf:about="{ns}/{parent}/{feature_id}">"#
+            )?;
+            writeln!(
+                output,
+                r#"    <sbol:displayId>{feature_id}</sbol:displayId>"#
+            )?;
             writeln!(
                 output,
                 r#"    <rdf:type rdf:resource="http://sbols.org/v3#SubComponent"/>"#
@@ -172,8 +194,8 @@ impl CodeGenerator {
             writeln!(output, "  </rdf:Description>")?;
         }
         for index in 0..features.len().saturating_sub(1) {
-            let subject = &features[index].0;
-            let object = &features[index + 1].0;
+            let subject = &features[index].id;
+            let object = &features[index + 1].id;
             writeln!(
                 output,
                 r#"  <rdf:Description rdf:about="{ns}/{parent}/order_{index}">"#
@@ -200,6 +222,9 @@ impl CodeGenerator {
             )?;
             writeln!(output, "  </rdf:Description>")?;
         }
+        for interaction in &interactions {
+            write_sbol_interaction(output, ns, &parent, interaction)?;
+        }
         output.push_str(&definitions);
         Ok(())
     }
@@ -208,15 +233,22 @@ impl CodeGenerator {
         &self,
         defined: &mut HashMap<String, ()>,
         definitions: &mut String,
-        features: &mut Vec<(String, String)>,
+        features: &mut Vec<SbolFeature>,
         ns: &str,
+        tu_index: usize,
+        kind: &'static str,
         name: &str,
         role: &str,
         sequence: &str,
     ) {
         let display = sbol_display(name);
         let feature = format!("{display}_inst{}", features.len());
-        features.push((feature, display.clone()));
+        features.push(SbolFeature {
+            id: feature,
+            component: display.clone(),
+            tu_index,
+            kind,
+        });
         if defined.contains_key(&display) {
             return;
         }
@@ -631,6 +663,175 @@ mod chrono_lite {
     }
 }
 
+struct SbolFeature {
+    id: String,
+    component: String,
+    tu_index: usize,
+    kind: &'static str,
+}
+
+struct SbolParticipation {
+    id: &'static str,
+    role: &'static str,
+    feature: String,
+}
+
+struct SbolInteractionPlan {
+    id: String,
+    sbo: &'static str,
+    participations: Vec<SbolParticipation>,
+}
+
+fn sbol_interaction_plan(
+    circuit: &GeneticCircuit,
+    features: &[SbolFeature],
+) -> Vec<SbolInteractionPlan> {
+    let mut plans = Vec::new();
+    for (index, tu) in circuit.transcription_units.iter().enumerate() {
+        let Some(template) = features
+            .iter()
+            .find(|feature| feature.tu_index == index && feature.kind == "promoter")
+        else {
+            continue;
+        };
+        let Some(product) = features
+            .iter()
+            .find(|feature| feature.tu_index == index && feature.kind == "cds")
+        else {
+            continue;
+        };
+        let _ = tu;
+        plans.push(SbolInteractionPlan {
+            id: format!("production_{index}"),
+            sbo: "https://identifiers.org/SBO:0000589",
+            participations: vec![
+                SbolParticipation {
+                    id: "template",
+                    role: "https://identifiers.org/SBO:0000645",
+                    feature: template.id.clone(),
+                },
+                SbolParticipation {
+                    id: "product",
+                    role: "https://identifiers.org/SBO:0000011",
+                    feature: product.id.clone(),
+                },
+            ],
+        });
+    }
+    for (index, link) in circuit.regulatory_links.iter().enumerate() {
+        let regulator = sbol_display(&link.from);
+        let target = sbol_display(&link.to);
+        let Some(from_feature) = features.iter().find(|feature| {
+            feature.kind == "cds" && feature.component.eq_ignore_ascii_case(&regulator)
+        }) else {
+            continue;
+        };
+        let Some(to_feature) = features.iter().find(|feature| {
+            feature.kind == "promoter" && feature.component.eq_ignore_ascii_case(&target)
+        }) else {
+            continue;
+        };
+        let (id, sbo, actor_role, target_role, actor_id, target_id) = match link.regulation_type {
+            LinkType::Activation => (
+                format!("stimulation_{index}"),
+                "https://identifiers.org/SBO:0000170",
+                "https://identifiers.org/SBO:0000459",
+                "https://identifiers.org/SBO:0000643",
+                "stimulator",
+                "stimulated",
+            ),
+            LinkType::Repression | LinkType::Dual => (
+                format!("inhibition_{index}"),
+                "https://identifiers.org/SBO:0000169",
+                "https://identifiers.org/SBO:0000020",
+                "https://identifiers.org/SBO:0000642",
+                "inhibitor",
+                "inhibited",
+            ),
+        };
+        plans.push(SbolInteractionPlan {
+            id,
+            sbo,
+            participations: vec![
+                SbolParticipation {
+                    id: actor_id,
+                    role: actor_role,
+                    feature: from_feature.id.clone(),
+                },
+                SbolParticipation {
+                    id: target_id,
+                    role: target_role,
+                    feature: to_feature.id.clone(),
+                },
+            ],
+        });
+    }
+    plans
+}
+
+fn write_sbol_interaction(
+    output: &mut String,
+    ns: &str,
+    parent: &str,
+    interaction: &SbolInteractionPlan,
+) -> Result<(), CodeGenError> {
+    writeln!(
+        output,
+        r#"  <rdf:Description rdf:about="{ns}/{parent}/{}">"#,
+        interaction.id
+    )?;
+    writeln!(
+        output,
+        r#"    <sbol:displayId>{}</sbol:displayId>"#,
+        interaction.id
+    )?;
+    writeln!(
+        output,
+        r#"    <rdf:type rdf:resource="http://sbols.org/v3#Interaction"/>"#
+    )?;
+    writeln!(
+        output,
+        r#"    <sbol:type rdf:resource="{}"/>"#,
+        interaction.sbo
+    )?;
+    for participation in &interaction.participations {
+        writeln!(
+            output,
+            r#"    <sbol:hasParticipation rdf:resource="{ns}/{parent}/{}/{}"/>"#,
+            interaction.id, participation.id
+        )?;
+    }
+    writeln!(output, "  </rdf:Description>")?;
+    for participation in &interaction.participations {
+        writeln!(
+            output,
+            r#"  <rdf:Description rdf:about="{ns}/{parent}/{}/{}">"#,
+            interaction.id, participation.id
+        )?;
+        writeln!(
+            output,
+            r#"    <sbol:displayId>{}</sbol:displayId>"#,
+            participation.id
+        )?;
+        writeln!(
+            output,
+            r#"    <rdf:type rdf:resource="http://sbols.org/v3#Participation"/>"#
+        )?;
+        writeln!(
+            output,
+            r#"    <sbol:role rdf:resource="{}"/>"#,
+            participation.role
+        )?;
+        writeln!(
+            output,
+            r#"    <sbol:participant rdf:resource="{ns}/{parent}/{}"/>"#,
+            participation.feature
+        )?;
+        writeln!(output, "  </rdf:Description>")?;
+    }
+    Ok(())
+}
+
 fn sbol_display(raw: &str) -> String {
     let mut out: String = raw
         .chars()
@@ -722,8 +923,10 @@ mod tests {
                 downstream_spacer: None,
                 ribozyme_insulator: None,
                 metadata: std::collections::HashMap::new(),
+                kinetics: crate::compiler::kinetics::KineticParams::default(),
             }],
             regulatory_links: vec![],
+            kinetics: crate::compiler::kinetics::KineticParams::default(),
             estimated_atp_cost: 0.0,
             toxicity_score: 0.0,
             metadata: std::collections::HashMap::new(),

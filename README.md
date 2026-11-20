@@ -56,6 +56,30 @@ The compiler parses BioScript, lowers it through its own intermediate representa
 - a Markdown protocol
 - a synthesis cost figure computed from fixed per-base amounts in `server/src/compiler/targets.rs` (this is not a live vendor quote)
 
+SBML regulatory links use the protein the circuit produces. `LacI ~> pLac` represses with `protein_<unit that expresses LacI>`, not a boundary species held at 0. A name that no transcription unit expresses stays `regulator_<name>`. The rate law is a Hill term plus basal transcription. The basal parameter defaults to 0. The Hill coefficient defaults to 2 and the Hill threshold `K_hill` defaults to 10. Those defaults are what the exporter already wrote; declaring them is optional.
+
+A `kinetics` block sets the numbers that reach the SBML file:
+
+```bioscript
+kinetics {
+    hill: 2          // also n
+    K: 40            // Hill threshold, mole/L in the export
+    k_txn: 0.4995    // transcription, mole/L/s
+    k_tln: 0.1155    // translation, 1/s
+    k_leak: 0.0005   // basal transcription, mole/L/s; also basal or a0
+    k_mRNA_deg: 0.005776
+    k_prot_deg: 0.001155
+    TetR: { initial_mRNA: 20 }   // concentration of that unit's mRNA
+    pLac: { hill: 2.5, K: 40 }   // the link that targets pLac
+}
+```
+
+Rate keys on a named section (`k_txn`, `k_tln`, `k_leak`, the two degradation rates, `initial_mRNA`, `initial_protein`) apply to the transcription unit whose promoter or CDS has that name. `hill` and `K` apply to the `~>` link whose regulator or target has that name. The SBML model uses the first link that targets each promoter. `initial_mRNA` and `initial_protein` are written as `initialConcentration`. Time in the SBML file is seconds. The LLVM text still emits `k_half` 0.1 unless the source sets `K`, because that constant was already 0.1 and is not the SBML threshold.
+
+SBOL3 output includes an Interaction for genetic production of each unit (SBO:0000589) and an Interaction for each `~>` link (inhibition SBO:0000169, or stimulation SBO:0000170 when the compiler classifies the regulator as an activator). Participations point at the promoter and CDS features. The in-browser compiler in `web-demo/` reads `~>` and writes those interactions and the protein link. It does not read `kinetics` blocks. `POST /api/compile` in the Python engine is a separate parser and does not apply this syntax either.
+
+`scripts/repressilator_biomd12.py` compiles one repressilator with the BIOMD0000000012 rates (Elowitz and Leibler, Nature 2000; the BioModels file uses minutes, and the script converts them to the export's seconds) and integrates it in pure Python. `cargo test` runs the same comparison. The script is not required in GitHub Actions. Package manifests in this tree stay at 1.0.1. The v1.1.0 number belongs to the Windows installer and the Zenodo record cited below; this change does not retag either.
+
 Example files `examples/hello-biology.bio`, `examples/test-lsp-real.bio`, `examples/test-extension.bio`, and `examples/DEMO-complete-circuit.bioscript` are compiled by `cargo test`. When `sbol3` and `python-libsbml` import successfully, that test also runs [scripts/validate_exports.py](scripts/validate_exports.py). Without those packages the schema check is skipped. Continuous integration installs them.
 
 ### TypeScript client

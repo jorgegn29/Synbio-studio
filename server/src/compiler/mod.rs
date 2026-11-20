@@ -30,6 +30,7 @@ pub mod codon_optimizer;
 pub mod hir;
 pub mod insulation;
 pub mod ir_lowering;
+pub mod kinetics;
 pub mod lexer;
 pub mod llvm_codegen;
 pub mod mir;
@@ -729,6 +730,7 @@ mod tests {
                 "gfp_cassette_demo",
                 r#"circuit gfp_cassette_demo { pLac -> B0034 -> GFP -> B0015 }"#,
             ),
+            ("repressilator", REPRESSILATOR),
         ];
         let dir = std::env::temp_dir().join("synbio-export-validation");
         std::fs::create_dir_all(&dir).unwrap();
@@ -767,17 +769,408 @@ mod tests {
             if name == "gfp_cassette_demo" {
                 assert!(sbml.contains("IPTG"), "{name} SBML missing IPTG");
             }
+            if name == "repressilator" {
+                assert!(
+                    sbol.contains("http://sbols.org/v3#Interaction"),
+                    "repressilator SBOL has no Interaction"
+                );
+                assert!(
+                    sbol.contains("https://identifiers.org/SBO:0000169"),
+                    "repressilator SBOL has no inhibition term"
+                );
+                assert!(
+                    sbol.contains("https://identifiers.org/SBO:0000589"),
+                    "repressilator SBOL has no genetic production term"
+                );
+                assert!(
+                    sbol.contains("hasParticipation"),
+                    "repressilator SBOL has no participation"
+                );
+                for protein in [
+                    "protein_pLambda_LacI",
+                    "protein_pLac_TetR",
+                    "protein_pTet_cI",
+                ] {
+                    assert!(
+                        sbml.contains(&format!("modifierSpeciesReference species=\"{protein}\"")),
+                        "repressor was not linked to {protein}"
+                    );
+                }
+                assert!(
+                    !sbml.contains("regulator_"),
+                    "unlinked regulator species leaked into SBML"
+                );
+            }
             std::fs::write(dir.join(format!("{name}.sbol")), &sbol).unwrap();
             std::fs::write(dir.join(format!("{name}.sbml")), &sbml).unwrap();
         }
 
         let script =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../scripts/validate_exports.py");
-        let status = std::process::Command::new(python)
+        let output = std::process::Command::new(python)
             .arg(&script)
             .arg(&dir)
-            .status()
+            .output()
             .unwrap_or_else(|err| panic!("validator: {err}"));
-        assert!(status.success(), "export validation failed");
+        assert!(
+            output.status.success(),
+            "export validation failed\n{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+    }
+
+    const REPRESSILATOR: &str = r#"
+        circuit Repressilator {
+            pLambda -> B0034 -> LacI -> B0015
+            pLac -> B0034 -> TetR -> B0015
+            pTet -> B0034 -> cI -> B0015
+            LacI ~> pLac
+            TetR ~> pTet
+            cI ~> pLambda
+        }
+    "#;
+
+    #[test]
+    fn repressilator_sbml_closes_feedback_and_sbol_records_interactions() {
+        let compiler = Compiler::new(CompilerConfig::default());
+        let result = compiler
+            .compile_full(REPRESSILATOR)
+            .expect("repressilator compiles");
+        let sbml = result.sbml.unwrap();
+        let sbol = result.sbol.unwrap();
+        let expected = [
+            ("txn_pLac_TetR", "protein_pLambda_LacI"),
+            ("txn_pTet_cI", "protein_pLac_TetR"),
+            ("txn_pLambda_LacI", "protein_pTet_cI"),
+        ];
+        for (reaction, protein) in expected {
+            let modifier = txn_modifier(&sbml, reaction).unwrap_or_else(|| {
+                panic!(
+                    "{reaction} has no modifier\n{}",
+                    reaction_block(&sbml, reaction)
+                )
+            });
+            assert_eq!(modifier, protein, "{reaction} repressor species");
+            assert!(
+                sbml.contains(&format!("id=\"{protein}\"")),
+                "{protein} is not a species"
+            );
+            let species = species_tag(&sbml, protein);
+            assert!(
+                species.contains("boundaryCondition=\"false\""),
+                "{protein} must be the produced protein, not a boundary input: {species}"
+            );
+        }
+        assert!(!sbml.contains("regulator_"));
+        assert!(sbml.contains("id=\"K_hill\" name=\"Hill threshold\" value=\"10\""));
+        assert!(sbml.contains("<cn type=\"integer\" sbml:units=\"dimensionless\">2</cn>"));
+        assert!(sbml.contains("id=\"k_leak_pLac_TetR\""));
+        assert!(sbml.contains("value=\"0\" units=\"mole_per_litre_per_second\""));
+        assert!(sbol.contains("http://sbols.org/v3#Interaction"));
+        assert!(sbol.contains("https://identifiers.org/SBO:0000169"));
+        assert!(sbol.contains("https://identifiers.org/SBO:0000020"));
+        assert!(sbol.contains("https://identifiers.org/SBO:0000642"));
+        assert!(sbol.contains("https://identifiers.org/SBO:0000589"));
+        assert!(sbol.contains("https://identifiers.org/SBO:0000645"));
+        assert!(sbol.contains("https://identifiers.org/SBO:0000011"));
+        assert!(sbol.contains("sbol:participant"));
+    }
+
+    #[test]
+    fn kinetic_overrides_keep_defaults_when_omitted() {
+        let compiler = Compiler::new(CompilerConfig::default());
+        let plain = compiler
+            .compile_full("circuit plain { pTet -> B0034 -> GFP -> B0015 }")
+            .unwrap();
+        let sbml = plain.sbml.unwrap();
+        assert!(sbml.contains("value=\"10\""));
+        assert!(
+            !sbml.contains("k_leak_"),
+            "constitutive export gained a basal term"
+        );
+        assert!(!sbml.contains("initialConcentration"));
+
+        let overridden = compiler
+            .compile_full(
+                r#"
+                circuit Toggle {
+                    pLambda -> B0034 -> LacI -> B0015
+                    pTrc -> B0034 -> cI -> B0015
+                    cI ~> pLambda
+                    LacI ~> pTrc
+                    kinetics {
+                        k_mRNA_deg: 0.01
+                        k_prot_deg: 0.002
+                        LacI: { k_txn: 2.5, k_tln: 0.2, k_leak: 0.01 }
+                        cI: { k_txn: 0.25 }
+                        pLambda: { hill: 2.5, K: 1 }
+                        pTrc: { hill: 1, K: 8 }
+                    }
+                }
+            "#,
+            )
+            .unwrap_or_else(|err| panic!("toggle: {err}"));
+        let sbml = overridden.sbml.unwrap();
+        assert_eq!(
+            txn_modifier(&sbml, "txn_pLambda_LacI").as_deref(),
+            Some("protein_pTrc_cI")
+        );
+        assert_eq!(
+            txn_modifier(&sbml, "txn_pTrc_cI").as_deref(),
+            Some("protein_pLambda_LacI")
+        );
+        assert!(sbml.contains("dimensionless\">2.5</cn>"));
+        assert!(sbml.contains("dimensionless\">1</cn>"));
+        assert!(sbml.contains("id=\"K_hill_pLambda_LacI\""));
+        assert!(parameter_value(&sbml, "K_hill_pLambda_LacI") - 1.0 < 1e-9);
+        assert!((parameter_value(&sbml, "K_hill_pTrc_cI") - 8.0).abs() < 1e-9);
+        assert!((parameter_value(&sbml, "k_txn_pLambda_LacI") - 2.5).abs() < 1e-9);
+        assert!((parameter_value(&sbml, "k_tln_pLambda_LacI") - 0.2).abs() < 1e-9);
+        assert!((parameter_value(&sbml, "k_leak_pLambda_LacI") - 0.01).abs() < 1e-9);
+        assert!((parameter_value(&sbml, "k_mRNA_deg") - 0.01).abs() < 1e-9);
+        assert!((parameter_value(&sbml, "k_prot_deg") - 0.002).abs() < 1e-9);
+        // The global threshold stays at the historical default when links disagree.
+        assert!((parameter_value(&sbml, "K_hill") - 10.0).abs() < 1e-9);
+
+        let rejected =
+            compiler.compile_full("circuit Bad { pLac -> GFP kinetics { not_a_rate: 1 } }");
+        let message = rejected.unwrap_err().to_string();
+        assert!(message.contains("unknown kinetic parameter"), "{message}");
+    }
+
+    #[test]
+    fn biomd12_repressilator_export_oscillates() {
+        let ln2 = std::f64::consts::LN_2;
+        let k_mrna = ln2 / 2.0 / 60.0;
+        let k_prot = ln2 / 10.0 / 60.0;
+        let k_tln = 20.0 * ln2 / 2.0 / 60.0;
+        let k_txn = 0.5 - 0.0005;
+        let k_leak = 0.0005_f64;
+        let source = format!(
+            r#"
+            circuit Repressilator {{
+                pLambda -> B0034 -> LacI -> B0015
+                pLac -> B0034 -> TetR -> B0015
+                pTet -> B0034 -> cI -> B0015
+                LacI ~> pLac
+                TetR ~> pTet
+                cI ~> pLambda
+                kinetics {{
+                    hill: 2
+                    K: 40
+                    k_txn: {k_txn:.12}
+                    k_tln: {k_tln:.12}
+                    k_leak: {k_leak:.12}
+                    k_mRNA_deg: {k_mrna:.12}
+                    k_prot_deg: {k_prot:.12}
+                    TetR: {{ initial_mRNA: 20 }}
+                }}
+            }}
+            "#
+        );
+        let compiler = Compiler::new(CompilerConfig::default());
+        let sbml = compiler.compile_full(&source).unwrap().sbml.unwrap();
+        let units = [
+            ("pLambda_LacI", "protein_pTet_cI"),
+            ("pLac_TetR", "protein_pLambda_LacI"),
+            ("pTet_cI", "protein_pLac_TetR"),
+        ];
+        let mut repressor = [0usize; 3];
+        let mrna_ids = ["mRNA_pLambda_LacI", "mRNA_pLac_TetR", "mRNA_pTet_cI"];
+        let protein_ids = [
+            "protein_pLambda_LacI",
+            "protein_pLac_TetR",
+            "protein_pTet_cI",
+        ];
+        for (index, (tu, expected)) in units.iter().enumerate() {
+            let modifier = txn_modifier(&sbml, &format!("txn_{tu}")).unwrap();
+            assert_eq!(modifier, *expected);
+            repressor[index] = protein_ids.iter().position(|id| *id == modifier).unwrap() * 2 + 1;
+        }
+        let rates = OscRates {
+            k_txn: parameter_value(&sbml, "k_txn_pLac_TetR"),
+            k_tln: parameter_value(&sbml, "k_tln_pLac_TetR"),
+            k_leak: parameter_value(&sbml, "k_leak_pLac_TetR"),
+            k_mrna: parameter_value(&sbml, "k_mRNA_deg"),
+            k_prot: parameter_value(&sbml, "k_prot_deg"),
+            k: parameter_value(&sbml, "K_hill"),
+            n: reaction_hill(&sbml, "txn_pLac_TetR"),
+            repressor,
+        };
+        let mut y = [0.0; 6];
+        y[2] = species_initial(&sbml, mrna_ids[1]);
+        assert!((y[2] - 20.0).abs() < 1e-6, "TetR mRNA initial {}", y[2]);
+        let (period_min, amplitude, samples) = integrate_repressilator(&rates, y);
+        assert!(
+            period_min > 110.0 && period_min < 140.0,
+            "period {period_min} min is not the BIOMD0000000012 oscillation (expected about 125)"
+        );
+        assert!(amplitude > 1000.0, "LacI amplitude {amplitude} is flat");
+        let mut reference_rates = rates;
+        reference_rates.k_txn = k_txn;
+        reference_rates.k_tln = k_tln;
+        reference_rates.k_leak = k_leak;
+        reference_rates.k_mrna = k_mrna;
+        reference_rates.k_prot = k_prot;
+        reference_rates.k = 40.0;
+        reference_rates.n = 2.0;
+        let (_, _, reference) =
+            integrate_repressilator(&reference_rates, [0.0, 0.0, 20.0, 0.0, 0.0, 0.0]);
+        let mut sq = 0.0;
+        let mut peak = f64::MIN;
+        let mut trough = f64::MAX;
+        for (sample, truth) in samples.iter().zip(reference.iter()) {
+            let diff = sample - truth;
+            sq += diff * diff;
+            peak = peak.max(*truth);
+            trough = trough.min(*truth);
+        }
+        let nrmse = (sq / samples.len() as f64).sqrt() / (peak - trough);
+        assert!(
+            nrmse < 1e-3,
+            "SBML-parameterised trajectory NRMSE {nrmse} vs BIOMD0000000012 equations"
+        );
+    }
+
+    struct OscRates {
+        k_txn: f64,
+        k_tln: f64,
+        k_leak: f64,
+        k_mrna: f64,
+        k_prot: f64,
+        k: f64,
+        n: f64,
+        /// Protein state index that represses each mRNA, in LacI, TetR, cI order.
+        repressor: [usize; 3],
+    }
+
+    fn integrate_repressilator(rates: &OscRates, mut y: [f64; 6]) -> (f64, f64, Vec<f64>) {
+        let dt = 1.0_f64;
+        let steps = 2000 * 60;
+        let mut samples = Vec::with_capacity(steps / 30);
+        let mut peaks = Vec::new();
+        let mut prev = y[1];
+        let mut prev_slope = 0.0;
+        for step in 0..steps {
+            let dy = osc_deriv(&y, rates);
+            let mid = add6(y, scale6(dy, dt * 0.5));
+            let k2 = osc_deriv(&mid, rates);
+            let mid2 = add6(y, scale6(k2, dt * 0.5));
+            let k3 = osc_deriv(&mid2, rates);
+            let end = add6(y, scale6(k3, dt));
+            let k4 = osc_deriv(&end, rates);
+            y = add6(
+                y,
+                scale6(
+                    add6(add6(dy, scale6(k2, 2.0)), add6(scale6(k3, 2.0), k4)),
+                    dt / 6.0,
+                ),
+            );
+            let minute = (step + 1) as f64 / 60.0;
+            if step % 30 == 0 {
+                samples.push(y[1]);
+            }
+            let slope = y[1] - prev;
+            if minute >= 1000.0 && prev_slope > 0.0 && slope <= 0.0 {
+                peaks.push(minute);
+            }
+            prev_slope = slope;
+            prev = y[1];
+        }
+        assert!(
+            peaks.len() >= 3,
+            "expected an oscillation, peaks={peaks:?} final={y:?}"
+        );
+        let period =
+            peaks.windows(2).map(|pair| pair[1] - pair[0]).sum::<f64>() / (peaks.len() - 1) as f64;
+        let window: Vec<f64> = samples.iter().copied().skip(samples.len() / 2).collect();
+        let amplitude = window.iter().copied().fold(f64::MIN, f64::max)
+            - window.iter().copied().fold(f64::MAX, f64::min);
+        (period, amplitude, samples)
+    }
+
+    fn osc_deriv(y: &[f64; 6], rates: &OscRates) -> [f64; 6] {
+        let mut dy = [0.0; 6];
+        for gene in 0..3 {
+            let mrna = y[gene * 2];
+            let protein = y[gene * 2 + 1];
+            let repressor = y[rates.repressor[gene]];
+            let kn = rates.k.powf(rates.n);
+            let sn = repressor.powf(rates.n);
+            dy[gene * 2] = rates.k_leak + rates.k_txn * kn / (kn + sn) - rates.k_mrna * mrna;
+            dy[gene * 2 + 1] = rates.k_tln * mrna - rates.k_prot * protein;
+        }
+        dy
+    }
+
+    fn add6(left: [f64; 6], right: [f64; 6]) -> [f64; 6] {
+        std::array::from_fn(|index| left[index] + right[index])
+    }
+
+    fn scale6(value: [f64; 6], factor: f64) -> [f64; 6] {
+        std::array::from_fn(|index| value[index] * factor)
+    }
+
+    fn parameter_value(sbml: &str, id: &str) -> f64 {
+        let marker = format!("id=\"{id}\"");
+        let start = sbml.find(&marker).unwrap_or_else(|| panic!("missing {id}"));
+        let window = &sbml[start..];
+        let value_at = window
+            .find("value=\"")
+            .unwrap_or_else(|| panic!("no value for {id}"))
+            + 7;
+        let end = window[value_at..].find('"').unwrap();
+        window[value_at..value_at + end]
+            .parse()
+            .unwrap_or_else(|_| panic!("bad value for {id}"))
+    }
+
+    fn reaction_block<'a>(sbml: &'a str, reaction_id: &str) -> &'a str {
+        let marker = format!("<reaction id=\"{reaction_id}\"");
+        let start = sbml
+            .find(&marker)
+            .unwrap_or_else(|| panic!("missing reaction {reaction_id}"));
+        let end = sbml[start..]
+            .find("</reaction>")
+            .unwrap_or_else(|| panic!("unclosed {reaction_id}"))
+            + start;
+        &sbml[start..end]
+    }
+
+    fn txn_modifier(sbml: &str, reaction_id: &str) -> Option<String> {
+        let block = reaction_block(sbml, reaction_id);
+        let key = "modifierSpeciesReference species=\"";
+        let pos = block.find(key)? + key.len();
+        let end = block[pos..].find('"')?;
+        Some(block[pos..pos + end].to_string())
+    }
+
+    fn reaction_hill(sbml: &str, reaction_id: &str) -> f64 {
+        let block = reaction_block(sbml, reaction_id);
+        let key = "sbml:units=\"dimensionless\">";
+        let pos = block.find(key).expect("hill exponent") + key.len();
+        let end = block[pos..].find('<').unwrap();
+        block[pos..pos + end].parse().unwrap()
+    }
+
+    fn species_tag(sbml: &str, id: &str) -> String {
+        let marker = format!("id=\"{id}\"");
+        let start = sbml
+            .find(&marker)
+            .unwrap_or_else(|| panic!("missing species {id}"));
+        let end = sbml[start..].find("/>").unwrap() + start;
+        sbml[start..end].to_string()
+    }
+
+    fn species_initial(sbml: &str, id: &str) -> f64 {
+        let tag = species_tag(sbml, id);
+        let key = if tag.contains("initialConcentration=\"") {
+            "initialConcentration=\""
+        } else {
+            "initialAmount=\""
+        };
+        let pos = tag.find(key).unwrap() + key.len();
+        let end = tag[pos..].find('"').unwrap();
+        tag[pos..pos + end].parse().unwrap()
     }
 }

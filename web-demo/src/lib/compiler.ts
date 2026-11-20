@@ -1,3 +1,5 @@
+import { sbolInteractionRdf } from './artifacts';
+
 // ============================================================
 // SynBio-LLVM BioScript Compiler — Browser Edition
 // Full lexer + parser + validator + IR generator
@@ -43,6 +45,8 @@ export interface Circuit {
   killSwitch: KillSwitch | null;
   transcriptionUnits: TranscriptionUnit[];
   connections: string[][];
+  /** Explicit `regulator ~> promoter` lines. Empty when the source has none. */
+  regulations: { from: string; to: string }[];
   chassisName: string;
   chassisOrganism: string;
   atpCost: number;
@@ -306,6 +310,14 @@ function tokenize(source: string): Token[] {
       continue;
     }
 
+    // Regulatory arrow. `~>` is repression in BioScript.
+    if (source[i] === '~' && source[i + 1] === '>') {
+      tokens.push({ type: 'operator', value: '~>', line, col });
+      i += 2;
+      col += 2;
+      continue;
+    }
+
     // Operators and punctuation
     if ('+-*/<>=!&|'.includes(source[i])) {
       const startCol = col;
@@ -416,6 +428,7 @@ function parseAndValidate(tokens: Token[]): { circuits: Circuit[]; diagnostics: 
         killSwitch: null,
         transcriptionUnits: [],
         connections: [],
+        regulations: [],
         chassisName: currentChassis.name,
         chassisOrganism: currentChassis.organism,
         atpCost: 0,
@@ -470,12 +483,18 @@ function parseAndValidate(tokens: Token[]): { circuits: Circuit[]; diagnostics: 
         circuit.killSwitch = ks;
       }
 
-      // Parse genetic connections (chains with ->)
+      // Parse genetic connections (chains with ->). A new promoter -> ... line
+      // starts a new unit. `~>` is a regulatory link, not another DNA part.
       const connectionLines: Token[][] = [];
       let currentChain: Token[] = [];
+      const flushChain = () => {
+        if (currentChain.length > 0) {
+          connectionLines.push(currentChain);
+          currentChain = [];
+        }
+      };
       for (let j = 0; j < bodyTokens.length; j++) {
-        if (bodyTokens[j].value === 'kill_switch') {
-          // Skip kill_switch block
+        if (bodyTokens[j].value === 'kill_switch' || bodyTokens[j].value === 'kinetics') {
           let skip = 0;
           while (j < bodyTokens.length) {
             if (bodyTokens[j].value === '{') skip++;
@@ -484,25 +503,29 @@ function parseAndValidate(tokens: Token[]): { circuits: Circuit[]; diagnostics: 
           }
           continue;
         }
+        if (bodyTokens[j + 1]?.value === '~>') {
+          flushChain();
+          j += 2;
+          continue;
+        }
         if (bodyTokens[j].value === '->') {
+          if (currentChain.length > 0) currentChain.push(bodyTokens[j]);
+          continue;
+        }
+        const continuing = currentChain.length > 0 && currentChain[currentChain.length - 1].value === '->';
+        if (continuing && bodyTokens[j].type === 'identifier') {
           currentChain.push(bodyTokens[j]);
           continue;
         }
-        if (currentChain.length > 0 && bodyTokens[j].type === 'identifier') {
-          currentChain.push(bodyTokens[j]);
-          continue;
-        }
-        if (bodyTokens[j].type === 'identifier' && j + 1 < bodyTokens.length && bodyTokens[j + 1].value === '->') {
-          if (currentChain.length > 0) connectionLines.push(currentChain);
+        const startsChain = bodyTokens[j].type === 'identifier' && bodyTokens[j + 1]?.value === '->';
+        if (startsChain) {
+          flushChain();
           currentChain = [bodyTokens[j]];
           continue;
         }
-        if (currentChain.length > 0) {
-          connectionLines.push(currentChain);
-          currentChain = [];
-        }
+        flushChain();
       }
-      if (currentChain.length > 0) connectionLines.push(currentChain);
+      flushChain();
 
       const declarative = parseDeclarativeUnits(bodyTokens);
 
@@ -522,6 +545,16 @@ function parseAndValidate(tokens: Token[]): { circuits: Circuit[]; diagnostics: 
             expressionLevel: calculateExpression(parts),
           });
           circuit.connections.push(conn);
+        }
+      }
+
+      for (let j = 0; j + 2 < bodyTokens.length; j++) {
+        if (bodyTokens[j + 1].value === '~>') {
+          const from = bodyTokens[j].value;
+          const to = bodyTokens[j + 2].value;
+          if (from && to && from !== '~>' && to !== '~>') {
+            circuit.regulations.push({ from, to });
+          }
         }
       }
 
@@ -876,6 +909,7 @@ export function exportSBOL(circuit: Circuit): string {
     <sbol:instanceOf rdf:resource="${SBOL_NAMESPACE}/${feature.of}"/>
   </rdf:Description>`).join('');
 
+  const interactions = sbolInteractionRdf(circuit, SBOL_NAMESPACE, parentId, features);
   const constraintLinks: string[] = [];
   const constraintBlocks: string[] = [];
   for (let i = 0; i + 1 < features.length; i++) {
@@ -902,9 +936,11 @@ export function exportSBOL(circuit: Circuit): string {
     <sbol:role rdf:resource="https://identifiers.org/SO:0000804"/>
 ${featureLinks}
 ${constraintLinks.join('\n')}
+${interactions.links.join('\n')}
   </rdf:Description>
 ${featureBlocks}
 ${constraintBlocks.join('')}
+${interactions.blocks}
 ${definitions.join('\n')}
 </rdf:RDF>
 `;

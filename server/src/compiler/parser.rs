@@ -231,9 +231,20 @@ impl Parser {
         let mut kill_switch = None;
         let mut statements = Vec::new();
         let mut connections = Vec::new();
+        let mut kinetics = crate::compiler::kinetics::KineticParams::default();
+        let mut part_kinetics: Vec<(String, crate::compiler::kinetics::KineticParams)> = Vec::new();
         let mut declared_names: Vec<String> = Vec::new();
 
         while !self.check(&Token::RBrace) && !self.is_at_end() {
+            // `kinetics { hill: 2, K: 40, k_leak: 0 }` — circuit-wide defaults.
+            if self.is_kinetics_block() {
+                self.advance();
+                let block = self.parse_kinetic_block()?;
+                kinetics = kinetics.with_override(&block.defaults);
+                part_kinetics.extend(block.named);
+                continue;
+            }
+
             // Kill switch
             if self.check(&Token::KillSwitch) {
                 kill_switch = Some(self.parse_kill_switch()?);
@@ -273,6 +284,8 @@ impl Parser {
             kill_switch,
             statements,
             connections,
+            kinetics,
+            part_kinetics,
             span: start..self.current_span().start,
         })
     }
@@ -1377,8 +1390,73 @@ impl Parser {
         Ok(GeneticConnection {
             parts,
             connection_type,
+            kinetics: crate::compiler::kinetics::KineticParams::default(),
             span: start..self.previous_span().end,
         })
+    }
+
+    /// `kinetics` followed by `{`, as a circuit-level block rather than a part name.
+    fn is_kinetics_block(&self) -> bool {
+        match self.current_token() {
+            Some(Token::Identifier(name)) if name == "kinetics" => {
+                matches!(self.peek_token(), Some(Token::LBrace))
+            }
+            _ => false,
+        }
+    }
+
+    /// `{ hill: 2.5, K: 40, LacI: { initial_mRNA: 20 } }`
+    fn parse_kinetic_block(&mut self) -> ParseResult<crate::compiler::kinetics::KineticBlock> {
+        use crate::compiler::kinetics::KineticBlock;
+        self.expect(Token::LBrace)?;
+        let mut block = KineticBlock::default();
+        while !self.check(&Token::RBrace) && !self.is_at_end() {
+            let key = self.parse_name()?.name;
+            let nested = if self.check(&Token::LBrace) {
+                true
+            } else {
+                self.expect(Token::Colon)?;
+                self.check(&Token::LBrace)
+            };
+            if nested {
+                let nested = self.parse_kinetic_block()?;
+                if !nested.named.is_empty() {
+                    return Err(self.error(
+                        "a named kinetics section cannot contain another named section".to_string(),
+                    ));
+                }
+                block.named.push((key, nested.defaults));
+            } else {
+                let value = self.parse_kinetic_number()?;
+                block
+                    .defaults
+                    .set(&key, value)
+                    .map_err(|message| ParseError {
+                        message,
+                        span: self.previous_span(),
+                    })?;
+            }
+            self.try_consume(&Token::Comma);
+            self.try_consume(&Token::Semicolon);
+        }
+        self.expect(Token::RBrace)?;
+        Ok(block)
+    }
+
+    fn parse_kinetic_number(&mut self) -> ParseResult<f64> {
+        match self.current_token().cloned() {
+            Some(Token::Integer(n)) => {
+                self.advance();
+                Ok(n as f64)
+            }
+            Some(Token::Float(value)) => {
+                self.advance();
+                Ok(value)
+            }
+            other => Err(self.error(format!(
+                "Se esperaba un número en el bloque cinético, encontrado {other:?}"
+            ))),
+        }
     }
 
     fn expr_to_genetic_part(&self, expr: Expr) -> ParseResult<GeneticPart> {

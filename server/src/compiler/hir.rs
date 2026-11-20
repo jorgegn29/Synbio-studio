@@ -11,6 +11,7 @@
 //! Pipeline: AST → [Semantic Analysis] → HIR → MIR → BioIR
 
 use crate::compiler::ast::{self, BioPart, ConnectionType, GeneType, Span};
+use crate::compiler::kinetics::KineticParams;
 use std::collections::HashMap;
 
 // ─── HIR Types ────────────────────────────────────────────────────────────────
@@ -53,6 +54,8 @@ pub struct HirCircuit {
     pub bindings: Vec<HirBinding>,
     /// Conditional triggers (desugared `when` blocks)
     pub triggers: Vec<HirTrigger>,
+    /// Circuit-wide kinetic defaults from `kinetics { ... }`.
+    pub kinetics: KineticParams,
     pub span: Span,
 }
 
@@ -62,6 +65,7 @@ pub struct HirCircuit {
 pub struct HirTranscriptionUnit {
     pub id: String,
     pub parts: Vec<HirPart>,
+    pub kinetics: KineticParams,
     pub span: Span,
 }
 
@@ -92,6 +96,7 @@ pub struct HirRegulation {
     pub regulator: String,
     pub target: String,
     pub regulation_kind: HirRegulationKind,
+    pub kinetics: KineticParams,
     pub span: Span,
 }
 
@@ -331,6 +336,7 @@ impl HirLowering {
             kill_switch: None,
             bindings: Vec::new(),
             triggers: Vec::new(),
+            kinetics: circuit.body.kinetics.clone(),
             span: circuit.span.clone(),
         };
 
@@ -358,8 +364,43 @@ impl HirLowering {
         for conn in &circuit.body.connections {
             self.lower_connection(conn, &mut hir_circuit);
         }
+        self.apply_part_kinetics(&circuit.body.part_kinetics, &mut hir_circuit);
 
         hir_circuit
+    }
+
+    /// Named sections of a `kinetics` block.
+    ///
+    /// Rate fields land on the transcription unit whose promoter or CDS matches.
+    /// Hill and K land on the regulatory link whose regulator or target matches.
+    fn apply_part_kinetics(
+        &self,
+        parts: &[(String, crate::compiler::kinetics::KineticParams)],
+        circuit: &mut HirCircuit,
+    ) {
+        for (name, params) in parts {
+            let rates = params.rate_fields();
+            let hill = params.hill_fields();
+            for tu in &mut circuit.transcription_units {
+                let matches_tu = tu.parts.iter().any(|part| {
+                    part.name.eq_ignore_ascii_case(name)
+                        && matches!(
+                            part.part_type,
+                            HirPartType::Promoter | HirPartType::CDS | HirPartType::Gene
+                        )
+                });
+                if matches_tu {
+                    tu.kinetics = tu.kinetics.with_override(&rates);
+                }
+            }
+            for link in &mut circuit.regulations {
+                if link.regulator.eq_ignore_ascii_case(name)
+                    || link.target.eq_ignore_ascii_case(name)
+                {
+                    link.kinetics = link.kinetics.with_override(&hill);
+                }
+            }
+        }
     }
 
     /// Lower a genetic connection into TU, regulation, or transform
@@ -378,6 +419,7 @@ impl HirLowering {
                 circuit.transcription_units.push(HirTranscriptionUnit {
                     id,
                     parts,
+                    kinetics: conn.kinetics.clone(),
                     span: conn.span.clone(),
                 });
             }
@@ -395,6 +437,7 @@ impl HirLowering {
                         regulator,
                         target,
                         regulation_kind: kind,
+                        kinetics: conn.kinetics.clone(),
                         span: conn.span.clone(),
                     });
                 }

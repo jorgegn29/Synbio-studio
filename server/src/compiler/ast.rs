@@ -90,6 +90,10 @@ pub struct CircuitBody {
     pub kill_switch: Option<KillSwitch>,
     pub statements: Vec<Statement>,
     pub connections: Vec<GeneticConnection>,
+    /// Circuit-wide defaults from a `kinetics { ... }` block.
+    pub kinetics: crate::compiler::kinetics::KineticParams,
+    /// `Name: { ... }` sections inside that block.
+    pub part_kinetics: Vec<(String, crate::compiler::kinetics::KineticParams)>,
     pub span: Span,
 }
 
@@ -107,6 +111,8 @@ pub struct KillSwitch {
 pub struct GeneticConnection {
     pub parts: Vec<GeneticPart>,
     pub connection_type: ConnectionType,
+    /// Kept for the connection. Named `kinetics` sections are applied later.
+    pub kinetics: crate::compiler::kinetics::KineticParams,
     pub span: Span,
 }
 

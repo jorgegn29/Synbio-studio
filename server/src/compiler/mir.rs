@@ -14,6 +14,7 @@
 //! Pipeline: AST → HIR → MIR → BioIR
 
 use crate::compiler::hir::*;
+use crate::compiler::kinetics::KineticParams;
 use std::collections::{HashMap, HashSet};
 
 // ─── MIR Types ────────────────────────────────────────────────────────────────
@@ -65,6 +66,8 @@ pub struct MirCircuit {
     pub transcription_units: Vec<MirTranscriptionUnit>,
     pub regulations: Vec<MirRegulation>,
     pub kill_switch: Option<MirKillSwitch>,
+    /// Circuit-wide kinetic defaults.
+    pub kinetics: KineticParams,
     /// Resource tracking
     pub resources: ResourceMap,
     /// Ownership tracking — which parts are used where
@@ -83,6 +86,8 @@ pub struct MirTranscriptionUnit {
     pub rbs: MirRBS,
     pub coding_sequences: Vec<MirCDS>,
     pub terminator: Option<MirTerminator>,
+    /// Per-unit kinetic overrides from the transcription line.
+    pub kinetics: KineticParams,
     /// Estimated expression level (copies/cell/generation)
     pub estimated_expression: f64,
     /// Estimated transcript length in bp
@@ -147,6 +152,7 @@ pub struct MirRegulation {
     pub to: String,
     pub kind: MirRegulationKind,
     pub estimated_strength: f64,
+    pub kinetics: KineticParams,
 }
 
 #[derive(Debug, Clone)]
@@ -463,6 +469,7 @@ impl MirLowering {
                     HirRegulationKind::Inferred => MirRegulationKind::Unknown,
                 },
                 estimated_strength: 0.5, // Default, can be refined
+                kinetics: r.kinetics.clone(),
             })
             .collect();
 
@@ -491,6 +498,7 @@ impl MirLowering {
             transcription_units,
             regulations,
             kill_switch,
+            kinetics: hir_circuit.kinetics.clone(),
             resources,
             ownership,
             estimated_burden: MetabolicBurden::default(),
@@ -624,6 +632,7 @@ impl MirLowering {
             rbs,
             coding_sequences,
             terminator,
+            kinetics: hir_tu.kinetics.clone(),
             estimated_expression,
             transcript_length,
         }
